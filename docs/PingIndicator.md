@@ -1,0 +1,1 @@
+# Structure of Ping Indicator Syntax
