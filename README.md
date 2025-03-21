@@ -39,7 +39,7 @@ Inspired by the original [vanilla-proxy](https://github.com/smell-of-curry/vanil
   Manages player queues and ensures staff members always have room to join.
 
 - **Ping Indicator** ⏳  
-  Sends a players ping every 20 ticks as a title packet to be displayed with a resource pack.
+  Sends a players ping every 20 ticks as a title packet to be displayed with a resource pack.  
   → *See* [PingIndicator.md](./docs/PingIndicator.md)
 
 ## 🔧 Design Philosophy
