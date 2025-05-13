@@ -40,10 +40,12 @@ type GoBDS struct {
 }
 
 // NewGoBDS ...
-func NewGoBDS(conf *Config, log *slog.Logger) *GoBDS {
+func NewGoBDS(conf Config, log *slog.Logger) *GoBDS {
+	log.Info("creating a new instance of gobds")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	gobds := &GoBDS{
-		conf: conf,
+		conf: &conf,
 
 		resources: make([]*resource.Pack, 0),
 
@@ -62,6 +64,8 @@ func (gb *GoBDS) setup() {
 	gb.setupServices()
 	gb.setupInterceptor()
 	gb.setupBorder()
+
+	gb.log.Info("completed initial setup")
 
 	go gb.tick()
 }
@@ -86,6 +90,11 @@ func (gb *GoBDS) setupResources() {
 		packs = append(packs, pack)
 	}
 	gb.resources = packs
+
+	if len(gb.resources) <= 0 {
+		gb.log.Warn("no resources found, skipping translator setup")
+		return
+	}
 
 	err := translator.Setup(gb.resources[0]) // TODO: Is this behaviour correct?
 	if err != nil {
@@ -150,6 +159,8 @@ func (gb *GoBDS) tick() {
 
 // Start ...
 func (gb *GoBDS) Start() error {
+	gb.log.Info("starting gobds")
+
 	remoteAddr := gb.conf.Network.RemoteAddress
 	_, err := raknet.Ping(remoteAddr)
 	if err != nil {
@@ -176,6 +187,7 @@ func (gb *GoBDS) Start() error {
 	if err != nil {
 		return err
 	}
+	gb.log.Info("listener established")
 
 	gb.listener = l
 	defer gb.listener.Close()
