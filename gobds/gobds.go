@@ -226,7 +226,7 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	d := minecraft.Dialer{
 		KeepXBLIdentityData: true,
 
-		ClientData:   conn.ClientData(),
+		ClientData:   clientData,
 		IdentityData: identityData,
 
 		DownloadResourcePack: func(id uuid.UUID, version string, current, total int) bool {
