@@ -17,7 +17,6 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
-	"github.com/smell-of-curry/gobds/gobds/service/identity"
 	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/session/handlers"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -105,8 +104,7 @@ func (gb *GoBDS) setupResources() {
 
 // setupServices ...
 func (gb *GoBDS) setupServices() {
-	infra.IdentityService = identity.NewService(gb.log, gb.conf.Services.IdentityService)
-	infra.ClaimService = claim.NewService(gb.log, gb.conf.Services.ClaimService)
+	infra.ClaimService = claim.NewService(gb.log, gb.conf.ClaimService)
 }
 
 // setupInterceptor ...
@@ -174,8 +172,6 @@ func (gb *GoBDS) Start() error {
 	}
 
 	cfg := minecraft.ListenConfig{
-		AuthenticationDisabled: true,
-
 		StatusProvider: prov,
 
 		TexturePacksRequired: gb.conf.Resources.PacksRequired,
@@ -221,36 +217,14 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	// TODO: Handle whitelist logic, secured slots logic
 	// I would just add an admin config containing the names of exempt players.
 
-	clientData, identityData := conn.ClientData(), conn.IdentityData()
-
-	response, err := infra.IdentityService.IdentityOf(clientData.ThirdPartyName)
-	if err != nil {
-		_ = gb.listener.Disconnect(conn, fmt.Sprintf("identity service: %v", err))
-		return
-	}
-
-	identityData.XUID = response.XUID
-	uid := uuid.NewSHA1(uuid.NameSpaceDNS, []byte(identityData.XUID))
-	identityData.Identity = uid.String()
-	err = identityData.Validate()
-	if err != nil {
-		_ = gb.listener.Disconnect(conn, fmt.Sprintf("failed to validate identity data: %v", err))
-		return
-	}
-
 	d := minecraft.Dialer{
-		KeepXBLIdentityData: true,
+		ClientData:   conn.ClientData(),
+		IdentityData: conn.IdentityData(),
 
-		ClientData:   clientData,
-		IdentityData: identityData,
-
-		DownloadResourcePack: func(id uuid.UUID, version string, current, total int) bool {
-			return false
-		},
+		DownloadResourcePack: func(id uuid.UUID, version string, current, total int) bool { return false },
 
 		FlushRate: time.Millisecond * time.Duration(gb.conf.Network.FlushRate),
-
-		ErrorLog: gb.log,
+		ErrorLog:  gb.log,
 	}
 	serverConn, err := d.DialTimeout("raknet", gb.conf.Network.RemoteAddress, time.Second*60)
 	if err != nil {
