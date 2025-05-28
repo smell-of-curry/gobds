@@ -104,7 +104,7 @@ func (gb *GoBDS) setupResources() {
 
 // setupServices ...
 func (gb *GoBDS) setupServices() {
-	infra.ClaimService = claim.NewService(gb.log, gb.conf.Services.ClaimService)
+	infra.ClaimService = claim.NewService(gb.log, gb.conf.ClaimService)
 }
 
 // setupInterceptor ...

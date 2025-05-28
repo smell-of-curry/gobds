@@ -29,15 +29,9 @@ type Config struct {
 		URLResources  []string
 		PathResources []string
 	}
-	Services struct {
-		IdentityService struct {
-			URL string
-			Key string
-		}
-		ClaimService struct {
-			URL string
-			Key string
-		}
+	ClaimService struct {
+		URL string
+		Key string
 	}
 	Encryption struct {
 		Key string
@@ -61,9 +55,7 @@ func DefaultConfig() Config {
 
 	c.Resources.PacksRequired = false
 
-	c.Services.IdentityService.Key = "secret-key"
-	c.Services.ClaimService.Key = "secret-key"
-
+	c.ClaimService.Key = "secret-key"
 	c.Encryption.Key = "secret-key"
 	return c
 }
