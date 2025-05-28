@@ -55,7 +55,9 @@ func DefaultConfig() Config {
 
 	c.Resources.PacksRequired = false
 
+	c.ClaimService.URL = "http://127.0.0.1:8080/fetch/claims"
 	c.ClaimService.Key = "secret-key"
+
 	c.Encryption.Key = "secret-key"
 	return c
 }
