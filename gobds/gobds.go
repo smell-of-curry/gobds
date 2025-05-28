@@ -172,8 +172,6 @@ func (gb *GoBDS) Start() error {
 	}
 
 	cfg := minecraft.ListenConfig{
-		AuthenticationDisabled: false,
-
 		StatusProvider: prov,
 
 		TexturePacksRequired: gb.conf.Resources.PacksRequired,
