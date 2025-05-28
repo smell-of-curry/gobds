@@ -45,7 +45,7 @@ func (h InventoryTransaction) handleWorldBorder(_ interceptor.Client, pkt *packe
 // handleClaims ...
 func (h InventoryTransaction) handleClaims(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
 	td, ok := pkt.TransactionData.(*protocol.UseItemTransactionData)
-	if ok {
+	if !ok {
 		return
 	}
 

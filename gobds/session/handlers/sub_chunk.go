@@ -25,7 +25,7 @@ func (SubChunk) Handle(c interceptor.Client, pk packet.Packet, _ *session.Contex
 
 	var entries = make([]protocol.SubChunkEntry, 0)
 	for _, subChunk := range pkt.SubChunkEntries {
-		inside := infra.WorldBorder.ArePositionsInside([]int32{
+		inside := infra.WorldBorder.ChunkInside(protocol.ChunkPos{
 			pkt.Position.X() + int32(subChunk.Offset[0]),
 			pkt.Position.Z() + int32(subChunk.Offset[2]),
 		})

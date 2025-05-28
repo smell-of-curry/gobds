@@ -1,5 +1,9 @@
 package area
 
+import (
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
+)
+
 // Area2D ...
 type Area2D struct {
 	MinX, MinZ int32
@@ -25,11 +29,10 @@ func (a Area2D) PositionInside(x, z int32) bool {
 		z > a.MinZ && z < a.MaxZ
 }
 
-// ArePositionsInside ...
-func (a Area2D) ArePositionsInside(v []int32) bool {
-	x := v[0] << 4
-	z := v[1] << 4
-
-	return x >= a.MinX-16 && x <= a.MaxX &&
-		z >= a.MinZ-16 && z <= a.MaxZ
+// ChunkInside ...
+func (a Area2D) ChunkInside(chunk protocol.ChunkPos) bool {
+	chunkMinX, chunkMinZ := chunk.X()<<4, chunk.Z()<<4
+	chunkMaxX, chunkMaxZ := chunkMinX+15, chunkMinZ+15
+	return chunkMinX <= a.MaxX && chunkMaxX >= a.MinX &&
+		chunkMinZ <= a.MaxZ && chunkMaxZ >= a.MinZ
 }

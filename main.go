@@ -14,7 +14,7 @@ func main() {
 	}
 
 	g := gobds.NewGoBDS(conf, log)
-	if err := g.Start(); err != nil {
+	if err = g.Start(); err != nil {
 		panic(err)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -130,12 +131,12 @@ func (gb *GoBDS) setupInterceptor() {
 }
 
 // setupBorder ...
-func (gb *GoBDS) setupBorder() {
+func (gb *GoBDS) setupBorder() { // TODO: Proper fix borders.
 	b := gb.conf.Border
 	if !b.Enabled {
 		return // Border is disabled, just return.
 	}
-	infra.WorldBorder = area.NewArea2D(b.MaxX, b.MaxZ, b.MinX, b.MinZ)
+	infra.WorldBorder = area.NewArea2D(b.MinX, b.MinZ, b.MaxX, b.MaxZ)
 }
 
 // tick ...
@@ -187,10 +188,14 @@ func (gb *GoBDS) Start() error {
 	if err != nil {
 		return err
 	}
-	gb.log.Info("listener established")
+	gb.log.Info("listener established, gobds is now running",
+		"on", gb.conf.Network.LocalAddress, "to", gb.conf.Network.RemoteAddress)
 
 	gb.listener = l
-	defer gb.listener.Close()
+	defer func(l *minecraft.Listener) {
+		gb.log.Info("shutting down gobds")
+		_ = l.Close()
+	}(gb.listener)
 
 	for {
 		select {
@@ -204,7 +209,7 @@ func (gb *GoBDS) Start() error {
 			}
 
 			go func(conn *minecraft.Conn) {
-				gb.log.Info("accepted new connection")
+				gb.log.Info("accepted new connection", "name", conn.IdentityData().DisplayName)
 				gb.accept(conn)
 			}(conn.(*minecraft.Conn))
 		}
@@ -213,8 +218,6 @@ func (gb *GoBDS) Start() error {
 
 // accept ...
 func (gb *GoBDS) accept(conn *minecraft.Conn) {
-	go gb.closeOnceDone(conn)
-
 	// TODO: Handle whitelist logic, secured slots logic
 	// I would just add an admin config containing the names of exempt players.
 
@@ -252,6 +255,7 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	serverConn, err := d.DialTimeout("raknet", gb.conf.Network.RemoteAddress, time.Second*60)
 	if err != nil {
 		gb.log.Error("error dialing connection", "err", err)
+		_ = gb.listener.Disconnect(conn, "error dialing connection")
 		return
 	}
 
@@ -303,62 +307,59 @@ func (gb *GoBDS) startGame(conn *minecraft.Conn, serverConn *minecraft.Conn) {
 // startListening ...
 func (gb *GoBDS) startListening(s *session.Session) {
 	client, server := s.Client(), s.Server()
-	go func() {
-		for {
-			select {
-			case <-gb.ctx.Done():
-				return
-			default:
-				pk, err := client.ReadPacket()
-				if err != nil {
-					gb.log.Error("error reading client packet", "err", err)
-					return
-				}
-
-				ctx := session.NewContext()
-				gb.interceptor.Intercept(s, pk, ctx)
-				if ctx.Cancelled() {
-					continue
-				}
-
-				if err = server.WritePacket(pk); err != nil {
-					gb.log.Error("error writing to server", "err", err)
-					return
-				}
-			}
-		}
-	}()
-	go func() {
-		for {
-			select {
-			case <-gb.ctx.Done():
-				return
-			default:
-				pk, err := server.ReadPacket()
-				if err != nil {
-					gb.log.Error("error reading server packet", "err", err)
-					return
-				}
-
-				ctx := session.NewContext()
-				gb.interceptor.Intercept(s, pk, ctx)
-				if ctx.Cancelled() {
-					continue
-				}
-
-				if err = client.WritePacket(pk); err != nil {
-					gb.log.Error("error writing to client", "err", err)
-					return
-				}
-			}
-		}
-	}()
+	go gb.readFrom(s, client, server, client, server, "reading from client", "server")
+	go gb.readFrom(s, client, server, server, client, "reading from server", "client")
 }
 
-// closeOnceDone ...
-func (gb *GoBDS) closeOnceDone(conn *minecraft.Conn) {
-	<-gb.ctx.Done()
-	if conn != nil {
-		_ = conn.Close()
+// readFrom ...
+func (gb *GoBDS) readFrom(
+	s *session.Session,
+
+	client, server *minecraft.Conn,
+	src, dst *minecraft.Conn,
+	readName, writeName string,
+) {
+	defer gb.listener.Disconnect(client, "connection closed")
+	defer server.Close()
+
+	for {
+		select {
+		case <-gb.ctx.Done():
+			return
+		default:
+		}
+
+		pkt, err := src.ReadPacket()
+		if err != nil {
+			if closedConnectionErr(err) || errors.Is(err, context.Canceled) {
+				return
+			}
+			var disc minecraft.DisconnectError
+			if errors.As(err, &disc) {
+				_ = gb.listener.Disconnect(client, disc.Error())
+				return
+			}
+			gb.log.Error(fmt.Sprintf("error %s", readName), "err", err)
+			return
+		}
+
+		ctx := session.NewContext()
+		gb.interceptor.Intercept(s, pkt, ctx)
+		if ctx.Cancelled() {
+			continue
+		}
+
+		if err = dst.WritePacket(pkt); err != nil {
+			if closedConnectionErr(err) || errors.Is(err, context.Canceled) {
+				return
+			}
+			gb.log.Error(fmt.Sprintf("error writing to %s", writeName), "err", err)
+			return
+		}
 	}
+}
+
+// closedConnectionErr ...
+func closedConnectionErr(err error) bool {
+	return strings.Contains(err.Error(), "use of closed network connection")
 }

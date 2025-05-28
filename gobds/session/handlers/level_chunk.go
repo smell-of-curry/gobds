@@ -18,7 +18,7 @@ func (LevelChunk) Handle(_ interceptor.Client, pk packet.Packet, ctx *session.Co
 		return
 	}
 
-	if !infra.WorldBorder.ArePositionsInside(pkt.Position[:]) {
+	if !infra.WorldBorder.ChunkInside(pkt.Position) {
 		ctx.Cancel()
 	}
 }
