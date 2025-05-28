@@ -131,7 +131,7 @@ func (gb *GoBDS) setupInterceptor() {
 }
 
 // setupBorder ...
-func (gb *GoBDS) setupBorder() { // TODO: Proper fix borders.
+func (gb *GoBDS) setupBorder() {
 	b := gb.conf.Border
 	if !b.Enabled {
 		return // Border is disabled, just return.
