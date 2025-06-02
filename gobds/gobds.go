@@ -21,17 +21,21 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/session/handlers"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
 	"github.com/smell-of-curry/gobds/gobds/util/translator"
+	"github.com/smell-of-curry/gobds/gobds/whitelist"
 )
 
 // GoBDS ...
 type GoBDS struct {
 	conf *Config
 
+	provider *minecraft.ForeignStatusProvider
 	listener *minecraft.Listener
 
 	resources []*resource.Pack
 
 	interceptor *interceptor.Interceptor
+
+	whitelist *whitelist.Whitelist
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -63,6 +67,7 @@ func (gb *GoBDS) setup() {
 	gb.setupResources()
 	gb.setupServices()
 	gb.setupInterceptor()
+	gb.setupWhitelists()
 	gb.setupBorder()
 
 	gb.log.Info("completed initial setup")
@@ -129,6 +134,16 @@ func (gb *GoBDS) setupInterceptor() {
 	gb.interceptor = intercept
 }
 
+// setupWhitelists ...
+func (gb *GoBDS) setupWhitelists() {
+	entries, err := whitelist.ReadConfig()
+	if err != nil {
+		gb.log.Error("failed to read whitelist config", "err", err)
+		return
+	}
+	gb.whitelist = whitelist.NewWhitelist(entries)
+}
+
 // setupBorder ...
 func (gb *GoBDS) setupBorder() {
 	b := gb.conf.Border
@@ -167,13 +182,13 @@ func (gb *GoBDS) Start() error {
 		return err
 	}
 
-	prov, err := minecraft.NewForeignStatusProvider(remoteAddr)
+	gb.provider, err = minecraft.NewForeignStatusProvider(remoteAddr)
 	if err != nil {
 		return err
 	}
 
 	cfg := minecraft.ListenConfig{
-		StatusProvider: prov,
+		StatusProvider: gb.provider,
 
 		TexturePacksRequired: gb.conf.Resources.PacksRequired,
 		ResourcePacks:        gb.resources,
@@ -215,8 +230,15 @@ func (gb *GoBDS) Start() error {
 
 // accept ...
 func (gb *GoBDS) accept(conn *minecraft.Conn) {
-	// TODO: Handle whitelist logic, secured slots logic
-	// I would just add an admin config containing the names of exempt players.
+	displayName := conn.IdentityData().DisplayName
+	if !gb.handleWhitelisted(displayName) {
+		_ = gb.listener.Disconnect(conn, "You're not whitelisted.")
+		return
+	}
+	if !gb.handleSecureSlots(displayName) {
+		_ = gb.listener.Disconnect(conn, "The server is at full capacity.")
+		return
+	}
 
 	d := minecraft.Dialer{
 		ClientData:   conn.ClientData(),
@@ -235,6 +257,34 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	}
 
 	gb.startGame(conn, serverConn)
+}
+
+// handleWhitelisted ...
+func (gb *GoBDS) handleWhitelisted(displayName string) bool {
+	if gb.whitelist == nil || !gb.conf.Network.Whitelisted {
+		return true
+	}
+	return gb.whitelist.Has(displayName)
+}
+
+// handleSecureSlots ...
+func (gb *GoBDS) handleSecureSlots(displayName string) bool {
+	if gb.whitelist == nil {
+		// We depend on the whitelist config to handle secured slots.
+		return true
+	}
+	status := gb.provider.ServerStatus(-1, -1)
+	current, limit := status.PlayerCount, status.MaxPlayers
+	if current >= limit {
+		return false
+	}
+
+	securedSlots := gb.conf.Network.SecuredSlots
+	securedLimit := limit - securedSlots
+	if current < securedLimit {
+		return true
+	}
+	return gb.whitelist.Has(displayName)
 }
 
 // startGame ...
