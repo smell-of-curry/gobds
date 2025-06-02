@@ -1,11 +1,8 @@
 package whitelist
 
 import (
-	"os"
 	"strings"
 	"sync"
-
-	"github.com/restartfu/gophig"
 )
 
 // Whitelist ...
@@ -29,23 +26,4 @@ func (w *Whitelist) Has(name string) bool {
 		}
 	}
 	return false
-}
-
-// defaultConfig ...
-func defaultConfig() []string {
-	return []string{"the glancist", "Smell of curry"}
-}
-
-// ReadConfig ...
-func ReadConfig() ([]string, error) {
-	g := gophig.NewGophig[[]string]("./whitelists.toml", gophig.TOMLMarshaler{}, os.ModePerm)
-	_, err := g.LoadConf()
-	if os.IsNotExist(err) {
-		err = g.SaveConf(defaultConfig())
-		if err != nil {
-			return nil, err
-		}
-	}
-	c, err := g.LoadConf()
-	return c, err
 }

@@ -136,12 +136,12 @@ func (gb *GoBDS) setupInterceptor() {
 
 // setupWhitelists ...
 func (gb *GoBDS) setupWhitelists() {
-	entries, err := whitelist.ReadConfig()
+	conf, err := whitelist.ReadConfig()
 	if err != nil {
 		gb.log.Error("failed to read whitelist config", "err", err)
 		return
 	}
-	gb.whitelist = whitelist.NewWhitelist(entries)
+	gb.whitelist = whitelist.NewWhitelist(conf.Entries)
 }
 
 // setupBorder ...
