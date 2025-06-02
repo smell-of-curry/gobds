@@ -21,6 +21,11 @@ var (
 	commandsMu    sync.RWMutex
 )
 
+var (
+	availableCommandsCache *packet.AvailableCommands
+	availableCommandsMu    sync.RWMutex
+)
+
 // Handle ...
 func (AvailableCommands) Handle(_ interceptor.Client, pk packet.Packet, _ *session.Context) {
 	pkt := pk.(*packet.AvailableCommands)
@@ -38,4 +43,8 @@ func (AvailableCommands) Handle(_ interceptor.Client, pk packet.Packet, _ *sessi
 		commandsCache = filtered
 		commandsMu.Unlock()
 	}
+
+	availableCommandsMu.Lock()
+	availableCommandsCache = pkt
+	availableCommandsMu.Unlock()
 }

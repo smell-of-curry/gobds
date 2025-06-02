@@ -122,6 +122,7 @@ func (gb *GoBDS) setupInterceptor() {
 		packet.IDRemoveActor:          handlers.RemoveActor{},
 		packet.IDSetActorData:         handlers.SetActorData{},
 		packet.IDSubChunk:             handlers.SubChunk{},
+		packet.IDText:                 handlers.Text{},
 	} {
 		intercept.AddHandler(id, h)
 	}

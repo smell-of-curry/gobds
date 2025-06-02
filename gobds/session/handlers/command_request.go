@@ -26,6 +26,7 @@ func (CommandRequest) Handle(c interceptor.Client, pk packet.Packet, ctx *sessio
 	commandsMu.RLock()
 	for _, availableCommands := range commandsCache {
 		if slices.Contains(disabledCommands, availableCommands.Name) {
+			ctx.Cancel()
 			commandsMu.RUnlock()
 			return
 		}
