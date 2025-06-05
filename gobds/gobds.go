@@ -5,15 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/go-jose/go-jose/v4/json"
 	"github.com/google/uuid"
 	"github.com/sandertv/go-raknet"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/resource"
+	"github.com/smell-of-curry/gobds/gobds/cmd"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
@@ -77,6 +80,8 @@ func (gb *GoBDS) setup() {
 
 // setupResources ...
 func (gb *GoBDS) setupResources() {
+	defer gb.setupCommands()
+
 	var packs []*resource.Pack
 	for _, url := range gb.conf.Resources.URLResources {
 		pack, err := resource.ReadURL(url)
@@ -94,8 +99,8 @@ func (gb *GoBDS) setupResources() {
 		}
 		packs = append(packs, pack)
 	}
-	gb.resources = packs
 
+	gb.resources = packs
 	if len(gb.resources) <= 0 {
 		gb.log.Warn("no resources found, skipping translator setup")
 		return
@@ -105,6 +110,24 @@ func (gb *GoBDS) setupResources() {
 	if err != nil {
 		gb.log.Error("failed to setup translator", "err", err)
 	}
+}
+
+// setupCommands ...
+func (gb *GoBDS) setupCommands() {
+	rawBytes, err := os.ReadFile(gb.conf.Resources.CommandPath)
+	if err != nil {
+		gb.log.Error("failed to read commands", "err", err)
+		return
+	}
+
+	var commands map[string]cmd.EngineResponseCommand
+	if err = json.Unmarshal(rawBytes, &commands); err != nil {
+		gb.log.Error("failed to unmarshal commands", "err", err)
+		return
+	}
+
+	cmd.LoadFrom(commands)
+	gb.log.Info("loaded commands", "count", len(commands))
 }
 
 // setupServices ...
@@ -127,7 +150,6 @@ func (gb *GoBDS) setupInterceptor() {
 		packet.IDRemoveActor:          handlers.RemoveActor{},
 		packet.IDSetActorData:         handlers.SetActorData{},
 		packet.IDSubChunk:             handlers.SubChunk{},
-		packet.IDText:                 handlers.Text{},
 	} {
 		intercept.AddHandler(id, h)
 	}

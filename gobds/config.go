@@ -26,6 +26,7 @@ type Config struct {
 	Resources struct {
 		PacksRequired bool
 
+		CommandPath   string
 		URLResources  []string
 		PathResources []string
 	}
@@ -54,6 +55,7 @@ func DefaultConfig() Config {
 	c.Border.Enabled = false
 
 	c.Resources.PacksRequired = false
+	c.Resources.CommandPath = "resources/commands.json"
 
 	c.ClaimService.URL = "http://127.0.0.1:8080/fetch/claims"
 	c.ClaimService.Key = "secret-key"

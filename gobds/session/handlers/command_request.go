@@ -22,11 +22,13 @@ func (CommandRequest) Handle(c interceptor.Client, pk packet.Packet, ctx *sessio
 		ctx.Cancel()
 		return
 	}
+	if strings.ReplaceAll(cmd, " ", "") == "" {
+		return
+	}
 
 	commandsMu.RLock()
-	for _, availableCommands := range commandsCache {
-		if slices.Contains(disabledCommands, availableCommands.Name) {
-			ctx.Cancel()
+	for _, vanillaCommand := range vanillaCommandsCache {
+		if vanillaCommand.Name == cmd {
 			commandsMu.RUnlock()
 			return
 		}
@@ -39,4 +41,5 @@ func (CommandRequest) Handle(c interceptor.Client, pk packet.Packet, ctx *sessio
 		Message:    fmt.Sprintf("-%s", strings.TrimPrefix(pkt.CommandLine, "/")),
 		XUID:       c.IdentityData().XUID,
 	})
+	ctx.Cancel()
 }

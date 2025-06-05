@@ -64,7 +64,7 @@ func (s *Session) Data() any {
 
 // Ping ...
 func (s *Session) Ping() int64 {
-	return s.client.Latency().Milliseconds()
+	return s.server.Latency().Milliseconds() * 2
 }
 
 // WriteToClient ...
