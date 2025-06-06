@@ -19,6 +19,7 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/cmd"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
+	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
 	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/session/handlers"
@@ -132,6 +133,7 @@ func (gb *GoBDS) setupCommands() {
 
 // setupServices ...
 func (gb *GoBDS) setupServices() {
+	infra.AuthenticationService = authentication.NewService(gb.log, gb.conf.AuthenticationService)
 	infra.ClaimService = claim.NewService(gb.log, gb.conf.ClaimService)
 }
 
@@ -252,7 +254,18 @@ func (gb *GoBDS) Start() error {
 
 // accept ...
 func (gb *GoBDS) accept(conn *minecraft.Conn) {
-	displayName := conn.IdentityData().DisplayName
+	clientData, identityData := conn.ClientData(), conn.IdentityData()
+	response, err := infra.AuthenticationService.AuthenticationOf(identityData.XUID)
+	if err != nil {
+		_ = gb.listener.Disconnect(conn, err.Error())
+		return
+	}
+	if !response.Allowed {
+		_ = gb.listener.Disconnect(conn, fmt.Sprintf("You must join through the server hub to play."))
+		return
+	}
+
+	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
 		_ = gb.listener.Disconnect(conn, "You're not whitelisted.")
 		return
@@ -263,8 +276,8 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	}
 
 	d := minecraft.Dialer{
-		ClientData:   conn.ClientData(),
-		IdentityData: conn.IdentityData(),
+		ClientData:   clientData,
+		IdentityData: identityData,
 
 		DownloadResourcePack: func(id uuid.UUID, version string, current, total int) bool { return false },
 

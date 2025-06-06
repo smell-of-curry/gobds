@@ -30,6 +30,10 @@ type Config struct {
 		URLResources  []string
 		PathResources []string
 	}
+	AuthenticationService struct {
+		URL string
+		Key string
+	}
 	ClaimService struct {
 		URL string
 		Key string
@@ -56,6 +60,9 @@ func DefaultConfig() Config {
 
 	c.Resources.PacksRequired = false
 	c.Resources.CommandPath = "resources/commands.json"
+
+	c.AuthenticationService.URL = "http://127.0.0.1:8080/authentication"
+	c.AuthenticationService.Key = "secret-key"
 
 	c.ClaimService.URL = "http://127.0.0.1:8080/fetch/claims"
 	c.ClaimService.Key = "secret-key"
