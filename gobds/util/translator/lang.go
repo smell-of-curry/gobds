@@ -36,6 +36,7 @@ func TranslationMapFor(rp *resource.Pack, language string) (langMap map[string]s
 		return nil, fmt.Errorf("error while reading language file: %w", err)
 	}
 
+	langMap = make(map[string]string)
 	scanner := bufio.NewScanner(strings.NewReader(string(raw)))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
