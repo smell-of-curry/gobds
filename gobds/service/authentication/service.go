@@ -58,7 +58,7 @@ func (s *Service) AuthenticationOf(xuid string) (*ResponseModel, error) {
 			lastErr = fmt.Errorf("found expired authentication record found for: %s", xuid)
 		case http.StatusOK:
 			var responseModel ResponseModel
-			if err = json.NewDecoder(response.Body).Decode(&response); err != nil {
+			if err = json.NewDecoder(response.Body).Decode(&responseModel); err != nil {
 				return nil, err
 			}
 			return &responseModel, nil
