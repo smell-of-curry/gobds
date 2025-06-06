@@ -268,8 +268,9 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 
 		DownloadResourcePack: func(id uuid.UUID, version string, current, total int) bool { return false },
 
-		FlushRate: time.Millisecond * time.Duration(gb.conf.Network.FlushRate),
-		ErrorLog:  gb.log,
+		FlushRate:           time.Millisecond * time.Duration(gb.conf.Network.FlushRate),
+		ErrorLog:            gb.log,
+		KeepXBLIdentityData: true,
 	}
 	serverConn, err := d.DialTimeout("raknet", gb.conf.Network.RemoteAddress, time.Second*60)
 	if err != nil {
