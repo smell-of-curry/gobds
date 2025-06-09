@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	_ "unsafe"
 
 	"github.com/go-jose/go-jose/v4/json"
 	"github.com/google/uuid"
@@ -68,6 +69,8 @@ func NewGoBDS(conf Config, log *slog.Logger) *GoBDS {
 
 // setup ...
 func (gb *GoBDS) setup() {
+	world_finaliseBlockRegistry()
+
 	gb.setupResources()
 	gb.setupServices()
 	gb.setupInterceptor()
@@ -424,3 +427,8 @@ func (gb *GoBDS) readFrom(
 func closedConnectionErr(err error) bool {
 	return strings.Contains(err.Error(), "use of closed network connection")
 }
+
+// noinspection ALL
+//
+//go:linkname world_finaliseBlockRegistry github.com/df-mc/dragonfly/server/world.finaliseBlockRegistry
+func world_finaliseBlockRegistry()

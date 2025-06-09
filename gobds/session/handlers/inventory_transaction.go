@@ -3,6 +3,8 @@ package handlers
 import (
 	"slices"
 
+	"github.com/df-mc/dragonfly/server/block"
+	"github.com/df-mc/dragonfly/server/world"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/infra"
@@ -18,12 +20,38 @@ type InventoryTransaction struct{}
 func (h InventoryTransaction) Handle(c interceptor.Client, pk packet.Packet, ctx *session.Context) {
 	pkt := pk.(*packet.InventoryTransaction)
 
+	h.handleInteraction(c, pkt, ctx)
+	if ctx.Cancelled() {
+		return
+	}
+
 	h.handleWorldBorder(c, pkt, ctx)
 	if ctx.Cancelled() {
 		return
 	}
 
 	h.handleClaims(c, pkt, ctx)
+}
+
+// handleInteraction ...
+func (h InventoryTransaction) handleInteraction(_ interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+	transactionData, ok := pkt.TransactionData.(*protocol.UseItemTransactionData)
+	if !ok {
+		return
+	}
+	if transactionData.ActionType != protocol.UseItemActionClickBlock &&
+		transactionData.TriggerType != protocol.UseItemActionClickAir {
+		return
+	}
+	b, ok := world.BlockByRuntimeID(transactionData.BlockRuntimeID)
+	if !ok {
+		return
+	}
+	if _, ok = b.(block.Hopper); !ok {
+		return
+	}
+	// TODO: Re-enable hoppers once microjank fixes critical bugs.
+	ctx.Cancel()
 }
 
 // handleWorldBorder ...
@@ -94,13 +122,14 @@ func (h InventoryTransaction) handleClaims(c interceptor.Client, pkt *packet.Inv
 
 // claimDimensionToInt ...
 func claimDimensionToInt(dimension string) int32 {
-	if dimension == "minecraft:overworld" {
+	switch dimension {
+	case "minecraft:overworld":
 		return 0
-	} else if dimension == "minecraft:nether" {
+	case "minecraft:nether":
 		return 1
-	} else if dimension == "minecraft:end" {
+	case "minecraft:end":
 		return 2
-	} else {
+	default:
 		return -1
 	}
 }
