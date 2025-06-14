@@ -26,4 +26,6 @@ type Client interface {
 type ClientData interface {
 	Dimension() int32
 	SetDimension(dimension int32)
+	SetLastDrop()
+	InteractWithContainer() bool
 }

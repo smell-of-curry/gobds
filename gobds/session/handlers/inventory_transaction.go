@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"slices"
+	"time"
 
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/world"
@@ -34,7 +35,15 @@ func (h InventoryTransaction) Handle(c interceptor.Client, pk packet.Packet, ctx
 }
 
 // handleInteraction ...
-func (h InventoryTransaction) handleInteraction(_ interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+func (h InventoryTransaction) handleInteraction(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+	data := c.Data().(interceptor.ClientData)
+	for _, action := range pkt.Actions {
+		if action.SourceType != protocol.InventoryActionSourceWorld || action.WindowID != protocol.WindowIDInventory {
+			continue
+		}
+		data.SetLastDrop()
+	}
+
 	transactionData, ok := pkt.TransactionData.(*protocol.UseItemTransactionData)
 	if !ok {
 		return
@@ -47,11 +56,16 @@ func (h InventoryTransaction) handleInteraction(_ interceptor.Client, pkt *packe
 	if !ok {
 		return
 	}
-	if _, ok = b.(block.Hopper); !ok {
-		return
+	switch b.(type) {
+	case block.Hopper, block.Chest, block.EnderChest:
+		ctx.Cancel()
+		if !data.InteractWithContainer() {
+			return
+		}
+		time.AfterFunc(time.Millisecond*500, func() {
+			c.WriteToServer(pkt)
+		})
 	}
-	// TODO: Re-enable hoppers once microjank fixes critical bugs.
-	ctx.Cancel()
 }
 
 // handleWorldBorder ...
