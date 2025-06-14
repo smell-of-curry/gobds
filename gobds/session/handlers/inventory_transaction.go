@@ -57,7 +57,9 @@ func (h InventoryTransaction) handleInteraction(c interceptor.Client, pkt *packe
 		return
 	}
 	switch b.(type) {
-	case block.Hopper, block.Chest, block.EnderChest:
+	case block.Chest, block.EnderChest,
+		block.CraftingTable, block.Anvil,
+		block.Stonecutter, block.Hopper:
 		ctx.Cancel()
 		if !data.InteractWithContainer() {
 			return
