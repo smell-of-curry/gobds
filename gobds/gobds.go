@@ -27,6 +27,8 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/util/area"
 	"github.com/smell-of-curry/gobds/gobds/util/translator"
 	"github.com/smell-of-curry/gobds/gobds/whitelist"
+
+	_ "github.com/smell-of-curry/gobds/gobds/block"
 )
 
 // GoBDS ...

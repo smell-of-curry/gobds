@@ -39,8 +39,8 @@ func (d *Data) SetLastDrop() {
 	d.lastDrop.Store(&now)
 }
 
-// InteractWithContainer ...
-func (d *Data) InteractWithContainer() bool {
+// InteractWithBlock ...
+func (d *Data) InteractWithBlock() bool {
 	lastDrop := d.lastDrop.Load()
 	return time.Since(*lastDrop) > time.Millisecond*500
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	gblock "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
@@ -57,11 +58,13 @@ func (h InventoryTransaction) handleInteraction(c interceptor.Client, pkt *packe
 		return
 	}
 	switch b.(type) {
-	case block.Chest, block.EnderChest,
-		block.CraftingTable, block.Anvil,
-		block.Stonecutter, block.Hopper:
+	case block.Chest, block.EnderChest, block.CraftingTable,
+		block.Anvil, block.Stonecutter, block.Hopper,
+		gblock.Button, block.WoodTrapdoor, block.CopperTrapdoor,
+		block.WoodFenceGate, block.WoodDoor, block.CopperDoor,
+		block.Ladder, block.Composter:
 		ctx.Cancel()
-		if !data.InteractWithContainer() {
+		if !data.InteractWithBlock() {
 			return
 		}
 		time.AfterFunc(time.Millisecond*500, func() {
