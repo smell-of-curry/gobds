@@ -152,6 +152,7 @@ func (gb *GoBDS) setupInterceptor() {
 		packet.IDCommandRequest:       handlers.CommandRequest{},
 		packet.IDInventoryTransaction: handlers.InventoryTransaction{},
 		packet.IDItemRegistry:         handlers.ItemRegistry{},
+		packet.IDItemStackRequest:     handlers.ItemStackRequest{},
 		packet.IDLevelChunk:           handlers.LevelChunk{},
 		packet.IDPlayerAuthInput:      handlers.PlayerAuthInput{},
 		packet.IDRemoveActor:          handlers.RemoveActor{},
