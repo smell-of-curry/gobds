@@ -12,6 +12,8 @@ type Config struct {
 		LocalAddress  string
 		RemoteAddress string
 
+		PlayerManagerPath string
+
 		Whitelisted bool
 
 		SecuredSlots      int
@@ -49,6 +51,8 @@ func DefaultConfig() Config {
 
 	c.Network.LocalAddress = "127.0.0.1:19132"
 	c.Network.RemoteAddress = "127.0.0.1:19133"
+
+	c.Network.PlayerManagerPath = "players/manager.json"
 
 	c.Network.Whitelisted = false
 

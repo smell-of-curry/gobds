@@ -40,7 +40,8 @@ type GoBDS struct {
 
 	resources []*resource.Pack
 
-	interceptor *interceptor.Interceptor
+	interceptor   *interceptor.Interceptor
+	playerManager *PlayerManager
 
 	whitelist *whitelist.Whitelist
 
@@ -206,8 +207,14 @@ func (gb *GoBDS) tick() {
 func (gb *GoBDS) Start() error {
 	gb.log.Info("starting gobds")
 
+	playerManager, err := NewPlayerManager(gb.conf.Network.PlayerManagerPath, gb.log)
+	if err != nil {
+		return err
+	}
+	gb.playerManager = playerManager
+
 	remoteAddr := gb.conf.Network.RemoteAddress
-	_, err := raknet.Ping(remoteAddr)
+	_, err = raknet.Ping(remoteAddr)
 	if err != nil {
 		return err
 	}
@@ -234,8 +241,10 @@ func (gb *GoBDS) Start() error {
 		"on", gb.conf.Network.LocalAddress, "to", gb.conf.Network.RemoteAddress)
 
 	gb.listener = l
+	gb.playerManager.Start(time.Minute * 5)
 	defer func(l *minecraft.Listener) {
 		gb.log.Info("shutting down gobds")
+		gb.playerManager.Close()
 		_ = l.Close()
 	}(gb.listener)
 
@@ -270,6 +279,9 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 		_ = gb.listener.Disconnect(conn, fmt.Sprintf("You must join through the server hub to play."))
 		return
 	}
+
+	clientData = gb.playerManager.ClientDataOf(conn)
+	identityData = gb.playerManager.IdentityDataOf(conn)
 
 	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
