@@ -3,4 +3,5 @@
 
 *.toml
 *.json
+*.json.lock
 *.exe

@@ -3,8 +3,10 @@ package gobds
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -89,15 +91,21 @@ func (m *PlayerManager) load() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if err := os.MkdirAll(filepath.Dir(m.filePath), os.ModePerm); err != nil {
+		panic(fmt.Errorf("failed to create directory: %w", err))
+	}
+
 	if err := m.fileLock.Lock(); err != nil {
-		return err
+		panic(err)
 	}
 	defer m.fileLock.Unlock()
 
 	data, err := os.ReadFile(m.filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			m.log.Error("player manager file does not exist, will be created on next save", "path", m.filePath)
+			if createErr := os.WriteFile(m.filePath, []byte("{}"), os.ModePerm); createErr != nil {
+				panic(err)
+			}
 			return nil
 		}
 		return err

@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/netip"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +25,7 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
+	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/session/handlers"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -123,8 +127,22 @@ func (gb *GoBDS) setupResources() {
 func (gb *GoBDS) setupCommands() {
 	rawBytes, err := os.ReadFile(gb.conf.Resources.CommandPath)
 	if err != nil {
-		gb.log.Error("failed to read commands", "err", err)
-		return
+		if errors.Is(err, os.ErrNotExist) {
+			dir := filepath.Dir(gb.conf.Resources.CommandPath)
+			if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+				panic(err)
+			}
+			if createErr := os.WriteFile(gb.conf.Resources.CommandPath, []byte("{}"), os.ModePerm); createErr != nil {
+				panic(err)
+			}
+			rawBytes, err = os.ReadFile(gb.conf.Resources.CommandPath)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			gb.log.Error("failed to read commands", "err", err)
+			return
+		}
 	}
 
 	var commands map[string]cmd.EngineResponseCommand
@@ -141,6 +159,7 @@ func (gb *GoBDS) setupCommands() {
 func (gb *GoBDS) setupServices() {
 	infra.AuthenticationService = authentication.NewService(gb.log, gb.conf.AuthenticationService)
 	infra.ClaimService = claim.NewService(gb.log, gb.conf.ClaimService)
+	infra.VPNService = vpn.NewService(gb.log, gb.conf.VPNService)
 }
 
 // setupInterceptor ...
@@ -270,6 +289,11 @@ func (gb *GoBDS) Start() error {
 // accept ...
 func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	clientData, identityData := conn.ClientData(), conn.IdentityData()
+	if reason, allowed := gb.handleVPN(conn.LocalAddr()); !allowed {
+		_ = gb.listener.Disconnect(conn, reason)
+		return
+	}
+
 	response, err := infra.AuthenticationService.AuthenticationOf(identityData.XUID)
 	if err != nil {
 		_ = gb.listener.Disconnect(conn, err.Error())
@@ -339,6 +363,24 @@ func (gb *GoBDS) handleSecureSlots(displayName string) bool {
 		return true
 	}
 	return gb.whitelist.Has(displayName)
+}
+
+// handleVPN ...
+func (gb *GoBDS) handleVPN(netAddr net.Addr) (reason string, allowed bool) {
+	addr, _ := netip.ParseAddrPort(netAddr.String())
+	addrString := addr.Addr().String()
+	if addrString == "127.0.0.1" || addrString == "0.0.0.0" || addrString == "localhost" {
+		return "", true
+	}
+
+	m, err := infra.VPNService.CheckIP(addrString)
+	if err != nil {
+		return err.Error(), false
+	}
+	if m.Status != vpn.StatusSuccess {
+		return m.Message, false
+	}
+	return "VPN/Proxy connections are not allowed.", m.Proxy
 }
 
 // startGame ...

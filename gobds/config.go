@@ -40,6 +40,10 @@ type Config struct {
 		URL string
 		Key string
 	}
+	VPNService struct {
+		URL string
+		Key string
+	}
 	Encryption struct {
 		Key string
 	}
@@ -70,6 +74,8 @@ func DefaultConfig() Config {
 
 	c.ClaimService.URL = "http://127.0.0.1:8080/fetch/claims"
 	c.ClaimService.Key = "secret-key"
+
+	c.VPNService.URL = "http://ip-api.com/json"
 
 	c.Encryption.Key = "secret-key"
 	return c
