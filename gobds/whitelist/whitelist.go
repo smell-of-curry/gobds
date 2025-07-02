@@ -21,7 +21,7 @@ func (w *Whitelist) Has(name string) bool {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	for _, entry := range w.entries {
-		if strings.ToLower(entry) == strings.ToLower(name) {
+		if strings.EqualFold(entry, name) {
 			return true
 		}
 	}
