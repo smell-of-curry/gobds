@@ -3,7 +3,5 @@
 
 *.toml
 *.json
-*.json.lock
-*.exe
-
 *.lock
+*.exe
