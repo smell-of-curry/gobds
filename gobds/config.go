@@ -66,7 +66,7 @@ func DefaultConfig() Config {
 	c.Network.PlayerManagerPath = "players/manager.json"
 
 	c.Network.Whitelisted = false
-	c.Network.WhitelistPath = "whitelists.toml"
+	c.Network.WhitelistPath = "whitelists.json"
 
 	c.Network.SecuredSlots = 0
 	c.Network.MaxRenderDistance = 16
