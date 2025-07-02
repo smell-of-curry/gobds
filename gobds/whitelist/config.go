@@ -19,8 +19,8 @@ func defaultConfig() Config {
 }
 
 // ReadConfig ...
-func ReadConfig() (Config, error) {
-	g := gophig.NewGophig[Config]("./whitelists.toml", gophig.TOMLMarshaler{}, os.ModePerm)
+func ReadConfig(path string) (Config, error) {
+	g := gophig.NewGophig[Config](path, gophig.TOMLMarshaler{}, os.ModePerm)
 	_, err := g.LoadConf()
 	if os.IsNotExist(err) {
 		err = g.SaveConf(defaultConfig())
