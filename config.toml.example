@@ -1,0 +1,36 @@
+[Network]
+LocalAddress = '127.0.0.1:19132'
+RemoteAddress = '127.0.0.1:19133'
+PlayerManagerPath = 'players/manager.json'
+Whitelisted = false
+SecuredSlots = 0
+MaxRenderDistance = 16
+FlushRate = 20
+
+[Border]
+Enabled = false
+MinX = 0
+MinZ = 0
+MaxX = 0
+MaxZ = 0
+
+[Resources]
+PacksRequired = false
+CommandPath = 'resources/commands.json'
+URLResources = []
+PathResources = []
+
+[AuthenticationService]
+URL = 'http://127.0.0.1:8080/authentication'
+Key = 'secret-key'
+
+[ClaimService]
+URL = 'http://127.0.0.1:8080/fetch/claims'
+Key = 'secret-key'
+
+[VPNService]
+URL = 'http://ip-api.com/json'
+Key = ''
+
+[Encryption]
+Key = 'secret-key'
