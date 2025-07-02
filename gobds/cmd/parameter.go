@@ -61,13 +61,3 @@ func (o Optional[T]) LoadOr(or T) T {
 	}
 	return or
 }
-
-// with returns an Optional[T] with the value passed. It also sets the 'set' field to true.
-func (o Optional[T]) with(val any) any {
-	return Optional[T]{val: val.(T), set: true}
-}
-
-// optionalT is used to identify a parameter of the Optional type.
-type optionalT interface {
-	with(val any) any
-}

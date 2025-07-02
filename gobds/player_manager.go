@@ -98,7 +98,11 @@ func (m *PlayerManager) load() error {
 	if err := m.fileLock.Lock(); err != nil {
 		panic(err)
 	}
-	defer m.fileLock.Unlock()
+	defer func() {
+		if err := m.fileLock.Unlock(); err != nil {
+			m.log.Error("failed to unlock file during load", "err", err)
+		}
+	}()
 
 	data, err := os.ReadFile(m.filePath)
 	if err != nil {
@@ -134,7 +138,11 @@ func (m *PlayerManager) save() error {
 	if err = m.fileLock.Lock(); err != nil {
 		return err
 	}
-	defer m.fileLock.Unlock()
+	defer func() {
+		if err := m.fileLock.Unlock(); err != nil {
+			m.log.Error("failed to unlock file during save", "err", err)
+		}
+	}()
 
 	tempFile := m.filePath + ".tmp"
 	if err = os.WriteFile(tempFile, data, os.ModePerm); err != nil {

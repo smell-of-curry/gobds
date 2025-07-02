@@ -39,7 +39,7 @@ func (h AvailableCommands) Handle(_ interceptor.Client, pk packet.Packet, _ *ses
 	vanillaCommandsCache = filtered
 	commandsMu.Unlock()
 
-	pkt = h.appendCustomCommands(pkt)
+	*pkt = *h.appendCustomCommands(pkt)
 }
 
 // appendCustomCommands ...

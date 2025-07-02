@@ -133,7 +133,7 @@ func (gb *GoBDS) setupCommands() {
 				panic(err)
 			}
 			if createErr := os.WriteFile(gb.conf.Resources.CommandPath, []byte("{}"), os.ModePerm); createErr != nil {
-				panic(err)
+				panic(createErr)
 			}
 			rawBytes, err = os.ReadFile(gb.conf.Resources.CommandPath)
 			if err != nil {
@@ -288,7 +288,7 @@ func (gb *GoBDS) Start() error {
 
 // accept ...
 func (gb *GoBDS) accept(conn *minecraft.Conn) {
-	clientData, identityData := conn.ClientData(), conn.IdentityData()
+	identityData := conn.IdentityData()
 	if reason, allowed := gb.handleVPN(conn.LocalAddr()); !allowed {
 		_ = gb.listener.Disconnect(conn, reason)
 		return
@@ -300,11 +300,11 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 		return
 	}
 	if !response.Allowed {
-		_ = gb.listener.Disconnect(conn, fmt.Sprintf("You must join through the server hub to play."))
+		_ = gb.listener.Disconnect(conn, "You must join through the server hub to play.")
 		return
 	}
 
-	clientData = gb.playerManager.ClientDataOf(conn)
+	clientData := gb.playerManager.ClientDataOf(conn)
 	identityData = gb.playerManager.IdentityDataOf(conn)
 
 	displayName := identityData.DisplayName
@@ -440,7 +440,11 @@ func (gb *GoBDS) readFrom(
 	src, dst *minecraft.Conn,
 	readName, writeName string,
 ) {
-	defer gb.listener.Disconnect(client, "connection closed")
+	defer func() {
+		if err := gb.listener.Disconnect(client, "connection closed"); err != nil {
+			gb.log.Error("error disconnecting client", "err", err)
+		}
+	}()
 	defer server.Close()
 
 	for {
