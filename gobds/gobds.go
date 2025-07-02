@@ -304,8 +304,8 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 		return
 	}
 
-	clientData := gb.playerManager.ClientDataOf(conn)
 	identityData = gb.playerManager.IdentityDataOf(conn)
+	clientData := gb.playerManager.ClientDataOf(conn)
 
 	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
