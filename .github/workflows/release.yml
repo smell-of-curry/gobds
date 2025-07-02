@@ -20,7 +20,7 @@ jobs:
         run: GOOS=windows GOARCH=amd64 go build -o gobds.exe .
 
       - name: Build Linux executable
-        run: GOOS=linux GOARCH=amd64 go build -o gobds .
+        run: GOOS=linux GOARCH=amd64 go build -o gobds-linux .
 
       - name: Create Release
         id: create_release
@@ -49,7 +49,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gobds
-          asset_name: gobds
+          asset_path: ./gobds-linux
+          asset_name: gobds-linux
           asset_content_type: application/octet-stream
 ...
