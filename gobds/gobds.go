@@ -186,6 +186,7 @@ func (gb *GoBDS) setupInterceptor() {
 
 // setupWhitelists ...
 func (gb *GoBDS) setupWhitelists() {
+	conf, err := whitelist.ReadConfig(gb.conf.Network.WhitelistPath)
 	if err != nil {
 		gb.log.Error("failed to read whitelist config", "err", err)
 		return
