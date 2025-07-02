@@ -1,4 +1,5 @@
 [Network]
+ServerName = 'Some server'
 LocalAddress = '127.0.0.1:19132'
 RemoteAddress = '127.0.0.1:19133'
 PlayerManagerPath = 'players/manager.json'
@@ -6,6 +7,7 @@ Whitelisted = false
 SecuredSlots = 0
 MaxRenderDistance = 16
 FlushRate = 20
+SentryDSN = ''
 
 [Border]
 Enabled = false

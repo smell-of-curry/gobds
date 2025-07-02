@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/getsentry/sentry-go"
 	"github.com/smell-of-curry/gobds/gobds"
 )
 
@@ -13,6 +14,18 @@ func main() {
 	conf, err := gobds.ReadConfig()
 	if err != nil {
 		panic(err)
+	}
+
+	dsn := conf.Network.SentryDSN
+	if dsn != "" {
+		err = sentry.Init(sentry.ClientOptions{
+			Dsn:        conf.Network.SentryDSN,
+			ServerName: conf.Network.ServerName,
+		})
+		if err != nil {
+			panic(err)
+		}
+		defer sentry.Flush(2 * time.Second)
 	}
 
 	g := gobds.NewGoBDS(conf, log)

@@ -9,6 +9,8 @@ import (
 // Config ...
 type Config struct {
 	Network struct {
+		ServerName string
+
 		LocalAddress  string
 		RemoteAddress string
 
@@ -19,6 +21,8 @@ type Config struct {
 		SecuredSlots      int
 		MaxRenderDistance int
 		FlushRate         int
+
+		SentryDSN string
 	}
 	Border struct {
 		Enabled    bool
@@ -52,6 +56,8 @@ type Config struct {
 // DefaultConfig ...
 func DefaultConfig() Config {
 	c := Config{}
+
+	c.Network.ServerName = "Some server"
 
 	c.Network.LocalAddress = "127.0.0.1:19132"
 	c.Network.RemoteAddress = "127.0.0.1:19133"
