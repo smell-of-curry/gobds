@@ -260,7 +260,7 @@ func (gb *GoBDS) Start() error {
 		"on", gb.conf.Network.LocalAddress, "to", gb.conf.Network.RemoteAddress)
 
 	gb.listener = l
-	gb.playerManager.Start(time.Minute * 5)
+	gb.playerManager.Start(time.Minute * 3)
 	defer func(l *minecraft.Listener) {
 		gb.log.Info("shutting down gobds")
 		gb.playerManager.Close()
@@ -304,8 +304,8 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 		return
 	}
 
-	clientData := gb.playerManager.ClientDataOf(conn)
 	identityData = gb.playerManager.IdentityDataOf(conn)
+	clientData := gb.playerManager.ClientDataOf(conn)
 
 	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
@@ -442,6 +442,9 @@ func (gb *GoBDS) readFrom(
 ) {
 	defer func() {
 		if err := gb.listener.Disconnect(client, "connection closed"); err != nil {
+			if closedConnectionErr(err) || errors.Is(err, context.Canceled) {
+				return
+			}
 			gb.log.Error("error disconnecting client", "err", err)
 		}
 	}()

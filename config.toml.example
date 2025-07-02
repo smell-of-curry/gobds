@@ -1,4 +1,5 @@
 [Network]
+ServerName = 'Some server'
 LocalAddress = '127.0.0.1:19132' # The port that players will connect to
 RemoteAddress = '127.0.0.1:19134' # The port that the BDS server is hosted on
 PlayerManagerPath = 'players/manager.json' # The path with the player-list file
@@ -6,6 +7,7 @@ Whitelisted = false # If whitelist block is enabled
 SecuredSlots = 0 # The amount of secured slots on the server for only whitelisted players 
 MaxRenderDistance = 16 # The view distance for players
 FlushRate = 20 # The flush rate for the server
+SentryDSN = ''
 
 [Border]
 Enabled = false # Whether to enable the world border
