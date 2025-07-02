@@ -60,7 +60,7 @@ func DefaultConfig() Config {
 
 	c.Network.Whitelisted = false
 
-	c.Network.SecuredSlots = 10
+	c.Network.SecuredSlots = 0
 	c.Network.MaxRenderDistance = 16
 	c.Network.FlushRate = 20
 
