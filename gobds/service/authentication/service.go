@@ -38,7 +38,6 @@ func (s *Service) AuthenticationOf(xuid string) (*ResponseModel, error) {
 			cancel()
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
-		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("authorization", s.Key)
 
 		response, err := s.Client.Do(request)
