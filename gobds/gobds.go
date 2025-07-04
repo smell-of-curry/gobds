@@ -212,12 +212,14 @@ func (gb *GoBDS) tick() {
 		case <-gb.ctx.Done():
 			return
 		case <-t.C:
-			claims, err := infra.ClaimService.FetchClaims()
-			if err != nil {
-				gb.log.Error("failed to fetch claims", "err", err)
-				continue
+			if infra.ClaimService.Enabled {
+				claims, err := infra.ClaimService.FetchClaims()
+				if err != nil {
+					gb.log.Error("failed to fetch claims", "err", err)
+					continue
+				}
+				infra.SetClaims(claims)
 			}
-			infra.SetClaims(claims)
 		}
 	}
 }
@@ -293,15 +295,16 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 		_ = gb.listener.Disconnect(conn, reason)
 		return
 	}
-
-	response, err := infra.AuthenticationService.AuthenticationOf(identityData.XUID)
-	if err != nil {
-		_ = gb.listener.Disconnect(conn, err.Error())
-		return
-	}
-	if !response.Allowed {
-		_ = gb.listener.Disconnect(conn, "You must join through the server hub to play.")
-		return
+	if infra.AuthenticationService.Enabled {
+		response, err := infra.AuthenticationService.AuthenticationOf(identityData.XUID)
+		if err != nil {
+			_ = gb.listener.Disconnect(conn, err.Error())
+			return
+		}
+		if !response.Allowed {
+			_ = gb.listener.Disconnect(conn, "You must join through the server hub to play.")
+			return
+		}
 	}
 
 	identityData = gb.playerManager.IdentityDataOf(conn)
@@ -380,7 +383,7 @@ func (gb *GoBDS) handleVPN(netAddr net.Addr) (reason string, allowed bool) {
 	if m.Status != vpn.StatusSuccess {
 		return m.Message, false
 	}
-	return "VPN/Proxy connections are not allowed.", m.Proxy
+	return "VPN/Proxy connections are not allowed.", !m.Proxy
 }
 
 // startGame ...

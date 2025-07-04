@@ -24,6 +24,9 @@ func NewService(log *slog.Logger, c service.Config) *Service {
 
 // FetchClaims ...
 func (s *Service) FetchClaims() (map[string]PlayerClaim, error) {
+	if !s.Enabled {
+		return map[string]PlayerClaim{}, nil
+	}
 	var lastErr error
 	for attempt := 0; attempt <= service.MaxRetries; attempt++ {
 		if s.Closed {

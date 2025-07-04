@@ -23,6 +23,9 @@ func NewService(log *slog.Logger, c service.Config) *Service {
 
 // AuthenticationOf ...
 func (s *Service) AuthenticationOf(xuid string) (*ResponseModel, error) {
+	if !s.Enabled {
+		return &ResponseModel{Allowed: true}, nil
+	}
 	var lastErr error
 	for attempt := 0; attempt <= service.MaxRetries; attempt++ {
 		if s.Closed {

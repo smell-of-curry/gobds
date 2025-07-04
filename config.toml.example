@@ -24,14 +24,17 @@ URLResources = [] # Urls of resource packs to require downloaded by players
 PathResources = [] # Paths of resource packs to require downloaded by players
 
 [AuthenticationService]
+Enabled = false # Whether this service is enabled
 URL = 'http://127.0.0.1:8080/authentication' # The Hub API Endpoint to verify players joining through queue
 Key = 'secret-key' # The authentication key for the queues API
 
 [ClaimService]
+Enabled = false # Whether this service is enabled
 URL = 'http://127.0.0.1:3001/api/database/testing/claims' # The service endpoint to fetch players claims
 Key = 'secret-key' # The API token needed to fetch claims
 
 [VPNService]
+Enabled = false # Whether this service is enabled
 URL = 'http://ip-api.com/json' # A service to validate users if they are using VPN's
 Key = '' # Authentication key if required
 

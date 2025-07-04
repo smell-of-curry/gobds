@@ -38,16 +38,19 @@ type Config struct {
 		PathResources []string
 	}
 	AuthenticationService struct {
-		URL string
-		Key string
+		Enabled bool
+		URL     string
+		Key     string
 	}
 	ClaimService struct {
-		URL string
-		Key string
+		Enabled bool
+		URL     string
+		Key     string
 	}
 	VPNService struct {
-		URL string
-		Key string
+		Enabled bool
+		URL     string
+		Key     string
 	}
 	Encryption struct {
 		Key string
@@ -77,12 +80,15 @@ func DefaultConfig() Config {
 	c.Resources.PacksRequired = false
 	c.Resources.CommandPath = "resources/commands.json"
 
+	c.AuthenticationService.Enabled = false
 	c.AuthenticationService.URL = "http://127.0.0.1:8080/authentication"
 	c.AuthenticationService.Key = "secret-key"
 
+	c.ClaimService.Enabled = false
 	c.ClaimService.URL = "http://127.0.0.1:8080/fetch/claims"
 	c.ClaimService.Key = "secret-key"
 
+	c.VPNService.Enabled = false
 	c.VPNService.URL = "http://ip-api.com/json"
 
 	c.Encryption.Key = "secret-key"

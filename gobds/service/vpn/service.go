@@ -27,6 +27,9 @@ func NewService(log *slog.Logger, c service.Config) *Service {
 
 // CheckIP ...
 func (s *Service) CheckIP(ip string) (*ResponseModel, error) {
+	if !s.Enabled {
+		return &ResponseModel{Status: "success", Proxy: false}, nil
+	}
 	s.mu.Lock()
 	if time.Now().Before(s.rateLimitReset) {
 		s.mu.Unlock()

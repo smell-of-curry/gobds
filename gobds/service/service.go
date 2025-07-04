@@ -11,9 +11,10 @@ import (
 
 // Service ...
 type Service struct {
-	Url    string
-	Key    string
-	Closed bool
+	Enabled bool
+	Url     string
+	Key     string
+	Closed  bool
 
 	Client *http.Client
 	Log    *slog.Logger
@@ -43,9 +44,10 @@ func NewService(log *slog.Logger, c Config) *Service {
 	}
 
 	return &Service{
-		Url:    c.URL,
-		Key:    c.Key,
-		Closed: false,
+		Enabled: c.Enabled,
+		Url:     c.URL,
+		Key:     c.Key,
+		Closed:  false,
 		Client: &http.Client{
 			Timeout:   RequestTimeout,
 			Transport: transport,
