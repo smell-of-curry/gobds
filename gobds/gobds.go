@@ -178,9 +178,14 @@ func (gb *GoBDS) setupInterceptor() {
 		packet.IDRemoveActor:          handlers.RemoveActor{},
 		packet.IDSetActorData:         handlers.SetActorData{},
 		packet.IDSubChunk:             handlers.SubChunk{},
+		packet.IDText:                 handlers.CustomCommandRegisterHandler{},
 	} {
 		intercept.AddHandler(id, h)
 	}
+
+	// Set the command path for the custom command register handler
+	handlers.SetCommandPath(gb.conf.Resources.CommandPath)
+
 	gb.interceptor = intercept
 }
 

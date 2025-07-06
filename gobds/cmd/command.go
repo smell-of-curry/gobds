@@ -6,15 +6,17 @@ type Command struct {
 	description string
 	aliases     []string
 	params      [][]ParamInfo
+	requiresOp  bool
 }
 
 // New ...
-func New(name, description string, aliases []string, params [][]ParamInfo) Command {
+func New(name, description string, aliases []string, params [][]ParamInfo, requiresOp bool) Command {
 	return Command{
 		name:        name,
 		description: description,
 		aliases:     aliases,
 		params:      params,
+		requiresOp:  requiresOp,
 	}
 }
 
@@ -36,6 +38,11 @@ func (cmd Command) Aliases() []string {
 // Params returns a list of all parameters.
 func (cmd Command) Params() [][]ParamInfo {
 	return cmd.params
+}
+
+// RequiresOp returns whether the command requires OP permission.
+func (cmd Command) RequiresOp() bool {
+	return cmd.requiresOp
 }
 
 // ParamInfo holds the information of a parameter.

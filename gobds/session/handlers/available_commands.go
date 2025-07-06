@@ -158,11 +158,17 @@ func (h AvailableCommands) appendCustomCommands(pkt *packet.AvailableCommands) *
 				})
 			}
 		}
+		permissionLevel := byte(packet.CommandPermissionLevelNormal)
+		if c.RequiresOp() {
+			permissionLevel = byte(packet.CommandPermissionLevelAdmin)
+		}
+
 		pkt.Commands = append(pkt.Commands, protocol.Command{
-			Name:          c.Name(),
-			Description:   c.Description(),
-			AliasesOffset: aliasesIndex,
-			Overloads:     overloads,
+			Name:            c.Name(),
+			Description:     c.Description(),
+			PermissionLevel: permissionLevel,
+			AliasesOffset:   aliasesIndex,
+			Overloads:       overloads,
 		})
 	}
 	return pkt
@@ -193,7 +199,7 @@ func valueToParamType(i cmd.ParamInfo) (t uint32, enum commandEnum) {
 	case bool:
 		return 0, commandEnum{
 			Type:    "bool",
-			Options: []string{"true", "1", "false", "0"},
+			Options: []string{"true", "false"},
 		}
 	case mgl64.Vec3:
 		return protocol.CommandArgTypePosition, enum
