@@ -1,7 +1,7 @@
 [Network]
 ServerName = 'Some server' # An identifier/name for the server, this is used for Sentry
-LocalAddress = '127.0.0.1:19132' # The port that players will connect to
-RemoteAddress = '127.0.0.1:19134' # The port that the BDS server is hosted on
+LocalAddress = '0.0.0.0:19132' # The port that players will connect to
+RemoteAddress = '0.0.0.0:19134' # The port that the BDS server is hosted on
 PlayerManagerPath = 'players/manager.json' # The path with the player-list file
 Whitelisted = false # If whitelist block is enabled
 WhitelistPath = 'whitelists.json' # The path to the whitelist file
