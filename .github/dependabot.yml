@@ -1,0 +1,20 @@
+# Learn about Dependabot:
+# https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Enable version updates for Go modules.
+  - package-ecosystem: 'gomod'
+    # Look for go.mod and go.sum files in the root directory.
+    directory: '/'
+    # Check for updates daily.
+    schedule:
+      interval: daily
+
+  # Enable version updates for GitHub Actions.
+  - package-ecosystem: github-actions
+    # Look in the root directory.
+    directory: '/'
+    # Check for updates weekly.
+    schedule:
+      interval: weekly
