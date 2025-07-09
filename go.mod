@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/avast/retry-go/v4 v4.6.1
-	github.com/df-mc/dragonfly v0.10.4-0.20250525055426-6759f0a7617b
+	github.com/df-mc/dragonfly v0.10.5
 	github.com/getsentry/sentry-go v0.34.0
 	github.com/go-gl/mathgl v1.2.0
 	github.com/go-jose/go-jose/v4 v4.1.0
@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.0.2
 	github.com/sandertv/go-raknet v1.14.3-0.20250525005230-991ee492a907
-	github.com/sandertv/gophertunnel v1.46.0
+	github.com/sandertv/gophertunnel v1.48.0
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
 )
 
