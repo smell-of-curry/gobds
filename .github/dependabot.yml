@@ -1,3 +1,4 @@
+---
 # Learn about Dependabot:
 # https://docs.github.com/en/code-security/dependabot
 
@@ -18,3 +19,4 @@ updates:
     # Check for updates weekly.
     schedule:
       interval: weekly
+...
