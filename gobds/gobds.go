@@ -20,6 +20,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/resource"
+	"github.com/sandertv/gophertunnel/minecraft/text"
 	"github.com/smell-of-curry/gobds/gobds/cmd"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
@@ -303,7 +304,11 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	if infra.AuthenticationService.Enabled {
 		response, err := infra.AuthenticationService.AuthenticationOf(identityData.XUID)
 		if err != nil {
-			_ = gb.listener.Disconnect(conn, err.Error())
+			disconnectionMessage := err.Error()
+			if errors.Is(err, authentication.RecordNotFound) {
+				disconnectionMessage = text.Colourf("<red>You must join through the server hub.</red>")
+			}
+			_ = gb.listener.Disconnect(conn, disconnectionMessage)
 			return
 		}
 		if !response.Allowed {

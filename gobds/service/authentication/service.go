@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,6 +21,10 @@ type Service struct {
 func NewService(log *slog.Logger, c service.Config) *Service {
 	return &Service{Service: service.NewService(log, c)}
 }
+
+var (
+	RecordNotFound = errors.New("no authentication record found")
+)
 
 // AuthenticationOf ...
 func (s *Service) AuthenticationOf(xuid string) (*ResponseModel, error) {
@@ -56,7 +61,7 @@ func (s *Service) AuthenticationOf(xuid string) (*ResponseModel, error) {
 
 		switch response.StatusCode {
 		case http.StatusNotFound:
-			lastErr = fmt.Errorf("no authentication record found for: %s", xuid)
+			lastErr = RecordNotFound
 		case http.StatusGone:
 			lastErr = fmt.Errorf("found expired authentication record found for: %s", xuid)
 		case http.StatusOK:
