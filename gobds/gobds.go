@@ -297,9 +297,11 @@ func (gb *GoBDS) Start() error {
 // accept ...
 func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	identityData := conn.IdentityData()
-	if reason, allowed := gb.handleVPN(conn.LocalAddr()); !allowed {
-		_ = gb.listener.Disconnect(conn, reason)
-		return
+	if infra.VPNService.Enabled {
+		if reason, allowed := gb.handleVPN(conn.LocalAddr()); !allowed {
+			_ = gb.listener.Disconnect(conn, reason)
+			return
+		}
 	}
 	if infra.AuthenticationService.Enabled {
 		response, err := infra.AuthenticationService.AuthenticationOf(identityData.XUID)
@@ -325,7 +327,7 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 		_ = gb.listener.Disconnect(conn, "You're not whitelisted.")
 		return
 	}
-	if !gb.handleSecureSlots(displayName) {
+	if !infra.AuthenticationService.Enabled && !gb.handleSecureSlots(displayName) {
 		_ = gb.listener.Disconnect(conn, "The server is at full capacity.")
 		return
 	}
