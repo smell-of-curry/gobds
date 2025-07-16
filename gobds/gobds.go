@@ -161,6 +161,7 @@ func (gb *GoBDS) setupServices() {
 	infra.AuthenticationService = authentication.NewService(gb.log, gb.conf.AuthenticationService)
 	infra.ClaimService = claim.NewService(gb.log, gb.conf.ClaimService)
 	infra.VPNService = vpn.NewService(gb.log, gb.conf.VPNService)
+	infra.PingIndicator = gb.conf.PingIndicator
 }
 
 // setupInterceptor ...

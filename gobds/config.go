@@ -30,6 +30,10 @@ type Config struct {
 		MinX, MinZ int32
 		MaxX, MaxZ int32
 	}
+	PingIndicator struct {
+		Enabled    bool
+		Identifier string
+	}
 	Resources struct {
 		PacksRequired bool
 
@@ -76,6 +80,9 @@ func DefaultConfig() Config {
 	c.Network.FlushRate = 20
 
 	c.Border.Enabled = false
+
+	c.PingIndicator.Enabled = true
+	c.PingIndicator.Identifier = "&_playerPing:"
 
 	c.Resources.PacksRequired = false
 	c.Resources.CommandPath = "resources/commands.json"

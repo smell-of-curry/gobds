@@ -17,6 +17,10 @@ MaxX = 12000 # The maximum X coordinate for the world border
 MinZ = -12000 # The minimum Z coordinate for the world border
 MaxZ = 12000 # The maximum Z coordinate for the world border
 
+[PingIndicator]
+Enabled = true # Whether to enable the ping indicator
+Identifier = '&_playerPing:' # The identifier for the ping indicator
+
 [Resources]
 PacksRequired = false # If resource packs are required to download by players
 CommandPath = 'resources/commands.json' # The path to the file where the bds-scripting-commands are stored

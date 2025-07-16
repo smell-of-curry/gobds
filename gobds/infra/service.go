@@ -11,3 +11,9 @@ var (
 	ClaimService          *claim.Service
 	VPNService            *vpn.Service
 )
+
+// PingIndicator represents the global config for the session ping indicator.
+var PingIndicator struct {
+	Enabled    bool
+	Identifier string
+}

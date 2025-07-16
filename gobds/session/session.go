@@ -7,6 +7,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/util"
 )
 
@@ -30,13 +31,14 @@ func NewSession(client, server *minecraft.Conn, log *slog.Logger) *Session {
 	}
 }
 
-// pingIdentifier ...
-const pingIdentifier = "&_playerPing:"
-
 // SendPingIndicator ...
 func (s *Session) SendPingIndicator() {
-	ping := s.Ping()
+	indicator := infra.PingIndicator
+	if !indicator.Enabled {
+		return
+	}
 
+	ping := s.Ping()
 	var colour string
 	switch {
 	case ping < 20:
@@ -53,7 +55,7 @@ func (s *Session) SendPingIndicator() {
 
 	s.WriteToClient(&packet.SetTitle{
 		ActionType: packet.TitleActionSetTitle,
-		Text:       fmt.Sprintf("%sCurrent Ping: %s%d", pingIdentifier, colour, ping),
+		Text:       fmt.Sprintf("%sCurrent Ping: %s%d", indicator.Identifier, colour, ping),
 	})
 }
 
