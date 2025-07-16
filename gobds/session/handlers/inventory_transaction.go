@@ -91,7 +91,7 @@ func (h InventoryTransaction) handleWorldBorder(_ interceptor.Client, pkt *packe
 
 // handleClaims ...
 func (h InventoryTransaction) handleClaims(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
-	td, ok := pkt.TransactionData.(*protocol.UseItemTransactionData)
+	transactionData, ok := pkt.TransactionData.(*protocol.UseItemTransactionData)
 	if !ok {
 		return
 	}
@@ -102,7 +102,7 @@ func (h InventoryTransaction) handleClaims(c interceptor.Client, pkt *packet.Inv
 	if !ok {
 		return
 	}
-	pos := td.Position
+	pos := transactionData.Position
 	cl := ClaimAt(dat.Dimension(), int32(pos.X()), int32(pos.Z()))
 
 	if cl.ID == "" || // Invalid claim?
@@ -112,7 +112,17 @@ func (h InventoryTransaction) handleClaims(c interceptor.Client, pkt *packet.Inv
 		return
 	}
 
-	heldItem := td.HeldItem.Stack.ItemType
+	if transactionData.ActionType == protocol.UseItemActionClickBlock &&
+		transactionData.TriggerType == protocol.UseItemActionClickAir {
+		if b, exists := world.BlockByRuntimeID(transactionData.BlockRuntimeID); exists {
+			switch b.(type) {
+			case block.ItemFrame, block.Lectern, block.DecoratedPot:
+				ctx.Cancel()
+			}
+		}
+	}
+
+	heldItem := transactionData.HeldItem.Stack.ItemType
 	if heldItem.NetworkID == 0 {
 		return
 	}
