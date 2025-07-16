@@ -16,6 +16,8 @@ type Client interface {
 	WriteToClient(pk packet.Packet)
 	WriteToServer(pk packet.Packet)
 
+	Disconnect(message string)
+
 	GameData() minecraft.GameData
 	ClientData() login.ClientData
 	Locale() string

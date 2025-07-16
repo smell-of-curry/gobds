@@ -85,6 +85,34 @@ func (s *Session) WriteToServer(pk packet.Packet) {
 	}
 }
 
+// ForwardXUID ...
+func (s *Session) ForwardXUID(encryptionKey string) {
+	name, xuid := s.IdentityData().DisplayName, s.IdentityData().XUID
+	message := "XUID=" + xuid + " | NAME=" + name
+
+	encryptedMessage, err := util.EncryptMessage(message, encryptionKey)
+	if err != nil {
+		s.log.Error("error encrypting message", "error", err)
+		return
+	}
+	s.WriteToServer(&packet.Text{
+		TextType:         packet.TextTypeChat,
+		NeedsTranslation: false,
+		SourceName:       s.ClientData().ThirdPartyName,
+		Message:          "[PROXY_XUID] " + encryptedMessage,
+		XUID:             xuid,
+	})
+}
+
+// Disconnect ...
+func (s *Session) Disconnect(message string) {
+	_ = s.client.WritePacket(&packet.Disconnect{
+		HideDisconnectionScreen: message == "",
+		Message:                 message,
+	})
+	_ = s.client.Flush()
+}
+
 // GameData ...
 func (s *Session) GameData() minecraft.GameData {
 	return s.client.GameData()
@@ -113,23 +141,4 @@ func (s *Session) Client() *minecraft.Conn {
 // Server ...
 func (s *Session) Server() *minecraft.Conn {
 	return s.server
-}
-
-// ForwardXUID ...
-func (s *Session) ForwardXUID(encryptionKey string) {
-	name, xuid := s.IdentityData().DisplayName, s.IdentityData().XUID
-	message := "XUID=" + xuid + " | NAME=" + name
-
-	encryptedMessage, err := util.EncryptMessage(message, encryptionKey)
-	if err != nil {
-		s.log.Error("error encrypting message", "error", err)
-		return
-	}
-	s.WriteToServer(&packet.Text{
-		TextType:         packet.TextTypeChat,
-		NeedsTranslation: false,
-		SourceName:       s.ClientData().ThirdPartyName,
-		Message:          "[PROXY_XUID] " + encryptedMessage,
-		XUID:             xuid,
-	})
 }

@@ -162,6 +162,7 @@ func (gb *GoBDS) setupServices() {
 	infra.ClaimService = claim.NewService(gb.log, gb.conf.ClaimService)
 	infra.VPNService = vpn.NewService(gb.log, gb.conf.VPNService)
 	infra.PingIndicator = gb.conf.PingIndicator
+	infra.AFKTimer = gb.conf.AFKTimer
 }
 
 // setupInterceptor ...
@@ -176,7 +177,7 @@ func (gb *GoBDS) setupInterceptor() {
 		packet.IDItemRegistry:         handlers.ItemRegistry{},
 		packet.IDItemStackRequest:     handlers.ItemStackRequest{},
 		packet.IDLevelChunk:           handlers.LevelChunk{},
-		packet.IDPlayerAuthInput:      handlers.PlayerAuthInput{},
+		packet.IDPlayerAuthInput:      handlers.NewPlayerAuthInput(),
 		packet.IDRemoveActor:          handlers.RemoveActor{},
 		packet.IDSetActorData:         handlers.SetActorData{},
 		packet.IDSubChunk:             handlers.SubChunk{},

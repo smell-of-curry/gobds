@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/restartfu/gophig"
+	"github.com/smell-of-curry/gobds/gobds/util"
 )
 
 // Config ...
@@ -33,6 +34,10 @@ type Config struct {
 	PingIndicator struct {
 		Enabled    bool
 		Identifier string
+	}
+	AFKTimer struct {
+		Enabled         bool
+		TimeoutDuration util.Duration
 	}
 	Resources struct {
 		PacksRequired bool
@@ -83,6 +88,8 @@ func DefaultConfig() Config {
 
 	c.PingIndicator.Enabled = true
 	c.PingIndicator.Identifier = "&_playerPing:"
+
+	c.AFKTimer.Enabled = true
 
 	c.Resources.PacksRequired = false
 	c.Resources.CommandPath = "resources/commands.json"

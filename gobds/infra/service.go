@@ -4,6 +4,7 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
+	"github.com/smell-of-curry/gobds/gobds/util"
 )
 
 var (
@@ -16,4 +17,10 @@ var (
 var PingIndicator struct {
 	Enabled    bool
 	Identifier string
+}
+
+// AFKTimer represents the global config for the session afk timer.
+var AFKTimer struct {
+	Enabled         bool
+	TimeoutDuration util.Duration
 }
