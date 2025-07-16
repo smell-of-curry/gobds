@@ -6,6 +6,7 @@ import (
 
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/world"
+	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
@@ -91,6 +92,19 @@ func (h InventoryTransaction) handleWorldBorder(_ interceptor.Client, pkt *packe
 
 // handleClaims ...
 func (h InventoryTransaction) handleClaims(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+	h.handleClaimUseItem(c, pkt, ctx)
+	if ctx.Cancelled() {
+		return
+	}
+	h.handleClaimUseItemOnEntity(c, pkt, ctx)
+	if ctx.Cancelled() {
+		return
+	}
+	h.handleClaimReleaseItem(c, pkt, ctx)
+}
+
+// handleClaimUseItem ...
+func (h InventoryTransaction) handleClaimUseItem(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
 	transactionData, ok := pkt.TransactionData.(*protocol.UseItemTransactionData)
 	if !ok {
 		return
@@ -146,6 +160,56 @@ func (h InventoryTransaction) handleClaims(c interceptor.Client, pkt *packet.Inv
 		return
 	}
 
+	ctx.Cancel()
+}
+
+// handleClaimUseItemEntity ...
+func (h InventoryTransaction) handleClaimUseItemOnEntity(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+	transactionData, ok := pkt.TransactionData.(*protocol.UseItemOnEntityTransactionData)
+	if !ok {
+		return
+	}
+
+	clientXUID := c.IdentityData().XUID
+
+	dat, ok := c.Data().(interceptor.ClientData)
+	if !ok {
+		return
+	}
+	pos := transactionData.Position
+	cl := ClaimAt(dat.Dimension(), int32(pos.X()), int32(pos.Z()))
+
+	if cl.ID == "" || // Invalid claim?
+		cl.OwnerXUID == "*" || // Admin claim.
+		cl.OwnerXUID == clientXUID ||
+		slices.Contains(cl.TrustedXUIDS, clientXUID) {
+		return
+	}
+	ctx.Cancel()
+}
+
+// handleClaimReleaseItem ...
+func (h InventoryTransaction) handleClaimReleaseItem(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+	transactionData, ok := pkt.TransactionData.(*protocol.ReleaseItemTransactionData)
+	if !ok {
+		return
+	}
+
+	clientXUID := c.IdentityData().XUID
+
+	dat, ok := c.Data().(interceptor.ClientData)
+	if !ok {
+		return
+	}
+	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
+	cl := ClaimAt(dat.Dimension(), int32(pos.X()), int32(pos.Z()))
+
+	if cl.ID == "" || // Invalid claim?
+		cl.OwnerXUID == "*" || // Admin claim.
+		cl.OwnerXUID == clientXUID ||
+		slices.Contains(cl.TrustedXUIDS, clientXUID) {
+		return
+	}
 	ctx.Cancel()
 }
 
