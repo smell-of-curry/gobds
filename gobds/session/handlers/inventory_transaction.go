@@ -118,7 +118,10 @@ func (h InventoryTransaction) handleClaimUseItem(c interceptor.Client, pkt *pack
 		return
 	}
 	pos := transactionData.Position
-	cl := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	if !ok {
+		return
+	}
 
 	if cl.ID == "" || // Invalid claim?
 		cl.OwnerXUID == "*" || // Admin claim.
@@ -180,7 +183,10 @@ func (h InventoryTransaction) handleClaimUseItemOnEntity(c interceptor.Client, p
 		return
 	}
 	pos := transactionData.Position
-	cl := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	if !ok {
+		return
+	}
 
 	if cl.ID == "" || // Invalid claim?
 		cl.OwnerXUID == "*" || // Admin claim.
@@ -214,7 +220,10 @@ func (h InventoryTransaction) handleClaimReleaseItem(c interceptor.Client, pkt *
 		return
 	}
 	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
-	cl := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	if !ok {
+		return
+	}
 
 	if cl.ID == "" || // Invalid claim?
 		cl.OwnerXUID == "*" || // Admin claim.
@@ -242,20 +251,17 @@ func claimDimensionToInt(dimension string) int32 {
 }
 
 // ClaimAt ...
-func ClaimAt(dimension int32, x, z float32) claim.PlayerClaim {
+func ClaimAt(dimension int32, x, z float32) (claim.PlayerClaim, bool) {
 	for _, c := range infra.Claims() {
 		if claimDimensionToInt(c.Location.Dimension) == dimension {
-			// Calculate actual min/max from the two positions
 			minX := min(c.Location.Pos1.X, c.Location.Pos2.X)
 			maxX := max(c.Location.Pos1.X, c.Location.Pos2.X)
 			minZ := min(c.Location.Pos1.Z, c.Location.Pos2.Z)
 			maxZ := max(c.Location.Pos1.Z, c.Location.Pos2.Z)
-
-			// Use floating-point comparison for better precision
 			if x >= minX && x <= maxX && z >= minZ && z <= maxZ {
-				return c
+				return c, true
 			}
 		}
 	}
-	return claim.PlayerClaim{}
+	return claim.PlayerClaim{}, false
 }
