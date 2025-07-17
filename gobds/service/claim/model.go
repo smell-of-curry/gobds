@@ -19,8 +19,8 @@ type PlayerClaim struct {
 // Location ...
 type Location struct {
 	Dimension string  `json:"dimension"`
-	MinPos    Vector2 `json:"pos1"`
-	MaxPos    Vector2 `json:"pos2"`
+	MinPos    Vector2 `json:"pos2"`
+	MaxPos    Vector2 `json:"pos1"`
 }
 
 // Vector2 ...
