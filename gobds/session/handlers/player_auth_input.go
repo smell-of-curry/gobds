@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"slices"
 	"sync"
 	"time"
 
@@ -48,8 +47,6 @@ func (h *PlayerAuthInput) Handle(c interceptor.Client, pk packet.Packet, ctx *se
 	if ctx.Cancelled() {
 		return
 	}
-
-	h.handleClaims(c, pkt, ctx)
 }
 
 // handleAFKTimer ...
@@ -103,31 +100,5 @@ func (h *PlayerAuthInput) handleWorldBorder(_ interceptor.Client, pkt *packet.Pl
 		if !infra.WorldBorder.PositionInside(blockPosition.X(), blockPosition.Z()) {
 			ctx.Cancel()
 		}
-	}
-}
-
-// handleClaims ...
-func (h *PlayerAuthInput) handleClaims(c interceptor.Client, pkt *packet.PlayerAuthInput, ctx *session.Context) {
-	clientXUID := c.IdentityData().XUID
-	for _, action := range pkt.BlockActions {
-		dat, ok := c.Data().(interceptor.ClientData)
-		if !ok {
-			return
-		}
-		pos := action.BlockPos
-		cl, ok := ClaimAt(dat.Dimension(), float32(pos.X()), float32(pos.Z()))
-		if !ok {
-			return
-		}
-
-		if cl.ID == "" || // Invalid claim?
-			cl.OwnerXUID == "*" || // Admin claim.
-			cl.OwnerXUID == clientXUID ||
-			slices.Contains(cl.TrustedXUIDS, clientXUID) {
-			continue
-		}
-
-		c.Message(text.Colourf("<red>You cannot interact with blocks inside this claim.</red>"))
-		ctx.Cancel()
 	}
 }
