@@ -188,9 +188,16 @@ func (h InventoryTransaction) handleClaimUseItemOnEntity(c interceptor.Client, p
 		slices.Contains(cl.TrustedXUIDS, clientXUID) {
 		return
 	}
+	ent, ok := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
+	if !ok {
+		return
+	}
 
-	c.Message(text.Colourf("<red>You cannot interact with entities inside this claim.</red>"))
-	ctx.Cancel()
+	switch ent.ActorType() {
+	case "minecraft:armor_stand", "minecraft:painting":
+		c.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
+		ctx.Cancel()
+	}
 }
 
 // handleClaimReleaseItem ...

@@ -21,7 +21,7 @@ func (AddActor) Handle(c interceptor.Client, pk packet.Packet, _ *session.Contex
 	pkt := pk.(*packet.AddActor)
 
 	entityType := pkt.EntityType
-	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, pkt.EntityType))
+	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, entityType))
 
 	if !strings.HasPrefix(entityType, "pokemon:") {
 		return

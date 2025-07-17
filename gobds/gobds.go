@@ -171,6 +171,7 @@ func (gb *GoBDS) setupInterceptor() {
 
 	for id, h := range map[int]interceptor.Handler{
 		packet.IDAddActor:             handlers.AddActor{},
+		packet.IDAddPainting:          handlers.AddPainting{},
 		packet.IDAvailableCommands:    handlers.AvailableCommands{},
 		packet.IDCommandRequest:       handlers.CommandRequest{},
 		packet.IDInventoryTransaction: handlers.InventoryTransaction{},
