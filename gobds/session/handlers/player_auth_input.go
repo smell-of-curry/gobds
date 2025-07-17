@@ -115,7 +115,7 @@ func (h *PlayerAuthInput) handleClaims(c interceptor.Client, pkt *packet.PlayerA
 			return
 		}
 		pos := action.BlockPos
-		cl := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+		cl := ClaimAt(dat.Dimension(), float32(pos.X()), float32(pos.Z()))
 
 		if cl.ID == "" || // Invalid claim?
 			cl.OwnerXUID == "*" || // Admin claim.
