@@ -38,7 +38,7 @@ Key = 'secret-key' # The authentication key for the queues API
 
 [ClaimService]
 Enabled = false # Whether this service is enabled
-URL = 'http://127.0.0.1:3001/api/database/testing/claims' # The service endpoint to fetch players claims
+URL = 'http://127.0.0.1:3001/api/database/testing/table/claims' # The service endpoint to fetch players claims
 Key = 'secret-key' # The API token needed to fetch claims
 
 [VPNService]
