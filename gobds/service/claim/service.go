@@ -69,7 +69,7 @@ func (s *Service) FetchClaims() (map[string]PlayerClaim, error) {
 				continue
 			}
 
-			fmt.Printf("Fetched %d claims\n", len(claimResponse))
+			s.Log.Info("fetched claims", "count", len(claimResponse))
 
 			obj := make(map[string]PlayerClaim)
 			for _, v := range claimResponse {
