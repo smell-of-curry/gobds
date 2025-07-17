@@ -37,16 +37,14 @@ func (s *Service) FetchClaims() (map[string]PlayerClaim, error) {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), service.RequestTimeout)
-		request, err := http.NewRequestWithContext(ctx, http.MethodPost, s.Url, nil)
+		defer cancel()
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, s.Url, nil)
 		if err != nil {
-			cancel()
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
-		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("authorization", s.Key)
 
 		response, err := s.Client.Do(request)
-		cancel()
 		if err != nil {
 			lastErr = fmt.Errorf("request failed: %w", err)
 			if service.ErrorIsTemporary(err) {
@@ -70,6 +68,8 @@ func (s *Service) FetchClaims() (map[string]PlayerClaim, error) {
 				lastErr = fmt.Errorf("failed to unmarshal response body: %w", err)
 				continue
 			}
+
+			fmt.Printf("Fetched %d claims\n", len(claimResponse))
 
 			obj := make(map[string]PlayerClaim)
 			for _, v := range claimResponse {

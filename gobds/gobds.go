@@ -214,6 +214,18 @@ func (gb *GoBDS) setupBorder() {
 
 // tick ...
 func (gb *GoBDS) tick() {
+	fetch := func() {
+		if infra.ClaimService.Enabled {
+			claims, err := infra.ClaimService.FetchClaims()
+			if err != nil {
+				gb.log.Error("failed to fetch claims", "err", err)
+				return
+			}
+			infra.SetClaims(claims)
+		}
+	}
+	fetch()
+
 	t := time.NewTicker(time.Minute * 5)
 	defer t.Stop()
 	for {
@@ -221,14 +233,7 @@ func (gb *GoBDS) tick() {
 		case <-gb.ctx.Done():
 			return
 		case <-t.C:
-			if infra.ClaimService.Enabled {
-				claims, err := infra.ClaimService.FetchClaims()
-				if err != nil {
-					gb.log.Error("failed to fetch claims", "err", err)
-					continue
-				}
-				infra.SetClaims(claims)
-			}
+			fetch()
 		}
 	}
 }
