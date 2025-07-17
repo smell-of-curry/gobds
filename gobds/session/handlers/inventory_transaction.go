@@ -9,6 +9,7 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/sandertv/gophertunnel/minecraft/text"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
@@ -131,6 +132,7 @@ func (h InventoryTransaction) handleClaimUseItem(c interceptor.Client, pkt *pack
 		if b, exists := world.BlockByRuntimeID(transactionData.BlockRuntimeID); exists {
 			switch b.(type) {
 			case block.ItemFrame, block.Lectern, block.DecoratedPot:
+				c.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
 				ctx.Cancel()
 			}
 		}
@@ -160,6 +162,7 @@ func (h InventoryTransaction) handleClaimUseItem(c interceptor.Client, pkt *pack
 		return
 	}
 
+	c.Message(text.Colourf("<red>You cannot throw items inside this claim.</red>"))
 	ctx.Cancel()
 }
 
@@ -185,6 +188,8 @@ func (h InventoryTransaction) handleClaimUseItemOnEntity(c interceptor.Client, p
 		slices.Contains(cl.TrustedXUIDS, clientXUID) {
 		return
 	}
+
+	c.Message(text.Colourf("<red>You cannot interact with entities inside this claim.</red>"))
 	ctx.Cancel()
 }
 
@@ -210,6 +215,8 @@ func (h InventoryTransaction) handleClaimReleaseItem(c interceptor.Client, pkt *
 		slices.Contains(cl.TrustedXUIDS, clientXUID) {
 		return
 	}
+
+	c.Message(text.Colourf("<red>You cannot release items inside this claim.</red>"))
 	ctx.Cancel()
 }
 

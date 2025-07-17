@@ -124,6 +124,7 @@ func (h *PlayerAuthInput) handleClaims(c interceptor.Client, pkt *packet.PlayerA
 			continue
 		}
 
+		c.Message(text.Colourf("<red>You cannot interact with blocks inside this claim.</red>"))
 		ctx.Cancel()
 	}
 }

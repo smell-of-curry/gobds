@@ -104,6 +104,14 @@ func (s *Session) ForwardXUID(encryptionKey string) {
 	})
 }
 
+// Message ...
+func (s *Session) Message(message string) {
+	_ = s.client.WritePacket(&packet.Text{
+		TextType: packet.TextTypeRaw,
+		Message:  message,
+	})
+}
+
 // Disconnect ...
 func (s *Session) Disconnect(message string) {
 	_ = s.client.WritePacket(&packet.Disconnect{

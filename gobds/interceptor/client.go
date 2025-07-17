@@ -16,6 +16,7 @@ type Client interface {
 	WriteToClient(pk packet.Packet)
 	WriteToServer(pk packet.Packet)
 
+	Message(message string)
 	Disconnect(message string)
 
 	GameData() minecraft.GameData
