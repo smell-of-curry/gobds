@@ -33,8 +33,8 @@ COPY --from=builder /app/gobds .
 # Copy the example configuration file.
 COPY config.example.toml ./config.example.toml
 
-# Copy the resources directory.
-COPY resources ./resources
+# Create a directory for resources.
+RUN mkdir resources
 
 # Create a directory for player data.
 # This directory should be mounted as a volume to persist player data.
