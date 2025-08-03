@@ -12,8 +12,6 @@ WORKDIR /app
 # Copy all source code first to ensure module commands have full context.
 COPY . .
 
-# Tidy removes unused dependencies and adds missing ones.
-RUN go mod tidy
 # Download dependencies.
 RUN go mod download
 
