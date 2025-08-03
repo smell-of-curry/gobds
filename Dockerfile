@@ -21,7 +21,7 @@ COPY . .
 # Build the Go application.
 # CGO_ENABLED=0 is important for creating a static binary that can run in a minimal image.
 # -ldflags "-w -s" strips debugging information, reducing the binary size.
-RUN CGO_ENABLED=0 go build -ldflags "-w -s" -o gobds .
+RUN CGO_ENABLED=0 go build -ldflags "-w -s" -o gobds ./cmd/main.go
 
 # --- Final Stage ---
 
@@ -32,7 +32,7 @@ FROM alpine:latest
 WORKDIR /app
 
 # Copy the built binary from the builder stage.
-COPY --from=builder /app/gobds ./cmd/main.go
+COPY --from=builder /app/gobds .
 
 # Copy the example configuration file.
 COPY config.example.toml ./config.example.toml
