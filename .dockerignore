@@ -1,0 +1,16 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+
+# IDE
+.vscode/
+
+# players data
+players/
+
+# Go build cache
+/gobds

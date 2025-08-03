@@ -82,7 +82,7 @@ func (gb *GoBDS) setup() {
 	gb.setupResources()
 	gb.setupServices()
 	gb.setupInterceptor()
-	gb.setupWhitelists()
+	gb.setupWhitelist()
 	gb.setupBorder()
 
 	gb.log.Info("completed initial setup")
@@ -193,8 +193,8 @@ func (gb *GoBDS) setupInterceptor() {
 	gb.interceptor = intercept
 }
 
-// setupWhitelists ...
-func (gb *GoBDS) setupWhitelists() {
+// setupWhitelist ...
+func (gb *GoBDS) setupWhitelist() {
 	conf, err := whitelist.ReadConfig(gb.conf.Network.WhitelistPath)
 	if err != nil {
 		gb.log.Error("failed to read whitelist config", "err", err)

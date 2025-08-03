@@ -1,7 +1,8 @@
-/.idea/
-/mocks/
+config.toml
+whitelist.json
 
-*.toml
-*.json
 *.lock
-*.exe
+gobds.exe
+
+players/manager.json
+resources/commands.json
