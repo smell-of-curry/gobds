@@ -6,13 +6,13 @@ FROM golang:1.24-alpine AS builder
 # Set the working directory inside the container.
 WORKDIR /app
 
-# Copy go.mod and go.sum to download dependencies first.
-# This leverages Docker's layer caching to avoid re-downloading dependencies on every build.
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy the rest of the application's source code.
+# Copy all source code first to ensure module commands have full context.
 COPY . .
+
+# Tidy removes unused dependencies and adds missing ones.
+RUN go mod tidy
+# Download dependencies.
+RUN go mod download
 
 # Build the Go application.
 # CGO_ENABLED=0 is important for creating a static binary that can run in a minimal image.
