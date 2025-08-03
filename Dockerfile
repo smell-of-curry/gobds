@@ -17,7 +17,7 @@ COPY . .
 # Build the Go application.
 # CGO_ENABLED=0 is important for creating a static binary that can run in a minimal image.
 # -ldflags "-w -s" strips debugging information, reducing the binary size.
-RUN CGO_ENABLED=0 go build -ldflags "-w -s" -o gobds ./main.go
+RUN CGO_ENABLED=0 go build -ldflags "-w -s" -o gobds .
 
 # --- Final Stage ---
 
