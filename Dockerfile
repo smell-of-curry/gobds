@@ -9,11 +9,14 @@ RUN apk add --no-cache git
 # Set the working directory inside the container.
 WORKDIR /app
 
-# Copy all source code first to ensure module commands have full context.
-COPY . .
+# Copy go.mod and go.sum first for better Docker layer caching.
+COPY go.mod go.sum ./
 
 # Download dependencies.
 RUN go mod download
+
+# Copy all source code.
+COPY . .
 
 # Build the Go application.
 # CGO_ENABLED=0 is important for creating a static binary that can run in a minimal image.
