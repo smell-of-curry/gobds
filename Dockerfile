@@ -3,6 +3,9 @@
 # Use the official Golang image as a builder.
 FROM golang:1.24-alpine AS builder
 
+# Install git (required for go mod operations with dependencies from git repos).
+RUN apk add --no-cache git
+
 # Set the working directory inside the container.
 WORKDIR /app
 
