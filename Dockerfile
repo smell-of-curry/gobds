@@ -32,7 +32,7 @@ FROM alpine:latest
 WORKDIR /app
 
 # Copy the built binary from the builder stage.
-COPY --from=builder /app/gobds .
+COPY --from=builder /app/gobds ./cmd/main.go
 
 # Copy the example configuration file.
 COPY config.example.toml ./config.example.toml
