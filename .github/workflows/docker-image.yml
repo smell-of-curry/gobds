@@ -16,7 +16,7 @@ jobs:
 
       - name: Docker Image Update Checker
         id: baseupdatecheck
-        uses: lucacome/docker-image-update-checker@v1.1.0
+        uses: lucacome/docker-image-update-checker@v2.0.0
         with:
           base-image: library/golang:1.24-alpine
           image: smellofcurry/gobds
