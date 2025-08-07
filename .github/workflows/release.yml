@@ -19,10 +19,10 @@ jobs:
           go-version: "1.24.1"
 
       - name: Build Windows executable
-        run: GOOS=windows GOARCH=amd64 go build -o gobds.exe .
+        run: GOOS=windows GOARCH=amd64 go build -o gobds.exe ./cmd/main.go
 
       - name: Build Linux executable
-        run: GOOS=linux GOARCH=amd64 go build -o gobds-linux .
+        run: GOOS=linux GOARCH=amd64 go build -o gobds-linux ./cmd/main.go
 
       - name: Create Release
         id: create_release
