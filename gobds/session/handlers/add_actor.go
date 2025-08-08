@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
@@ -27,12 +26,12 @@ func (AddActor) Handle(c interceptor.Client, pk packet.Packet, _ *session.Contex
 		return
 	}
 
-	name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
-	if !ok {
-		return
-	}
+	// name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
+	// if !ok {
+	// 	return
+	// }
 
-	pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
+	//pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
 }
 
 // nickIdentifier ...
