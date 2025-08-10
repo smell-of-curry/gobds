@@ -38,7 +38,7 @@ func main() {
 		}),
 	)
 	if err != nil {
-		log.Error("failed to start after multiple retries, shutting down", "error", err)
+		log.Error("failed to start after multiple retries, shutting down")
 		return
 	}
 }
