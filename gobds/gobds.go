@@ -350,7 +350,7 @@ func (gb *GoBDS) accept(conn *minecraft.Conn) {
 		ErrorLog:            gb.log,
 		KeepXBLIdentityData: true,
 	}
-	serverConn, err := d.DialTimeout("raknet", gb.conf.Network.RemoteAddress, time.Second*60)
+	serverConn, err := d.DialTimeout("raknet", gb.conf.Network.RemoteAddress, time.Minute)
 	if err != nil {
 		gb.log.Error("error dialing connection", "err", err)
 		_ = gb.listener.Disconnect(conn, "error dialing connection")
