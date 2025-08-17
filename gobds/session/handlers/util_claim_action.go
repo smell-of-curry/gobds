@@ -35,9 +35,7 @@ func ClaimActionPermitted(cl claim.PlayerClaim, c interceptor.Client, action Cla
 
 // handleClaimActionRender ...
 func handleClaimActionRender(cl claim.PlayerClaim, c interceptor.Client, data any) (permitted bool) {
-	clientXUID := c.IdentityData().XUID
-	if cl.ID == "" || cl.OwnerXUID == "*" ||
-		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	if claimOwnerOrTrusted(cl, c) {
 		return true
 	}
 	chunkPos := data.(protocol.ChunkPos)
@@ -52,9 +50,7 @@ func handleClaimActionRender(cl claim.PlayerClaim, c interceptor.Client, data an
 
 // handleClaimActionBlockInteract ...
 func handleClaimActionBlockInteract(cl claim.PlayerClaim, c interceptor.Client, data any) (permitted bool) {
-	clientXUID := c.IdentityData().XUID
-	if cl.ID == "" || cl.OwnerXUID == "*" ||
-		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	if claimOwnerOrTrusted(cl, c) {
 		return true
 	}
 	transactionPosition := data.(mgl32.Vec3)
@@ -72,9 +68,7 @@ func handleClaimActionBlockInteract(cl claim.PlayerClaim, c interceptor.Client, 
 
 // handleClaimActionItemRelease ...
 func handleClaimActionItemRelease(cl claim.PlayerClaim, c interceptor.Client, _ any) (permitted bool) {
-	clientXUID := c.IdentityData().XUID
-	if cl.ID == "" || cl.OwnerXUID == "*" ||
-		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	if claimOwnerOrTrusted(cl, c) {
 		return true
 	}
 	return false
@@ -82,15 +76,20 @@ func handleClaimActionItemRelease(cl claim.PlayerClaim, c interceptor.Client, _ 
 
 // handleClaimActionItemThrow ...
 func handleClaimActionItemThrow(cl claim.PlayerClaim, c interceptor.Client, _ any) (permitted bool) {
-	clientXUID := c.IdentityData().XUID
-	if cl.ID == "" || cl.OwnerXUID == "*" ||
-		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	if claimOwnerOrTrusted(cl, c) {
 		return true
 	}
 	return false
 }
 
-// ClaimAt ...
+// claimOwnerOrTrusted ...
+func claimOwnerOrTrusted(cl claim.PlayerClaim, c interceptor.Client) bool {
+	clientXUID := c.IdentityData().XUID
+	return cl.ID == "" || cl.OwnerXUID == "*" ||
+		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID)
+}
+
+// insideChunkPosition ...
 func insideChunkPosition(chunkPos protocol.ChunkPos, pos1, pos2 claim.Vector2) bool {
 	chunkMinX := float32(chunkPos.X() << 4)
 	chunkMinZ := float32(chunkPos.Z() << 4)
