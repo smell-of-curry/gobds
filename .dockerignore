@@ -12,5 +12,6 @@ Dockerfile
 # players data
 players/
 
-# Go build cache
-/gobds
+# Go build artifacts (exclude binaries)
+*.exe
+/gobds.exe

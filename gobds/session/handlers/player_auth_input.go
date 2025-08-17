@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"slices"
 	"sync"
 	"time"
 
@@ -77,11 +78,9 @@ func (h *PlayerAuthInput) handleAFKTimer(c interceptor.Client, pkt *packet.Playe
 }
 
 // handleWorldBorder ...
-func (h *PlayerAuthInput) handleWorldBorder(_ interceptor.Client, pkt *packet.PlayerAuthInput, ctx *session.Context) {
-	if !infra.WorldBorderEnabled() {
-		return
-	}
-
+func (h *PlayerAuthInput) handleWorldBorder(c interceptor.Client, pkt *packet.PlayerAuthInput, ctx *session.Context) {
+	clientData := c.Data().(interceptor.ClientData)
+	clientXUID := c.IdentityData().XUID
 	for i, action := range pkt.BlockActions {
 		if action.Action == protocol.PlayerActionCrackBreak {
 			continue
@@ -97,8 +96,23 @@ func (h *PlayerAuthInput) handleWorldBorder(_ interceptor.Client, pkt *packet.Pl
 			}
 		}
 
-		if !infra.WorldBorder.PositionInside(blockPosition.X(), blockPosition.Z()) {
+		if infra.WorldBorderEnabled() &&
+			!infra.WorldBorder.PositionInside(blockPosition.X(), blockPosition.Z()) {
 			ctx.Cancel()
+			continue
 		}
+
+		claim, exists := ClaimAt(clientData.Dimension(), float32(blockPosition.X()), float32(blockPosition.Z()))
+		if !exists {
+			continue
+		}
+		if claim.ID == "" || // Invalid claim?
+			claim.OwnerXUID == "*" || // Admin claim.
+			claim.OwnerXUID == clientXUID ||
+			slices.Contains(claim.TrustedXUIDS, clientXUID) {
+			continue
+		}
+
+		ctx.Cancel()
 	}
 }
