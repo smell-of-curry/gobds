@@ -46,12 +46,14 @@ func (SubChunk) Handle(c interceptor.Client, pk packet.Packet, _ *session.Contex
 
 		claim, exists := ClaimAtChunk(pkt.Dimension, chunkPos)
 		if !exists {
+			entries = append(entries, entry)
 			continue
 		}
 		if claim.ID == "" || // Invalid claim?
 			claim.OwnerXUID == "*" || // Admin claim.
 			claim.OwnerXUID == clientXUID ||
 			slices.Contains(claim.TrustedXUIDS, clientXUID) {
+			entries = append(entries, entry)
 			continue
 		}
 
