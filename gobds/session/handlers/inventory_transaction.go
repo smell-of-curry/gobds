@@ -13,7 +13,6 @@ import (
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
-	"github.com/smell-of-curry/gobds/gobds/service/claim"
 	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
@@ -234,34 +233,4 @@ func (h InventoryTransaction) handleClaimReleaseItem(c interceptor.Client, pkt *
 
 	c.Message(text.Colourf("<red>You cannot release items inside this claim.</red>"))
 	ctx.Cancel()
-}
-
-// claimDimensionToInt ...
-func claimDimensionToInt(dimension string) int32 {
-	switch dimension {
-	case "minecraft:overworld":
-		return 0
-	case "minecraft:nether":
-		return 1
-	case "minecraft:end":
-		return 2
-	default:
-		return -1
-	}
-}
-
-// ClaimAt ...
-func ClaimAt(dimension int32, x, z float32) (claim.PlayerClaim, bool) {
-	for _, c := range infra.Claims() {
-		if claimDimensionToInt(c.Location.Dimension) == dimension {
-			minX := min(c.Location.Pos1.X, c.Location.Pos2.X)
-			maxX := max(c.Location.Pos1.X, c.Location.Pos2.X)
-			minZ := min(c.Location.Pos1.Z, c.Location.Pos2.Z)
-			maxZ := max(c.Location.Pos1.Z, c.Location.Pos2.Z)
-			if x >= minX && x <= maxX && z >= minZ && z <= maxZ {
-				return c, true
-			}
-		}
-	}
-	return claim.PlayerClaim{}, false
 }
