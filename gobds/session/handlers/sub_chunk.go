@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"slices"
 	_ "unsafe"
 
 	"github.com/df-mc/dragonfly/server/world"
@@ -23,7 +22,6 @@ func (SubChunk) Handle(c interceptor.Client, pk packet.Packet, _ *session.Contex
 
 	clientData, _ := c.Data().(interceptor.ClientData)
 	clientData.SetDimension(pkt.Dimension)
-	clientXUID := c.IdentityData().XUID
 
 	dimension, _ := world.DimensionByID(int(pkt.Dimension))
 	virtualChunk := chunk.New(airRuntimeID, dimension.Range())
@@ -49,10 +47,8 @@ func (SubChunk) Handle(c interceptor.Client, pk packet.Packet, _ *session.Contex
 			entries = append(entries, entry)
 			continue
 		}
-		if claim.ID == "" || // Invalid claim?
-			claim.OwnerXUID == "*" || // Admin claim.
-			claim.OwnerXUID == clientXUID ||
-			slices.Contains(claim.TrustedXUIDS, clientXUID) {
+		permitted := ClaimActionPermitted(claim, c, ClaimActionRender, chunkPos)
+		if permitted {
 			entries = append(entries, entry)
 			continue
 		}
