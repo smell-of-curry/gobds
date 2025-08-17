@@ -13,6 +13,9 @@ type ClaimAction uint8
 
 const (
 	ClaimActionRender ClaimAction = iota
+	ClaimActionBlockInteract
+	ClaimActionItemRelease
+	ClaimActionItemThrow
 )
 
 // ClaimActionPermitted ...
@@ -20,12 +23,18 @@ func ClaimActionPermitted(cl claim.PlayerClaim, c interceptor.Client, action Cla
 	switch action {
 	case ClaimActionRender:
 		return handleClaimActionRender(cl, c, data)
+	case ClaimActionBlockInteract:
+		return handleClaimActionBlockInteract(cl, c, data)
+	case ClaimActionItemRelease:
+		return handleClaimActionItemRelease(cl, c, data)
+	case ClaimActionItemThrow:
+		return handleClaimActionItemThrow(cl, c, data)
 	}
 	return true
 }
 
 // handleClaimActionRender ...
-func handleClaimActionRender(cl claim.PlayerClaim, c interceptor.Client, data any) bool {
+func handleClaimActionRender(cl claim.PlayerClaim, c interceptor.Client, data any) (permitted bool) {
 	clientXUID := c.IdentityData().XUID
 	if cl.ID == "" || cl.OwnerXUID == "*" ||
 		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) {
@@ -37,6 +46,46 @@ func handleClaimActionRender(cl claim.PlayerClaim, c interceptor.Client, data an
 		if insideChunkPosition(chunkPos, pos1, pos2) {
 			return true
 		}
+	}
+	return false
+}
+
+// handleClaimActionBlockInteract ...
+func handleClaimActionBlockInteract(cl claim.PlayerClaim, c interceptor.Client, data any) (permitted bool) {
+	clientXUID := c.IdentityData().XUID
+	if cl.ID == "" || cl.OwnerXUID == "*" ||
+		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) {
+		return true
+	}
+	transactionPosition := data.(mgl32.Vec3)
+	for _, feature := range cl.Features {
+		switch feature.Type {
+		case claim.FeatureTypeBlockIntractable:
+			pos1, pos2 := feature.ToLocation, feature.FromLocation
+			if insideVector3(transactionPosition, pos1, pos2) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// handleClaimActionItemRelease ...
+func handleClaimActionItemRelease(cl claim.PlayerClaim, c interceptor.Client, _ any) (permitted bool) {
+	clientXUID := c.IdentityData().XUID
+	if cl.ID == "" || cl.OwnerXUID == "*" ||
+		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) {
+		return true
+	}
+	return false
+}
+
+// handleClaimActionItemThrow ...
+func handleClaimActionItemThrow(cl claim.PlayerClaim, c interceptor.Client, _ any) (permitted bool) {
+	clientXUID := c.IdentityData().XUID
+	if cl.ID == "" || cl.OwnerXUID == "*" ||
+		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) {
+		return true
 	}
 	return false
 }
@@ -55,4 +104,15 @@ func insideChunkPosition(chunkPos protocol.ChunkPos, pos1, pos2 claim.Vector2) b
 
 	return chunkMinX <= maxX && chunkMaxX >= minX &&
 		chunkMinZ <= maxZ && chunkMaxZ >= minZ
+}
+
+// insideVector3 ...
+func insideVector3(vec3 mgl32.Vec3, pos1, pos2 claim.Vector2) bool {
+	minX := min(pos1.X, pos2.X)
+	maxX := max(pos1.X, pos2.X)
+	minZ := min(pos1.Z, pos2.Z)
+	maxZ := max(pos1.Z, pos2.Z)
+
+	return vec3.X() >= minX && vec3.X() <= maxX &&
+		vec3.Z() >= minZ && vec3.Z() <= maxZ
 }
