@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/df-mc/dragonfly/server/world/chunk"
+	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
@@ -76,4 +77,9 @@ func ClaimAtChunk(dimension int32, chunkPos protocol.ChunkPos) (claim.PlayerClai
 		}
 	}
 	return claim.PlayerClaim{}, false
+}
+
+// blockPosToVec3 ...
+func blockPosToVec3(pos protocol.BlockPos) mgl32.Vec3 {
+	return mgl32.Vec3{float32(pos.X()), float32(pos.Y()), float32(pos.Z())}
 }
