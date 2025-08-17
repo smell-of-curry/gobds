@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"slices"
 	"time"
 
 	"github.com/df-mc/dragonfly/server/block"
@@ -110,34 +109,36 @@ func (h InventoryTransaction) handleClaimUseItem(c interceptor.Client, pkt *pack
 		return
 	}
 
-	clientXUID := c.IdentityData().XUID
-
-	dat, ok := c.Data().(interceptor.ClientData)
+	clientData, ok := c.Data().(interceptor.ClientData)
 	if !ok {
 		return
 	}
+
 	pos := transactionData.Position
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
-	if !ok {
-		return
-	}
-
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	claim, exists := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
+	if !exists {
 		return
 	}
 
 	if transactionData.ActionType == protocol.UseItemActionClickBlock &&
 		transactionData.TriggerType == protocol.UseItemActionClickAir {
-		if b, exists := world.BlockByRuntimeID(transactionData.BlockRuntimeID); exists {
+		permitted := ClaimActionPermitted(claim, c, ClaimActionBlockInteract, pos)
+		if permitted {
+			return
+		}
+
+		if b, found := world.BlockByRuntimeID(transactionData.BlockRuntimeID); found {
 			switch b.(type) {
 			case block.ItemFrame, block.Lectern, block.DecoratedPot:
 				c.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
 				ctx.Cancel()
 			}
 		}
+	}
+
+	permitted := ClaimActionPermitted(claim, c, ClaimActionItemThrow, pos)
+	if permitted {
+		return
 	}
 
 	heldItem := transactionData.HeldItem.Stack.ItemType
@@ -175,30 +176,26 @@ func (h InventoryTransaction) handleClaimUseItemOnEntity(c interceptor.Client, p
 		return
 	}
 
-	clientXUID := c.IdentityData().XUID
-
-	dat, ok := c.Data().(interceptor.ClientData)
+	clientData, ok := c.Data().(interceptor.ClientData)
 	if !ok {
 		return
 	}
+
 	pos := transactionData.Position
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	claim, ok := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
 	if !ok {
 		return
 	}
-
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	permitted := ClaimActionPermitted(claim, c, ClaimActionBlockInteract, pos)
+	if permitted {
 		return
 	}
-	ent, ok := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
+
+	entity, ok := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
 	if !ok {
 		return
 	}
-
-	switch ent.ActorType() {
+	switch entity.ActorType() {
 	case "minecraft:armor_stand", "minecraft:painting":
 		c.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
 		ctx.Cancel()
@@ -212,22 +209,18 @@ func (h InventoryTransaction) handleClaimReleaseItem(c interceptor.Client, pkt *
 		return
 	}
 
-	clientXUID := c.IdentityData().XUID
-
-	dat, ok := c.Data().(interceptor.ClientData)
+	clientData, ok := c.Data().(interceptor.ClientData)
 	if !ok {
 		return
 	}
+
 	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	claim, ok := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
 	if !ok {
 		return
 	}
-
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	permitted := ClaimActionPermitted(claim, c, ClaimActionItemRelease, pos)
+	if permitted {
 		return
 	}
 
