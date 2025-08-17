@@ -32,12 +32,9 @@ func handleClaimActionRender(cl claim.PlayerClaim, c interceptor.Client, data an
 	}
 	chunkPos := data.(protocol.ChunkPos)
 	for _, feature := range cl.Features {
-		switch feature.Type {
-		case claim.FeatureTypeMineable, claim.FeatureTypeBlockPlaceable:
-			pos1, pos2 := feature.ToLocation, feature.FromLocation
-			if insideChunkPosition(chunkPos, pos1, pos2) {
-				return true
-			}
+		pos1, pos2 := feature.ToLocation, feature.FromLocation
+		if insideChunkPosition(chunkPos, pos1, pos2) {
+			return true
 		}
 	}
 	return false
