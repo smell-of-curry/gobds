@@ -3,6 +3,7 @@ package handlers
 import (
 	"strings"
 
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/interceptor"
@@ -26,10 +27,10 @@ func (SetActorData) Handle(c interceptor.Client, pk packet.Packet, _ *session.Co
 		return
 	}
 
-	// name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
-	// if !ok {
-	// 	return
-	// }
+	name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
+	if !ok {
+		return
+	}
 
-	// pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
+	pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
 }
