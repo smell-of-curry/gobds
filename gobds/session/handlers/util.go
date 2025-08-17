@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"log/slog"
+
 	"github.com/df-mc/dragonfly/server/world/chunk"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
@@ -11,6 +13,8 @@ import (
 var (
 	airRuntimeID  uint32
 	denyRuntimeID uint32
+
+	log *slog.Logger
 )
 
 func init() {
@@ -25,6 +29,8 @@ func init() {
 
 	airRuntimeID = air
 	denyRuntimeID = deny
+
+	log = slog.Default()
 }
 
 // claimDimensionToInt ...

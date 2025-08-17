@@ -57,6 +57,7 @@ func (SubChunk) Handle(c interceptor.Client, pk packet.Packet, _ *session.Contex
 		buf := bytes.NewBuffer(entry.RawPayload)
 		decodedEntry, err := decodeSubChunk(buf, virtualChunk, &index, chunk.NetworkEncoding)
 		if err != nil {
+			log.Error("decode subchunk entry", "error", err)
 			continue
 		}
 
