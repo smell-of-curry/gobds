@@ -158,17 +158,12 @@ func (h AvailableCommands) appendCustomCommands(pkt *packet.AvailableCommands) *
 				})
 			}
 		}
-		permissionLevel := byte(packet.CommandPermissionLevelNormal)
-		if c.RequiresOp() {
-			permissionLevel = byte(packet.CommandPermissionLevelAdmin)
-		}
 
 		pkt.Commands = append(pkt.Commands, protocol.Command{
-			Name:            c.Name(),
-			Description:     c.Description(),
-			PermissionLevel: permissionLevel,
-			AliasesOffset:   aliasesIndex,
-			Overloads:       overloads,
+			Name:          c.Name(),
+			Description:   c.Description(),
+			AliasesOffset: aliasesIndex,
+			Overloads:     overloads,
 		})
 	}
 	return pkt
