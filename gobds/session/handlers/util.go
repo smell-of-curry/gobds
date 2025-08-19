@@ -3,9 +3,11 @@ package handlers
 import (
 	"log/slog"
 
+	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/world/chunk"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
+	gblock "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
 )
@@ -18,19 +20,27 @@ var (
 )
 
 func init() {
-	air, ok := chunk.StateToRuntimeID("minecraft:air", nil)
-	if !ok {
-		panic("cannot find air runtime ID")
-	}
-	deny, ok := chunk.StateToRuntimeID("minecraft:deny", nil)
-	if !ok {
-		panic("cannot find deny runtime ID")
-	}
-
-	airRuntimeID = air
-	denyRuntimeID = deny
-
 	log = slog.Default()
+}
+
+// SetupRuntimeIDs ...
+func SetupRuntimeIDs(hashedNetworkIDS bool) {
+	if hashedNetworkIDS {
+		airRuntimeID = uint32(Hash(block.Air{}))
+		denyRuntimeID = uint32(Hash(gblock.Deny{}))
+	} else {
+		air, ok := chunk.StateToRuntimeID("minecraft:air", nil)
+		if !ok {
+			panic("cannot find air runtime ID")
+		}
+		deny, ok := chunk.StateToRuntimeID("minecraft:deny", nil)
+		if !ok {
+			panic("cannot find deny runtime ID")
+		}
+
+		airRuntimeID = air
+		denyRuntimeID = deny
+	}
 }
 
 // claimDimensionToInt ...

@@ -187,7 +187,7 @@ func (gb *GoBDS) setupInterceptor() {
 		intercept.AddHandler(id, h)
 	}
 
-	// Set the command path for the custom command register handler
+	handlers.SetupRuntimeIDs(gb.conf.Network.HashedBlockIDS)
 	handlers.SetCommandPath(gb.conf.Resources.CommandPath)
 
 	gb.interceptor = intercept
