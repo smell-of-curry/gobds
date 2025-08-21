@@ -37,11 +37,11 @@ func (h *PlayerAuthInput) Handle(c interceptor.Client, pk packet.Packet, ctx *se
 	pkt := pk.(*packet.PlayerAuthInput)
 
 	if pkt.Tick%20 == 0 {
+		c.SendPingIndicator()
 		h.handleAFKTimer(c, pkt, ctx)
 		if ctx.Cancelled() {
 			return
 		}
-		c.SendPingIndicator()
 	}
 
 	h.handleWorldBorder(c, pkt, ctx)
