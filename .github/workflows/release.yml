@@ -13,20 +13,7 @@ on:
           default: true
     
     
-jobs:
-  context:
-    name: Debug Context
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print GitHub context
-        run: |
-          echo "event_name=${{ github.event_name }}"
-          echo "has_head_commit=${{ github.event.head_commit != null }}"
-          echo "message=${{ github.event.head_commit && github.event.head_commit.message || '' }}"
-          echo "ref=${{ github.ref }}"
-          echo "sha=${{ github.sha }}"
-          echo "event_json=${{ toJson(github.event) }}"
-          
+jobs:     
   build:
     if: (github.event_name == 'workflow_dispatch' && (inputs.release == true || inputs.release == 'true')) || contains(github.event.head_commit.message || '', '[Release]')
     name: Build GoBDS
