@@ -1,85 +1,51 @@
 [Network]
-# An identifier or name for the server, currently used for Sentry
-ServerName = 'Some server'
-# The address to listen for player connections
-LocalAddress = '0.0.0.0:19132'
-# The address of the downstream server, where player connections will be redirected
-RemoteAddress = '0.0.0.0:19134'
-# Path to the player list file
-PlayerManagerPath = 'players/manager.json'
-# Whether to enable the whitelist
-Whitelisted = false
-# Path to the whitelist file
-WhitelistPath = 'whitelist.json'
-# Number of slots reserved for whitelisted players
-SecuredSlots = 0
-# Maximum view distance for players
-MaxRenderDistance = 16
-# Server flush rate in ticks
-FlushRate = 20
-# Sentry DSN connection string for error reporting
-SentryDSN = ''
-# Whether the downstream server uses hashed block IDs
-HashedBlockIDS = true
+ServerName = 'Some server' # An identifier/name for the server, this is used for Sentry
+LocalAddress = '0.0.0.0:19132' # The port that players will connect to
+RemoteAddress = '0.0.0.0:19134' # The port that the BDS server is hosted on
+PlayerManagerPath = 'players/manager.json' # The path with the player-list file
+Whitelisted = false # If whitelist block is enabled
+WhitelistPath = 'whitelist.json' # The path to the whitelist file
+SecuredSlots = 0 # The amount of secured slots on the server for only whitelisted players
+MaxRenderDistance = 16 # The view distance for players
+FlushRate = 20 # The flush rate for the server
+SentryDSN = '' # The DSN link of the sentry connection
+HashedBlockIDS = true # Whether the downstream server uses hashed block IDs
 
 [Border]
-# Enable world border
-Enabled = false
-# Minimum X coordinate
-MinX = -12000
-# Maximum X coordinate
-MaxX = 12000
-# Minimum Z coordinate
-MinZ = -12000
-# Maximum Z coordinate
-MaxZ = 12000
+Enabled = false # Whether to enable the world border
+MinX = -12000 # The minimum X coordinate for the world border
+MaxX = 12000 # The maximum X coordinate for the world border
+MinZ = -12000 # The minimum Z coordinate for the world border
+MaxZ = 12000 # The maximum Z coordinate for the world border
 
 [PingIndicator]
-# Enable ping indicator
-Enabled = true
-# Identifier used for ping indicator
-Identifier = '&_playerPing:'
+Enabled = true # Whether to enable the ping indicator
+Identifier = '&_playerPing:' # The identifier for the ping indicator
 
 [AFKTimer]
-# Enable AFK timer
-Enabled = true
-# AFK timeout duration
-TimeoutDuration = "10m"
+Enabled = true # Whether to enable the afk timer
+TimeoutDuration = "10m" # The timeout duration of the afk timer
 
 [Resources]
-# Require resource packs
-PacksRequired = false
-# Path to BDS scripting commands file
-CommandPath = 'resources/commands.json'
-# URLs of required resource packs
-URLResources = []
-# Paths of required resource packs
-PathResources = []
+PacksRequired = false # If resource packs are required to download by players
+CommandPath = 'resources/commands.json' # The path to the file where the bds-scripting-commands are stored
+URLResources = [] # Urls of resource packs to require downloaded by players
+PathResources = [] # Paths of resource packs to require downloaded by players
 
 [AuthenticationService]
-# Enable authentication service
-Enabled = false
-# Hub API endpoint for queue verification
-URL = 'http://127.0.0.1:8080/authentication'
-# Authentication key
-Key = 'secret-key'
+Enabled = false # Whether this service is enabled
+URL = 'http://127.0.0.1:8080/authentication' # The Hub API Endpoint to verify players joining through queue
+Key = 'secret-key' # The authentication key for the queues API
 
 [ClaimService]
-# Enable claim service
-Enabled = false
-# Service endpoint for player claims
-URL = 'http://127.0.0.1:3001/api/database/testing/table/claims'
-# API token for claim service
-Key = 'secret-key'
+Enabled = false # Whether this service is enabled
+URL = 'http://127.0.0.1:3001/api/database/testing/table/claims' # The service endpoint to fetch players claims
+Key = 'secret-key' # The API token needed to fetch claims
 
 [VPNService]
-# Enable VPN check service
-Enabled = false
-# VPN validation API endpoint
-URL = 'http://ip-api.com/json'
-# Authentication key if required
-Key = ''
+Enabled = false # Whether this service is enabled
+URL = 'http://ip-api.com/json' # A service to validate users if they are using VPN's
+Key = '' # Authentication key if required
 
 [Encryption]
-# Encryption key for XUID messages to BDS
-Key = 'secret-key'
+Key = 'secret-key' # The Encryption key used for XUID messages to BDS
