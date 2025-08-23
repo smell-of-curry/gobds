@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"slices"
 	"sync"
 	"time"
 
@@ -80,14 +79,13 @@ func (h *PlayerAuthInput) handleAFKTimer(c interceptor.Client, pkt *packet.Playe
 // handleWorldBorder ...
 func (h *PlayerAuthInput) handleWorldBorder(c interceptor.Client, pkt *packet.PlayerAuthInput, ctx *session.Context) {
 	clientData := c.Data().(interceptor.ClientData)
-	clientXUID := c.IdentityData().XUID
-	for i, action := range pkt.BlockActions {
-		if action.Action == protocol.PlayerActionCrackBreak {
+	for i, blockAction := range pkt.BlockActions {
+		if blockAction.Action == protocol.PlayerActionCrackBreak {
 			continue
 		}
 
-		blockPosition := action.BlockPos
-		if action.Action == protocol.PlayerActionStopBreak && (i == 0 || i == 1) && len(pkt.BlockActions) > 1 {
+		blockPosition := blockAction.BlockPos
+		if blockAction.Action == protocol.PlayerActionStopBreak && (i == 0 || i == 1) && len(pkt.BlockActions) > 1 {
 			switch i {
 			case 0:
 				blockPosition = pkt.BlockActions[i+1].BlockPos
@@ -106,10 +104,8 @@ func (h *PlayerAuthInput) handleWorldBorder(c interceptor.Client, pkt *packet.Pl
 		if !exists {
 			continue
 		}
-		if claim.ID == "" || // Invalid claim?
-			claim.OwnerXUID == "*" || // Admin claim.
-			claim.OwnerXUID == clientXUID ||
-			slices.Contains(claim.TrustedXUIDS, clientXUID) {
+		permitted := ClaimActionPermitted(claim, c, ClaimActionBlockInteract, blockPosToVec3(blockPosition))
+		if permitted {
 			continue
 		}
 
