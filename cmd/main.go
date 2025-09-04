@@ -18,7 +18,7 @@ func main() {
 
 	dsn := conf.Network.SentryDSN
 	if dsn != "" {
-		err = sentry.Init(sentry.ClientOptions{
+		err := sentry.Init(sentry.ClientOptions{
 			Dsn:        conf.Network.SentryDSN,
 			ServerName: conf.Network.ServerName,
 		})
@@ -28,9 +28,14 @@ func main() {
 		defer sentry.Flush(2 * time.Second)
 	}
 
-	g := gobds.NewGoBDS(conf, log)
+	c, err := conf.Config(slog.Default())
+	if err != nil {
+		panic(err)
+	}
+
+	g := c.New()
 	err = retry.Do(
-		g.Start,
+		g.Listen,
 		retry.Attempts(5),
 		retry.Delay(time.Second*3),
 		retry.OnRetry(func(n uint, err error) {

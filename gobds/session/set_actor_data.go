@@ -1,29 +1,27 @@
-package handlers
+package session
 
 import (
 	"strings"
 
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/infra"
-	"github.com/smell-of-curry/gobds/gobds/interceptor"
-	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
-// SetActorData ...
-type SetActorData struct{}
+// SetActorDataHandler ...
+type SetActorDataHandler struct{}
 
 // Handle ...
-func (SetActorData) Handle(c interceptor.Client, pk packet.Packet, _ *session.Context) {
+func (*SetActorDataHandler) Handle(c *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.SetActorData)
 
 	ent, ok := infra.EntityFactory.ByRuntimeID(pkt.EntityRuntimeID)
 	if !ok {
-		return
+		return nil
 	}
 
 	entityType := ent.ActorType()
 	if !strings.HasPrefix(entityType, "pokemon:") {
-		return
+		return nil
 	}
 
 	// name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
@@ -32,4 +30,5 @@ func (SetActorData) Handle(c interceptor.Client, pk packet.Packet, _ *session.Co
 	// }
 
 	// pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
+	return nil
 }
