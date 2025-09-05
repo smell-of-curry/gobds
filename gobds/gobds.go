@@ -133,6 +133,7 @@ func (gb *GoBDS) listen(l Listener) {
 			s, err := gb.accept(conn, ctx)
 			if err != nil {
 				_ = l.Disconnect(conn, err.Error())
+				return
 			}
 
 			gb.conf.Log.Info("player connected", "nick", conn.IdentityData().DisplayName, "addr", conn.RemoteAddr())
