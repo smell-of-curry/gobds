@@ -34,6 +34,8 @@ func (c Config) New() *Session {
 		afkTimer:      c.AfkTimer,
 		border:        c.Border,
 
+		close: make(chan struct{}),
+
 		data: NewData(c.Client),
 		log:  c.Log,
 	}
