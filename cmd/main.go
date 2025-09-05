@@ -34,6 +34,7 @@ func main() {
 	}
 
 	g := c.New()
+	g.CloseOnProgramEnd()
 	err = retry.Do(
 		g.Listen,
 		retry.Attempts(5),

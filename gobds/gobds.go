@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"os"
+	"os/signal"
 	"sync/atomic"
+	"syscall"
 
 	"sync"
 	"time"
@@ -33,6 +36,15 @@ type GoBDS struct {
 	listeners []Listener
 
 	wg sync.WaitGroup
+}
+
+func (gb *GoBDS) CloseOnProgramEnd() {
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-c
+		_ = gb.Close()
+	}()
 }
 
 // New creates new GoBDS instance.
@@ -110,16 +122,18 @@ func (gb *GoBDS) Listen() error {
 func (gb *GoBDS) listen(l Listener) {
 	wg := new(sync.WaitGroup)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer l.Close()
+
 	go func() {
 		<-gb.ctx.Done()
+		cancel()
+		wg.Wait()
 		_ = l.Close()
 	}()
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			cancel()
-
-			wg.Wait()
 			gb.conf.Log.Info(fmt.Sprintf("Listener %T closed", l))
 
 			gb.wg.Done()
