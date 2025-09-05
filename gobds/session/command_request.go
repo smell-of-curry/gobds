@@ -1,4 +1,4 @@
-package handlers
+package session
 
 import (
 	"fmt"
@@ -6,40 +6,36 @@ import (
 	"strings"
 
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"github.com/smell-of-curry/gobds/gobds/interceptor"
-	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
 // CommandRequest ...
 type CommandRequest struct{}
 
 // Handle ...
-func (CommandRequest) Handle(c interceptor.Client, pk packet.Packet, ctx *session.Context) {
+func (*CommandRequest) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.CommandRequest)
 
 	cmd := strings.ToLower(strings.Split(pkt.CommandLine[1:], " ")[0])
 	if slices.Contains(disabledCommands, cmd) {
 		ctx.Cancel()
-		return
+		return nil
 	}
 	if strings.ReplaceAll(cmd, " ", "") == "" {
-		return
+		return nil
 	}
 
-	commandsMu.RLock()
-	for _, vanillaCommand := range vanillaCommandsCache {
-		if vanillaCommand.Name == cmd {
-			commandsMu.RUnlock()
-			return
-		}
+	handler := s.handlers[packet.IDAvailableCommands].(*AvailableCommands)
+	_, ok := handler.cache.Load(cmd)
+	if ok {
+		return nil
 	}
-	commandsMu.RUnlock()
 
-	c.WriteToServer(&packet.Text{
+	s.WriteToServer(&packet.Text{
 		TextType:   packet.TextTypeChat,
-		SourceName: c.IdentityData().DisplayName,
+		SourceName: s.IdentityData().DisplayName,
 		Message:    fmt.Sprintf("-%s", strings.TrimPrefix(pkt.CommandLine, "/")),
-		XUID:       c.IdentityData().XUID,
+		XUID:       s.IdentityData().XUID,
 	})
 	ctx.Cancel()
+	return nil
 }

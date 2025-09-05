@@ -10,13 +10,9 @@ import (
 type MappedClaims map[string]claim.PlayerClaim
 
 var (
-	claims   MappedClaims
+	claims   MappedClaims = make(MappedClaims)
 	claimsMu sync.RWMutex
 )
-
-func init() {
-	claims = make(MappedClaims)
-}
 
 // Claims ...
 func Claims() MappedClaims {

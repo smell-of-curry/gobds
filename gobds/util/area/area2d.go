@@ -14,8 +14,8 @@ type Area2D struct {
 var NilArea2D Area2D
 
 // NewArea2D ...
-func NewArea2D(minX, minZ int32, maxX, maxZ int32) Area2D {
-	return Area2D{
+func NewArea2D(minX, minZ int32, maxX, maxZ int32) *Area2D {
+	return &Area2D{
 		MinX: minX,
 		MinZ: minZ,
 		MaxX: maxX,
@@ -24,13 +24,13 @@ func NewArea2D(minX, minZ int32, maxX, maxZ int32) Area2D {
 }
 
 // PositionInside ...
-func (a Area2D) PositionInside(x, z int32) bool {
+func (a *Area2D) PositionInside(x, z int32) bool {
 	return x > a.MinX && x < a.MaxX &&
 		z > a.MinZ && z < a.MaxZ
 }
 
 // ChunkInside ...
-func (a Area2D) ChunkInside(chunk protocol.ChunkPos) bool {
+func (a *Area2D) ChunkInside(chunk protocol.ChunkPos) bool {
 	chunkMinX, chunkMinZ := chunk.X()<<4, chunk.Z()<<4
 	chunkMaxX, chunkMaxZ := chunkMinX+15, chunkMinZ+15
 	return chunkMinX <= a.MaxX && chunkMaxX >= a.MinX &&

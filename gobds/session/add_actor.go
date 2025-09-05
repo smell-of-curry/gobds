@@ -1,4 +1,4 @@
-package handlers
+package session
 
 import (
 	"fmt"
@@ -7,23 +7,23 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
-	"github.com/smell-of-curry/gobds/gobds/interceptor"
-	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/util/translator"
 )
 
-// AddActor ...
-type AddActor struct{}
+// AddActorHandler ...
+type AddActorHandler struct{}
 
 // Handle ...
-func (AddActor) Handle(c interceptor.Client, pk packet.Packet, _ *session.Context) {
+func (*AddActorHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.AddActor)
+
+	// wow, handler that does nothing...
 
 	entityType := pkt.EntityType
 	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, entityType))
 
 	if !strings.HasPrefix(entityType, "pokemon:") {
-		return
+		return nil
 	}
 
 	// name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
@@ -32,13 +32,14 @@ func (AddActor) Handle(c interceptor.Client, pk packet.Packet, _ *session.Contex
 	// }
 
 	//pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
+	return nil
 }
 
 // nickIdentifier ...
 const nickIdentifier = "§l§n§r"
 
 // translateName ...
-func translateName(name string, entityType string, c interceptor.Client) string {
+func translateName(name string, entityType string, c *Session) string {
 	if strings.HasPrefix(name, nickIdentifier) {
 		return name
 	}
@@ -63,8 +64,8 @@ func translateName(name string, entityType string, c interceptor.Client) string 
 }
 
 // entityTranslatedName ...
-func entityTranslatedName(entityType string, c interceptor.Client) string {
-	t, ok := translator.TranslationFor(c.Locale())
+func entityTranslatedName(entityType string, s *Session) string {
+	t, ok := translator.TranslationFor(s.Locale())
 	if !ok {
 		t, _ = translator.TranslationFor("en_US") // Default to american english.
 	}

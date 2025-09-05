@@ -27,7 +27,7 @@ func NewService(log *slog.Logger, c service.Config) *Service {
 }
 
 // CheckIP ...
-func (s *Service) CheckIP(ip string) (*ResponseModel, error) {
+func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error) {
 	if !s.Enabled {
 		return &ResponseModel{Status: "success", Proxy: false}, nil
 	}
@@ -48,15 +48,12 @@ func (s *Service) CheckIP(ip string) (*ResponseModel, error) {
 		}
 
 		url := fmt.Sprintf("%s/%s?fields=status,message,proxy", s.Url, ip)
-		ctx, cancel := context.WithTimeout(context.Background(), service.RequestTimeout)
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
-			cancel()
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
 		response, err := s.Client.Do(request)
-		cancel()
 		if err != nil {
 			lastErr = fmt.Errorf("request failed: %w", err)
 			if service.ErrorIsTemporary(err) {

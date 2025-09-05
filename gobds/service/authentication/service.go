@@ -27,7 +27,7 @@ var (
 )
 
 // AuthenticationOf ...
-func (s *Service) AuthenticationOf(xuid string) (*ResponseModel, error) {
+func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseModel, error) {
 	if !s.Enabled {
 		return &ResponseModel{Allowed: true}, nil
 	}
@@ -40,16 +40,13 @@ func (s *Service) AuthenticationOf(xuid string) (*ResponseModel, error) {
 			time.Sleep(service.RetryDelay)
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), service.RequestTimeout)
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/%s", s.Url, xuid), nil)
 		if err != nil {
-			cancel()
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 		request.Header.Set("authorization", s.Key)
 
 		response, err := s.Client.Do(request)
-		cancel()
 		if err != nil {
 			lastErr = fmt.Errorf("request failed: %w", err)
 			if service.ErrorIsTemporary(err) {

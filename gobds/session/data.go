@@ -3,8 +3,6 @@ package session
 import (
 	"sync/atomic"
 	"time"
-
-	"github.com/sandertv/gophertunnel/minecraft"
 )
 
 // Data ...
@@ -14,7 +12,7 @@ type Data struct {
 }
 
 // NewData ...
-func NewData(client *minecraft.Conn) *Data {
+func NewData(client Conn) *Data {
 	gameData := client.GameData()
 
 	d := &Data{}

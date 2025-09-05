@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
-	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
+	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
 // Player ...
@@ -158,7 +158,7 @@ func (m *PlayerManager) save() error {
 }
 
 // IdentityDataOf ...
-func (m *PlayerManager) IdentityDataOf(conn *minecraft.Conn) login.IdentityData {
+func (m *PlayerManager) IdentityDataOf(conn session.Conn) login.IdentityData {
 	m.mu.RLock()
 	xuid := conn.IdentityData().XUID
 	player, exists := m.players[xuid]
@@ -197,7 +197,7 @@ func (m *PlayerManager) IdentityDataOf(conn *minecraft.Conn) login.IdentityData 
 }
 
 // ClientDataOf ...
-func (m *PlayerManager) ClientDataOf(conn *minecraft.Conn) login.ClientData {
+func (m *PlayerManager) ClientDataOf(conn session.Conn) login.ClientData {
 	m.mu.RLock()
 	xuid := conn.IdentityData().XUID
 	player, exists := m.players[xuid]
