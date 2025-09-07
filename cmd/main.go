@@ -33,7 +33,10 @@ func main() {
 		panic(err)
 	}
 
-	g := c.New()
+	g, err := c.New()
+	if err != nil {
+		panic(err)
+	}
 	g.CloseOnProgramEnd()
 	err = retry.Do(
 		g.Listen,

@@ -71,7 +71,7 @@ func (*CustomCommandRegisterHandler) Handle(s *Session, pk packet.Packet, ctx *C
 		// Write commands to file
 		commandsJSON, err := json.MarshalIndent(commands, "", "  ")
 		if err != nil {
-			s.log.Error("failed to marshal commands to", "error", err)
+			s.log.Error("failed to marshal commands", "error", err)
 			return err
 		}
 

@@ -122,14 +122,13 @@ func (c UserConfig) loadCommands(log *slog.Logger) error {
 				panic(err)
 			}
 			if createErr := os.WriteFile(c.Resources.CommandPath, []byte("{}"), os.ModePerm); createErr != nil {
-				panic(createErr)
+				return createErr
 			}
 			rawBytes, err = os.ReadFile(c.Resources.CommandPath)
 			if err != nil {
-				panic(err)
+				return err
 			}
 		} else {
-			log.Error("failed to read commands", "err", err)
 			return err
 		}
 	}

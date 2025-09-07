@@ -48,7 +48,7 @@ func (gb *GoBDS) CloseOnProgramEnd() {
 }
 
 // New creates new GoBDS instance.
-func (c *Config) New() *GoBDS {
+func (c *Config) New() (*GoBDS, error) {
 	c.Log.Info("creating a new instance of gobds")
 	ctx, cancel := context.WithCancel(context.Background())
 	world_finaliseBlockRegistry()
@@ -59,16 +59,27 @@ func (c *Config) New() *GoBDS {
 		cancel: cancel,
 	}
 
+	if c.PlayerManager == nil {
+		return nil, fmt.Errorf("start gobds: player manager is not configured")
+	}
+	if len(c.Listeners) == 0 {
+		return nil, fmt.Errorf("start gobds: no listeners configured")
+	}
+	if c.StatusProvider == nil {
+		return nil, fmt.Errorf("start gobds: status provider is nil")
+	}
+
 	for _, lf := range c.Listeners {
 		l, err := lf(*c)
 		if err != nil {
-			c.Log.Error("create DefaultListener: " + err.Error())
+			c.Log.Error("error creating listener", "error", err)
+			continue
 		}
 		gobds.listeners = append(gobds.listeners, l)
 	}
 	go gobds.tick()
 
-	return gobds
+	return gobds, nil
 }
 
 // tick ...
