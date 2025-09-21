@@ -18,7 +18,7 @@ func main() {
 
 	dsn := conf.Network.SentryDSN
 	if dsn != "" {
-		err := sentry.Init(sentry.ClientOptions{
+		err = sentry.Init(sentry.ClientOptions{
 			Dsn:        conf.Network.SentryDSN,
 			ServerName: conf.Network.ServerName,
 		})
@@ -28,7 +28,7 @@ func main() {
 		defer sentry.Flush(2 * time.Second)
 	}
 
-	c, err := conf.Config(slog.Default())
+	c, err := conf.Config(log)
 	if err != nil {
 		panic(err)
 	}
@@ -38,6 +38,7 @@ func main() {
 		panic(err)
 	}
 	g.CloseOnProgramEnd()
+
 	err = retry.Do(
 		g.Listen,
 		retry.Attempts(5),
@@ -47,7 +48,7 @@ func main() {
 		}),
 	)
 	if err != nil {
-		log.Error("failed to start after multiple retries, shutting down", "error", err)
+		log.Error("failed to start after multiple retries, shutting down")
 		return
 	}
 }

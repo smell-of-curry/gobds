@@ -8,10 +8,9 @@ import (
 	"net/netip"
 	"os"
 	"os/signal"
+	"sync"
 	"sync/atomic"
 	"syscall"
-
-	"sync"
 	"time"
 	_ "unsafe"
 
@@ -36,15 +35,6 @@ type GoBDS struct {
 	listeners []Listener
 
 	wg sync.WaitGroup
-}
-
-func (gb *GoBDS) CloseOnProgramEnd() {
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-c
-		_ = gb.Close()
-	}()
 }
 
 // New creates new GoBDS instance.
@@ -124,7 +114,7 @@ func (gb *GoBDS) Listen() error {
 	}
 
 	gb.wg.Wait()
-	gb.conf.Log.Info("Proxy closed.", "uptime", time.Since(*gb.started.Load()).String())
+	gb.conf.Log.Info("proxy closed.", "uptime", time.Since(*gb.started.Load()).String())
 
 	return nil
 }
@@ -145,8 +135,6 @@ func (gb *GoBDS) listen(l Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			gb.conf.Log.Info(fmt.Sprintf("Listener %T closed", l))
-
 			gb.wg.Done()
 			return
 		}
@@ -161,9 +149,9 @@ func (gb *GoBDS) listen(l Listener) {
 				return
 			}
 
-			gb.conf.Log.Info("player connected", "nick", conn.IdentityData().DisplayName, "addr", conn.RemoteAddr())
+			gb.conf.Log.Info("player connected", "name", conn.IdentityData().DisplayName)
 			s.ReadPackets(ctx)
-			gb.conf.Log.Info("player disconnected", "nick", conn.IdentityData().DisplayName, "addr", conn.RemoteAddr())
+			gb.conf.Log.Info("player disconnected", "name", conn.IdentityData().DisplayName)
 		}()
 	}
 }
@@ -195,10 +183,10 @@ func (gb *GoBDS) accept(conn session.Conn, ctx context.Context) (*session.Sessio
 
 	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
-		return nil, fmt.Errorf("you're not whitelisted")
+		return nil, fmt.Errorf("You're not whitelisted")
 	}
 	if !gb.conf.AuthenticationService.Enabled && !gb.handleSecureSlots(displayName) {
-		return nil, fmt.Errorf("the server is at full capacity")
+		return nil, fmt.Errorf("The server is at full capacity")
 	}
 
 	ctx2, cancel := context.WithTimeout(ctx, time.Minute)
@@ -313,6 +301,16 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (
 func (gb *GoBDS) Close() error {
 	gb.cancel()
 	return nil
+}
+
+// CloseOnProgramEnd ...
+func (gb *GoBDS) CloseOnProgramEnd() {
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-c
+		_ = gb.Close()
+	}()
 }
 
 // noinspection ALL

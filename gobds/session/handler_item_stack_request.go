@@ -5,11 +5,11 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
-// ItemStackRequest ...
-type ItemStackRequest struct{}
+// ItemStackRequestHandler ...
+type ItemStackRequestHandler struct{}
 
 // Handle ...
-func (*ItemStackRequest) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+func (*ItemStackRequestHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.ItemStackRequest)
 	for _, request := range pkt.Requests {
 		for _, action := range request.Actions {

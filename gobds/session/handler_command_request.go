@@ -8,11 +8,11 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
-// CommandRequest ...
-type CommandRequest struct{}
+// CommandRequestHandler ...
+type CommandRequestHandler struct{}
 
 // Handle ...
-func (*CommandRequest) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+func (*CommandRequestHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.CommandRequest)
 
 	cmd := strings.ToLower(strings.Split(pkt.CommandLine[1:], " ")[0])
@@ -24,7 +24,7 @@ func (*CommandRequest) Handle(s *Session, pk packet.Packet, ctx *Context) error 
 		return nil
 	}
 
-	handler := s.handlers[packet.IDAvailableCommands].(*AvailableCommands)
+	handler := s.handlers[packet.IDAvailableCommands].(*AvailableCommandsHandler)
 	_, ok := handler.cache.Load(cmd)
 	if ok {
 		return nil

@@ -11,8 +11,8 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/cmd"
 )
 
-// AvailableCommands ...
-type AvailableCommands struct {
+// AvailableCommandsHandler ...
+type AvailableCommandsHandler struct {
 	cache sync.Map
 }
 
@@ -20,7 +20,7 @@ type AvailableCommands struct {
 var disabledCommands = []string{"me", "tell", "w", "msg"}
 
 // Handle ...
-func (h *AvailableCommands) Handle(_ *Session, pk packet.Packet, ctx *Context) error {
+func (h *AvailableCommandsHandler) Handle(_ *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.AvailableCommands)
 
 	h.cache.Clear()
@@ -35,7 +35,7 @@ func (h *AvailableCommands) Handle(_ *Session, pk packet.Packet, ctx *Context) e
 }
 
 // appendCustomCommands ...
-func (h *AvailableCommands) appendCustomCommands(pkt *packet.AvailableCommands) *packet.AvailableCommands {
+func (h *AvailableCommandsHandler) appendCustomCommands(pkt *packet.AvailableCommands) *packet.AvailableCommands {
 	enumIndices := make(map[string]uint32, len(pkt.Enums))
 	for i, e := range pkt.Enums {
 		enumIndices[e.Type] = uint32(i)

@@ -10,9 +10,6 @@ type Area2D struct {
 	MaxX, MaxZ int32
 }
 
-// NilArea2D ...
-var NilArea2D Area2D
-
 // NewArea2D ...
 func NewArea2D(minX, minZ int32, maxX, maxZ int32) *Area2D {
 	return &Area2D{

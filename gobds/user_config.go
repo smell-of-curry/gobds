@@ -146,10 +146,10 @@ func (c UserConfig) loadCommands(log *slog.Logger) error {
 
 // makeBorder returns new border instance.
 func (c UserConfig) makeBorder() *area.Area2D {
-	if c.Border.Enabled {
-		return area.NewArea2D(c.Border.MinX, c.Border.MinZ, c.Border.MaxX, c.Border.MaxZ)
+	if !c.Border.Enabled {
+		return nil
 	}
-	return nil
+	return area.NewArea2D(c.Border.MinX, c.Border.MinZ, c.Border.MaxX, c.Border.MaxZ)
 }
 
 // provider returns default provider.
@@ -159,22 +159,25 @@ func (c UserConfig) provider() (minecraft.ServerStatusProvider, error) {
 
 // afkTimer returns new AFKTimer instance.
 func (c UserConfig) afkTimer() *infra.AFKTimer {
-	if c.AFKTimer.Enabled {
-		return &infra.AFKTimer{TimeoutDuration: c.AFKTimer.TimeoutDuration}
+	if !c.AFKTimer.Enabled {
+		return nil
 	}
-	return nil
+	return &infra.AFKTimer{TimeoutDuration: c.AFKTimer.TimeoutDuration}
 }
 
 // pingIndicator returns new PingIndicator instance.
 func (c UserConfig) pingIndicator() *infra.PingIndicator {
-	if c.PingIndicator.Enabled {
-		return &infra.PingIndicator{Identifier: c.PingIndicator.Identifier}
+	if !c.PingIndicator.Enabled {
+		return nil
 	}
-	return nil
+	return &infra.PingIndicator{Identifier: c.PingIndicator.Identifier}
 }
 
 // whiteList returns new Whitelist instance.
 func (c UserConfig) whiteList(log *slog.Logger) *whitelist.Whitelist {
+	if !c.Network.Whitelisted {
+		return nil
+	}
 	conf, err := whitelist.ReadConfig(c.Network.WhitelistPath)
 	if err != nil {
 		log.Error("failed to read whitelist config", "err", err)
@@ -216,9 +219,9 @@ func (c UserConfig) listenerFunc(conf Config) (Listener, error) {
 	}
 	l, err := cfg.Listen("raknet", c.Network.LocalAddress)
 	if err != nil {
-		return nil, fmt.Errorf("create minecraft DefaultListener: %w", err)
+		return nil, fmt.Errorf("create listener: %w", err)
 	}
-	conf.Log.Info("Listener running.", "addr", l.Addr())
+	conf.Log.Info("listener running.", "addr", l.Addr())
 	return DefaultListener{l}, nil
 }
 

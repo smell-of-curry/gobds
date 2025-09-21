@@ -10,6 +10,8 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/cmd"
 )
 
+// todo; ...
+
 type IMinecraftRawText struct {
 	Text string `json:"text"`
 }
@@ -18,7 +20,7 @@ type IMinecraftTextMessage struct {
 	RawText []IMinecraftRawText `json:"rawtext"`
 }
 
-type CustomCommandRegisterHandler struct{}
+type TextHandler struct{}
 
 // Global variable to store the command file path - set during initialization
 var globalCommandPath string
@@ -28,7 +30,7 @@ func SetCommandPath(path string) {
 	globalCommandPath = path
 }
 
-func (*CustomCommandRegisterHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.Text)
 
 	// ensuring that only server packets are processed

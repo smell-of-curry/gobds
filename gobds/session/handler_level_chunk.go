@@ -4,11 +4,11 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
-// LevelChunk ...
-type LevelChunk struct{}
+// LevelChunkHandler ...
+type LevelChunkHandler struct{}
 
 // Handle ...
-func (*LevelChunk) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+func (*LevelChunkHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.LevelChunk)
 
 	if s.border == nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
@@ -14,10 +15,8 @@ import (
 type AddActorHandler struct{}
 
 // Handle ...
-func (*AddActorHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+func (*AddActorHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.AddActor)
-
-	// wow, handler that does nothing...
 
 	entityType := pkt.EntityType
 	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, entityType))
@@ -26,12 +25,12 @@ func (*AddActorHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error
 		return nil
 	}
 
-	// name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
-	// if !ok {
-	// 	return
-	// }
+	name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
+	if !ok {
+		return nil
+	}
 
-	//pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
+	pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, s)
 	return nil
 }
 
@@ -39,12 +38,12 @@ func (*AddActorHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error
 const nickIdentifier = "§l§n§r"
 
 // translateName ...
-func translateName(name string, entityType string, c *Session) string {
+func translateName(name string, entityType string, s *Session) string {
 	if strings.HasPrefix(name, nickIdentifier) {
 		return name
 	}
 
-	translatedName := entityTranslatedName(entityType, c)
+	translatedName := entityTranslatedName(entityType, s)
 
 	name = strings.TrimSpace(name)
 	lines := strings.Split(name, "\n")

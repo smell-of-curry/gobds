@@ -10,7 +10,6 @@ type RemoveActorHandler struct{}
 
 // Handle ...
 func (*RemoveActorHandler) Handle(_ *Session, pk packet.Packet, _ *Context) error {
-	// useless cause AddActorHandler does nothing
 	pkt := pk.(*packet.RemoveActor)
 	infra.EntityFactory.RemoveFromRuntimeID(uint64(pkt.EntityUniqueID))
 	return nil

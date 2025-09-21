@@ -62,7 +62,7 @@ func (h *InventoryTransactionHandler) handleInteraction(s *Session, pkt *packet.
 		block.Anvil, block.Stonecutter, block.Hopper,
 		gblock.Button, block.WoodTrapdoor, block.CopperTrapdoor,
 		block.WoodFenceGate, block.WoodDoor, block.CopperDoor,
-		block.Composter:
+		block.Ladder, block.Composter:
 		if !data.InteractWithBlock() {
 			ctx.Cancel()
 			return
@@ -138,7 +138,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 		return
 	}
 
-	registry := s.handlers[packet.IDItemRegistry].(*ItemRegistry)
+	registry := s.handlers[packet.IDItemRegistry].(*ItemRegistryHandler)
 	if registry.items == nil {
 		return
 	}

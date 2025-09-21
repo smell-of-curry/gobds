@@ -10,14 +10,9 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/util"
 )
 
-func MockSupportedLanguages() ([]byte, error) {
-	return []byte("[ \"en_US\" ]"), nil
-}
-
 // SupportedLanguages ...
 func SupportedLanguages(rp *resource.Pack) (supportedLanguages []string, err error) {
-	// raw, err := rp.ReadFile("texts/languages.json")
-	raw, err := MockSupportedLanguages() // TODO: Remove this
+	raw, err := rp.ReadFile("texts/languages.json")
 	if err != nil {
 		return nil, fmt.Errorf("error while reading languages.json: %w", err)
 	}
@@ -34,14 +29,9 @@ func SupportedLanguages(rp *resource.Pack) (supportedLanguages []string, err err
 	return supportedLanguages, nil
 }
 
-func MockTranslations() (string, error) {
-	return "test=test", nil
-}
-
 // TranslationMapFor ...
 func TranslationMapFor(rp *resource.Pack, language string) (langMap map[string]string, err error) {
-	// raw, err := rp.ReadFile("texts/" + language + ".lang")
-	raw, err := MockTranslations() // TODO: Remove this
+	raw, err := rp.ReadFile("texts/" + language + ".lang")
 	if err != nil {
 		return nil, fmt.Errorf("error while reading language file: %w", err)
 	}

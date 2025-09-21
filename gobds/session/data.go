@@ -12,8 +12,8 @@ type Data struct {
 }
 
 // NewData ...
-func NewData(client Conn) *Data {
-	gameData := client.GameData()
+func NewData(conn Conn) *Data {
+	gameData := conn.GameData()
 
 	d := &Data{}
 	d.dimension.Store(gameData.Dimension)

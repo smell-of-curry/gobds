@@ -6,11 +6,11 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/infra"
 )
 
-// AddPainting ...
-type AddPainting struct{}
+// AddPaintingHandler ...
+type AddPaintingHandler struct{}
 
 // Handle ...
-func (*AddPainting) Handle(_ *Session, pk packet.Packet, ctx *Context) error {
+func (*AddPaintingHandler) Handle(_ *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.AddPainting)
 	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, "minecraft:painting"))
 	return nil

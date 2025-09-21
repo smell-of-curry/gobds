@@ -11,8 +11,8 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/text"
 )
 
-// PlayerAuthInput ...
-type PlayerAuthInput struct {
+// PlayerAuthInputHandler ...
+type PlayerAuthInputHandler struct {
 	lastMoveTime       time.Time
 	lastPosition       mgl32.Vec3
 	lastYaw, lastPitch float32
@@ -20,8 +20,8 @@ type PlayerAuthInput struct {
 }
 
 // NewPlayerAuthInputHandler ...
-func NewPlayerAuthInputHandler() *PlayerAuthInput {
-	return &PlayerAuthInput{
+func NewPlayerAuthInputHandler() *PlayerAuthInputHandler {
+	return &PlayerAuthInputHandler{
 		lastMoveTime: time.Now(),
 		lastPosition: mgl32.Vec3{},
 		lastYaw:      0,
@@ -30,7 +30,7 @@ func NewPlayerAuthInputHandler() *PlayerAuthInput {
 }
 
 // Handle ...
-func (h *PlayerAuthInput) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.PlayerAuthInput)
 
 	if pkt.Tick%20 == 0 {
@@ -46,7 +46,7 @@ func (h *PlayerAuthInput) Handle(s *Session, pk packet.Packet, ctx *Context) err
 }
 
 // handleAFKTimer ...
-func (h *PlayerAuthInput) handleAFKTimer(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
+func (h *PlayerAuthInputHandler) handleAFKTimer(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
 	if s.afkTimer == nil {
 		return
 	}
@@ -62,14 +62,14 @@ func (h *PlayerAuthInput) handleAFKTimer(s *Session, pkt *packet.PlayerAuthInput
 		return
 	}
 
-	if time.Since(h.lastMoveTime) > time.Duration(s.afkTimer.TimeoutDuration) {
+	if time.Since(h.lastMoveTime) > s.afkTimer.TimeoutDuration {
 		s.Disconnect(text.Colourf("<red>You've been kicked for being AFK.</red>"))
 		ctx.Cancel()
 	}
 }
 
 // handleWorldBorder ...
-func (h *PlayerAuthInput) handleWorldBorder(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
+func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
 	clientData := s.Data()
 	clientXUID := s.IdentityData().XUID
 	for i, action := range pkt.BlockActions {

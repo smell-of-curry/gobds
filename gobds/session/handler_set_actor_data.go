@@ -3,6 +3,7 @@ package session
 import (
 	"strings"
 
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 )
@@ -11,7 +12,7 @@ import (
 type SetActorDataHandler struct{}
 
 // Handle ...
-func (*SetActorDataHandler) Handle(c *Session, pk packet.Packet, _ *Context) error {
+func (*SetActorDataHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.SetActorData)
 
 	ent, ok := infra.EntityFactory.ByRuntimeID(pkt.EntityRuntimeID)
@@ -24,11 +25,11 @@ func (*SetActorDataHandler) Handle(c *Session, pk packet.Packet, _ *Context) err
 		return nil
 	}
 
-	// name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
-	// if !ok {
-	// 	return
-	// }
+	name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
+	if !ok {
+		return nil
+	}
 
-	// pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
+	pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, s)
 	return nil
 }

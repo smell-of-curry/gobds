@@ -16,33 +16,6 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/util/area"
 )
 
-type Config struct {
-	Client        Conn
-	Server        Conn
-	PingIndicator *infra.PingIndicator
-	AfkTimer      *infra.AFKTimer
-	Border        *area.Area2D
-	Log           *slog.Logger
-}
-
-func (c Config) New() *Session {
-	s := &Session{
-		client: c.Client,
-		server: c.Server,
-
-		pingIndicator: c.PingIndicator,
-		afkTimer:      c.AfkTimer,
-		border:        c.Border,
-
-		close: make(chan struct{}),
-
-		data: NewData(c.Client),
-		log:  c.Log,
-	}
-	s.registerHandlers()
-	return s
-}
-
 // Session ...
 type Session struct {
 	client   Conn
@@ -254,17 +227,17 @@ func (s *Session) handlePacket(p packet.Packet, conn Conn) (bool, error) {
 func (s *Session) registerHandlers() {
 	s.handlers = map[uint32]packetHandler{
 		packet.IDAddActor:             &AddActorHandler{},
-		packet.IDAddPainting:          &AddPainting{},
-		packet.IDAvailableCommands:    &AvailableCommands{},
-		packet.IDCommandRequest:       &CommandRequest{},
+		packet.IDAddPainting:          &AddPaintingHandler{},
+		packet.IDAvailableCommands:    &AvailableCommandsHandler{},
+		packet.IDCommandRequest:       &CommandRequestHandler{},
 		packet.IDInventoryTransaction: &InventoryTransactionHandler{},
-		packet.IDItemRegistry:         &ItemRegistry{},
-		packet.IDItemStackRequest:     &ItemStackRequest{},
-		packet.IDLevelChunk:           &LevelChunk{},
+		packet.IDItemRegistry:         &ItemRegistryHandler{},
+		packet.IDItemStackRequest:     &ItemStackRequestHandler{},
+		packet.IDLevelChunk:           &LevelChunkHandler{},
 		packet.IDPlayerAuthInput:      NewPlayerAuthInputHandler(),
 		packet.IDRemoveActor:          &RemoveActorHandler{},
 		packet.IDSetActorData:         &SetActorDataHandler{},
 		packet.IDSubChunk:             &SubChunkHandler{},
-		packet.IDText:                 &CustomCommandRegisterHandler{},
+		packet.IDText:                 &TextHandler{},
 	}
 }

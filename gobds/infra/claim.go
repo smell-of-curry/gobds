@@ -10,7 +10,7 @@ import (
 type MappedClaims map[string]claim.PlayerClaim
 
 var (
-	claims   MappedClaims = make(MappedClaims)
+	claims   = make(MappedClaims)
 	claimsMu sync.RWMutex
 )
 
