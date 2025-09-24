@@ -222,7 +222,7 @@ func (c UserConfig) listenerFunc(conf Config) (Listener, error) {
 		return nil, fmt.Errorf("create listener: %w", err)
 	}
 	conf.Log.Info("listener running.", "addr", l.Addr())
-	return DefaultListener{l}, nil
+	return listener{l}, nil
 }
 
 // DefaultConfig ...

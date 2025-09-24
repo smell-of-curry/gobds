@@ -2,7 +2,6 @@ package gobds
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -139,7 +138,7 @@ func (m *PlayerManager) save() error {
 		return err
 	}
 	defer func() {
-		if err := m.fileLock.Unlock(); err != nil {
+		if err = m.fileLock.Unlock(); err != nil {
 			m.log.Error("failed to unlock file during save", "err", err)
 		}
 	}()
@@ -159,40 +158,41 @@ func (m *PlayerManager) save() error {
 
 // IdentityDataOf ...
 func (m *PlayerManager) IdentityDataOf(conn session.Conn) login.IdentityData {
+	data := conn.IdentityData()
+	xuid := data.XUID
+
 	m.mu.RLock()
-	xuid := conn.IdentityData().XUID
 	player, exists := m.players[xuid]
 	m.mu.RUnlock()
-
 	if exists {
 		return login.IdentityData{
 			XUID:        xuid,
 			DisplayName: player.PlayerName,
 			Identity:    player.Identity,
-			TitleID:     conn.IdentityData().TitleID,
+			TitleID:     data.TitleID,
 		}
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if p, ok := m.players[xuid]; ok {
-		player = p
-	} else {
-		newPlayer := Player{
-			PlayerName:         conn.IdentityData().DisplayName,
-			Identity:           conn.IdentityData().Identity,
+
+	player, exists = m.players[xuid]
+	if !exists {
+		player = Player{
+			PlayerName:         data.DisplayName,
+			Identity:           data.Identity,
 			ClientSelfSignedID: conn.ClientData().SelfSignedID,
 		}
-		m.players[xuid] = newPlayer
+		m.players[xuid] = player
 		m.dirty = true
-		player = newPlayer
-		m.log.Debug("added player to list", "name", newPlayer.PlayerName, "xuid", xuid)
+		m.log.Debug("player added to list", "name", player.PlayerName, "xuid", xuid)
 	}
+
 	return login.IdentityData{
 		XUID:        xuid,
 		DisplayName: player.PlayerName,
 		Identity:    player.Identity,
-		TitleID:     conn.IdentityData().TitleID,
+		TitleID:     data.TitleID,
 	}
 }
 
@@ -203,7 +203,6 @@ func (m *PlayerManager) ClientDataOf(conn session.Conn) login.ClientData {
 	player, exists := m.players[xuid]
 	clientData := conn.ClientData()
 	m.mu.RUnlock()
-
 	if exists {
 		clientData.SelfSignedID = player.ClientSelfSignedID
 		return clientData
@@ -212,29 +211,25 @@ func (m *PlayerManager) ClientDataOf(conn session.Conn) login.ClientData {
 	return clientData
 }
 
-// XUIDFromPlayerName ...
-func (m *PlayerManager) XUIDFromPlayerName(name string) (string, error) {
+// XUIDFromName ...
+func (m *PlayerManager) XUIDFromName(name string) (string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
-	for xuid, player := range m.players {
-		if strings.EqualFold(player.PlayerName, name) {
+	for xuid, p := range m.players {
+		if strings.EqualFold(p.PlayerName, name) {
 			return xuid, nil
 		}
 	}
-
-	return "", errors.New("player not found")
+	return "", fmt.Errorf("player not found, name=%s", name)
 }
 
 // PlayerFromXUID ...
 func (m *PlayerManager) PlayerFromXUID(xuid string) (Player, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
-	player, ok := m.players[xuid]
+	p, ok := m.players[xuid]
 	if !ok {
-		return Player{}, errors.New("player not found")
+		return Player{}, fmt.Errorf("player not found, xuid=%s", xuid)
 	}
-
-	return player, nil
+	return p, nil
 }
