@@ -1,4 +1,4 @@
-package handlers
+package session
 
 import (
 	"slices"
@@ -9,22 +9,19 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	"github.com/smell-of-curry/gobds/gobds/infra"
-	"github.com/smell-of-curry/gobds/gobds/interceptor"
-	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
-// PlayerAuthInput ...
-type PlayerAuthInput struct {
+// PlayerAuthInputHandler ...
+type PlayerAuthInputHandler struct {
 	lastMoveTime       time.Time
 	lastPosition       mgl32.Vec3
 	lastYaw, lastPitch float32
 	mu                 sync.Mutex
 }
 
-// NewPlayerAuthInput ...
-func NewPlayerAuthInput() *PlayerAuthInput {
-	return &PlayerAuthInput{
+// NewPlayerAuthInputHandler ...
+func NewPlayerAuthInputHandler() *PlayerAuthInputHandler {
+	return &PlayerAuthInputHandler{
 		lastMoveTime: time.Now(),
 		lastPosition: mgl32.Vec3{},
 		lastYaw:      0,
@@ -33,32 +30,26 @@ func NewPlayerAuthInput() *PlayerAuthInput {
 }
 
 // Handle ...
-func (h *PlayerAuthInput) Handle(c interceptor.Client, pk packet.Packet, ctx *session.Context) {
+func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.PlayerAuthInput)
 
 	if pkt.Tick%20 == 0 {
-		c.SendPingIndicator()
-		h.handleAFKTimer(c, pkt, ctx)
+		s.SendPingIndicator()
+		h.handleAFKTimer(s, pkt, ctx)
 		if ctx.Cancelled() {
-			return
+			return nil
 		}
 	}
 
-	h.handleWorldBorder(c, pkt, ctx)
-	if ctx.Cancelled() {
-		return
-	}
+	h.handleWorldBorder(s, pkt, ctx)
+	return nil
 }
 
 // handleAFKTimer ...
-func (h *PlayerAuthInput) handleAFKTimer(c interceptor.Client, pkt *packet.PlayerAuthInput, ctx *session.Context) {
-	afkTimer := infra.AFKTimer
-	if !afkTimer.Enabled {
+func (h *PlayerAuthInputHandler) handleAFKTimer(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
+	if s.afkTimer == nil {
 		return
 	}
-
-	h.mu.Lock()
-	defer h.mu.Unlock()
 
 	moved := !h.lastPosition.ApproxEqual(pkt.Position) ||
 		!mgl32.FloatEqual(h.lastYaw, pkt.Yaw) ||
@@ -71,16 +62,16 @@ func (h *PlayerAuthInput) handleAFKTimer(c interceptor.Client, pkt *packet.Playe
 		return
 	}
 
-	if time.Since(h.lastMoveTime) > time.Duration(afkTimer.TimeoutDuration) {
-		c.Disconnect(text.Colourf("<red>You've been kicked for being AFK.</red>"))
+	if time.Since(h.lastMoveTime) > s.afkTimer.TimeoutDuration {
+		s.Disconnect(text.Colourf("<red>You've been kicked for being AFK.</red>"))
 		ctx.Cancel()
 	}
 }
 
 // handleWorldBorder ...
-func (h *PlayerAuthInput) handleWorldBorder(c interceptor.Client, pkt *packet.PlayerAuthInput, ctx *session.Context) {
-	clientData := c.Data().(interceptor.ClientData)
-	clientXUID := c.IdentityData().XUID
+func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
+	clientData := s.Data()
+	clientXUID := s.IdentityData().XUID
 	for i, action := range pkt.BlockActions {
 		if action.Action == protocol.PlayerActionCrackBreak {
 			continue
@@ -96,8 +87,7 @@ func (h *PlayerAuthInput) handleWorldBorder(c interceptor.Client, pkt *packet.Pl
 			}
 		}
 
-		if infra.WorldBorderEnabled() &&
-			!infra.WorldBorder.PositionInside(blockPosition.X(), blockPosition.Z()) {
+		if s.border != nil && !s.border.PositionInside(blockPosition.X(), blockPosition.Z()) {
 			ctx.Cancel()
 			continue
 		}

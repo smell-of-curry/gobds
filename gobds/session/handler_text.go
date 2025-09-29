@@ -1,17 +1,16 @@
-package handlers
+package session
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/cmd"
-	"github.com/smell-of-curry/gobds/gobds/interceptor"
-	"github.com/smell-of-curry/gobds/gobds/session"
 )
+
+// todo; ...
 
 type IMinecraftRawText struct {
 	Text string `json:"text"`
@@ -21,7 +20,7 @@ type IMinecraftTextMessage struct {
 	RawText []IMinecraftRawText `json:"rawtext"`
 }
 
-type CustomCommandRegisterHandler struct{}
+type TextHandler struct{}
 
 // Global variable to store the command file path - set during initialization
 var globalCommandPath string
@@ -31,21 +30,22 @@ func SetCommandPath(path string) {
 	globalCommandPath = path
 }
 
-func (CustomCommandRegisterHandler) Handle(_ interceptor.Client, pk packet.Packet, ctx *session.Context) {
+func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.Text)
 
-	if pkt.TextType != packet.TextTypeObject {
-		return
+	// ensuring that only server packets are processed
+	if pkt.TextType != packet.TextTypeObject || ctx.Val() != s.server {
+		return nil
 	}
 
 	var messageData IMinecraftTextMessage
 	if err := json.Unmarshal([]byte(pkt.Message), &messageData); err != nil {
-		log.Println("Failed to parse message JSON", err)
-		return
+		s.log.Error("failed to parse message", "error", err)
+		return err
 	}
 	message := messageData.RawText[0].Text
 	if !strings.HasPrefix(message, "[PROXY_SYSTEM][COMMANDS]=") {
-		return
+		return nil
 	}
 	ctx.Cancel() // Ensure client doesn't see the message.
 	commandsRaw := strings.TrimPrefix(message, "[PROXY_SYSTEM][COMMANDS]=")
@@ -57,8 +57,8 @@ func (CustomCommandRegisterHandler) Handle(_ interceptor.Client, pk packet.Packe
 	// Parse the JSON commands
 	var commands map[string]cmd.EngineResponseCommand
 	if err := json.Unmarshal([]byte(commandsRaw), &commands); err != nil {
-		log.Println("Failed to parse commands JSON", err)
-		return
+		s.log.Error("failed to parse commands", err)
+		return err
 	}
 
 	// Write commands to file for persistence
@@ -66,24 +66,25 @@ func (CustomCommandRegisterHandler) Handle(_ interceptor.Client, pk packet.Packe
 		// Ensure directory exists
 		dir := filepath.Dir(globalCommandPath)
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-			log.Println("Failed to create command directory", err)
-			return
+			s.log.Error("failed to create command directory", "error", err)
+			return err
 		}
 
 		// Write commands to file
 		commandsJSON, err := json.MarshalIndent(commands, "", "  ")
 		if err != nil {
-			log.Println("Failed to marshal commands to JSON", err)
-			return
+			s.log.Error("failed to marshal commands", "error", err)
+			return err
 		}
 
 		if err := os.WriteFile(globalCommandPath, commandsJSON, os.ModePerm); err != nil {
-			log.Println("Failed to write commands file", err)
-			return
+			s.log.Error("failed to write commands file", "error", err)
+			return err
 		}
 	}
 
 	// Reload commands immediately
 	cmd.LoadFrom(commands)
-	log.Printf("Reloaded %d commands from server", len(commands))
+	s.log.Info("reloaded %d commands from server", len(commands))
+	return nil
 }
