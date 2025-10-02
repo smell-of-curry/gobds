@@ -4,14 +4,14 @@ go 1.24.1
 
 require (
 	github.com/avast/retry-go/v4 v4.6.1
-	github.com/df-mc/dragonfly v0.10.6-0.20250919195739-c6a3bd7575d2
+	github.com/df-mc/dragonfly v0.10.7-0.20251002154051-4f2d8cf2e37f
 	github.com/getsentry/sentry-go v0.35.3
 	github.com/go-gl/mathgl v1.2.0
 	github.com/go-jose/go-jose/v4 v4.1.2
 	github.com/gofrs/flock v0.12.1
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.0.2
-	github.com/sandertv/gophertunnel v1.49.1-0.20250916145347-e71aed776180
+	github.com/sandertv/gophertunnel v1.50.0
 	github.com/tailscale/hujson v0.0.0-20250605163823-992244df8c5a
 )
 
@@ -19,8 +19,8 @@ require (
 	github.com/brentp/intintmap v0.0.0-20190211203843-30dc0ade9af9 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/df-mc/goleveldb v1.1.9 // indirect
-	github.com/df-mc/jsonc v1.0.2 // indirect
-	github.com/df-mc/worldupgrader v1.0.19 // indirect
+	github.com/df-mc/jsonc v1.0.5 // indirect
+	github.com/df-mc/worldupgrader v1.0.20 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
@@ -38,4 +38,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/sandertv/gophertunnel => github.com/glance-testing-ground/gophertunnel v0.0.0-20250921095522-a3e35222a94b
+replace github.com/sandertv/gophertunnel => github.com/glance-testing-ground/gophertunnel v0.0.0-20251002173403-0801dcb3b5c3
