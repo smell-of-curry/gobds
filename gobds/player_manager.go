@@ -2,6 +2,7 @@ package gobds
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,8 +12,8 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
-	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
 // Player ...
@@ -138,7 +139,7 @@ func (m *PlayerManager) save() error {
 		return err
 	}
 	defer func() {
-		if err = m.fileLock.Unlock(); err != nil {
+		if err := m.fileLock.Unlock(); err != nil {
 			m.log.Error("failed to unlock file during save", "err", err)
 		}
 	}()
@@ -157,52 +158,52 @@ func (m *PlayerManager) save() error {
 }
 
 // IdentityDataOf ...
-func (m *PlayerManager) IdentityDataOf(conn session.Conn) login.IdentityData {
-	data := conn.IdentityData()
-	xuid := data.XUID
-
+func (m *PlayerManager) IdentityDataOf(conn *minecraft.Conn) login.IdentityData {
 	m.mu.RLock()
+	xuid := conn.IdentityData().XUID
 	player, exists := m.players[xuid]
 	m.mu.RUnlock()
+
 	if exists {
 		return login.IdentityData{
 			XUID:        xuid,
 			DisplayName: player.PlayerName,
 			Identity:    player.Identity,
-			TitleID:     data.TitleID,
+			TitleID:     conn.IdentityData().TitleID,
 		}
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	player, exists = m.players[xuid]
-	if !exists {
-		player = Player{
-			PlayerName:         data.DisplayName,
-			Identity:           data.Identity,
+	if p, ok := m.players[xuid]; ok {
+		player = p
+	} else {
+		newPlayer := Player{
+			PlayerName:         conn.IdentityData().DisplayName,
+			Identity:           conn.IdentityData().Identity,
 			ClientSelfSignedID: conn.ClientData().SelfSignedID,
 		}
-		m.players[xuid] = player
+		m.players[xuid] = newPlayer
 		m.dirty = true
-		m.log.Debug("player added to list", "name", player.PlayerName, "xuid", xuid)
+		player = newPlayer
+		m.log.Debug("added player to list", "name", newPlayer.PlayerName, "xuid", xuid)
 	}
-
 	return login.IdentityData{
 		XUID:        xuid,
 		DisplayName: player.PlayerName,
 		Identity:    player.Identity,
-		TitleID:     data.TitleID,
+		TitleID:     conn.IdentityData().TitleID,
 	}
 }
 
 // ClientDataOf ...
-func (m *PlayerManager) ClientDataOf(conn session.Conn) login.ClientData {
+func (m *PlayerManager) ClientDataOf(conn *minecraft.Conn) login.ClientData {
 	m.mu.RLock()
 	xuid := conn.IdentityData().XUID
 	player, exists := m.players[xuid]
 	clientData := conn.ClientData()
 	m.mu.RUnlock()
+
 	if exists {
 		clientData.SelfSignedID = player.ClientSelfSignedID
 		return clientData
@@ -211,25 +212,29 @@ func (m *PlayerManager) ClientDataOf(conn session.Conn) login.ClientData {
 	return clientData
 }
 
-// XUIDFromName ...
-func (m *PlayerManager) XUIDFromName(name string) (string, error) {
+// XUIDFromPlayerName ...
+func (m *PlayerManager) XUIDFromPlayerName(name string) (string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	for xuid, p := range m.players {
-		if strings.EqualFold(p.PlayerName, name) {
+
+	for xuid, player := range m.players {
+		if strings.EqualFold(player.PlayerName, name) {
 			return xuid, nil
 		}
 	}
-	return "", fmt.Errorf("player not found, name=%s", name)
+
+	return "", errors.New("player not found")
 }
 
 // PlayerFromXUID ...
 func (m *PlayerManager) PlayerFromXUID(xuid string) (Player, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	p, ok := m.players[xuid]
+
+	player, ok := m.players[xuid]
 	if !ok {
-		return Player{}, fmt.Errorf("player not found, xuid=%s", xuid)
+		return Player{}, errors.New("player not found")
 	}
-	return p, nil
+
+	return player, nil
 }

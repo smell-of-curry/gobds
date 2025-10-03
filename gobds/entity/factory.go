@@ -1,8 +1,6 @@
 package entity
 
 import (
-	"maps"
-	"slices"
 	"sync"
 )
 
@@ -45,5 +43,9 @@ func (f *Factory) ByRuntimeID(runtimeID uint64) (Entity, bool) {
 func (f *Factory) All() []Entity {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	return slices.Collect(maps.Values(f.entities))
+	all := make([]Entity, 0, len(f.entities))
+	for _, e := range f.entities {
+		all = append(all, e)
+	}
+	return all
 }

@@ -1,7 +1,8 @@
-package session
+package handlers
 
 import (
 	"slices"
+	"time"
 
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/world"
@@ -11,33 +12,34 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/infra"
+	"github.com/smell-of-curry/gobds/gobds/interceptor"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
+	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
-// InventoryTransactionHandler ...
-type InventoryTransactionHandler struct{}
+// InventoryTransaction ...
+type InventoryTransaction struct{}
 
 // Handle ...
-func (h *InventoryTransactionHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+func (h InventoryTransaction) Handle(c interceptor.Client, pk packet.Packet, ctx *session.Context) {
 	pkt := pk.(*packet.InventoryTransaction)
 
-	h.handleInteraction(s, pkt, ctx)
+	h.handleInteraction(c, pkt, ctx)
 	if ctx.Cancelled() {
-		return nil
+		return
 	}
 
-	h.handleWorldBorder(s, pkt, ctx)
+	h.handleWorldBorder(c, pkt, ctx)
 	if ctx.Cancelled() {
-		return nil
+		return
 	}
 
-	h.handleClaims(s, pkt, ctx)
-	return nil
+	h.handleClaims(c, pkt, ctx)
 }
 
 // handleInteraction ...
-func (h *InventoryTransactionHandler) handleInteraction(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
-	data := s.Data()
+func (h InventoryTransaction) handleInteraction(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+	data := c.Data().(interceptor.ClientData)
 	for _, action := range pkt.Actions {
 		if action.SourceType != protocol.InventoryActionSourceWorld || action.WindowID != protocol.WindowIDInventory {
 			continue
@@ -63,23 +65,26 @@ func (h *InventoryTransactionHandler) handleInteraction(s *Session, pkt *packet.
 		gblock.Button, block.WoodTrapdoor, block.CopperTrapdoor,
 		block.WoodFenceGate, block.WoodDoor, block.CopperDoor,
 		block.Ladder, block.Composter:
+		ctx.Cancel()
 		if !data.InteractWithBlock() {
-			ctx.Cancel()
 			return
 		}
+		time.AfterFunc(time.Millisecond*500, func() {
+			c.WriteToServer(pkt)
+		})
 	}
 }
 
 // handleWorldBorder ...
-func (h *InventoryTransactionHandler) handleWorldBorder(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
-	if s.border == nil {
+func (h InventoryTransaction) handleWorldBorder(_ interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+	if !infra.WorldBorderEnabled() {
 		return
 	}
 
 	switch td := pkt.TransactionData.(type) {
 	case *protocol.UseItemTransactionData:
 		if td.ActionType == protocol.UseItemActionClickBlock {
-			if !s.border.PositionInside(td.BlockPosition.X(), td.BlockPosition.Z()) {
+			if !infra.WorldBorder.PositionInside(td.BlockPosition.X(), td.BlockPosition.Z()) {
 				ctx.Cancel()
 			}
 		}
@@ -87,28 +92,31 @@ func (h *InventoryTransactionHandler) handleWorldBorder(s *Session, pkt *packet.
 }
 
 // handleClaims ...
-func (h *InventoryTransactionHandler) handleClaims(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
-	h.handleClaimUseItem(s, pkt, ctx)
+func (h InventoryTransaction) handleClaims(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
+	h.handleClaimUseItem(c, pkt, ctx)
 	if ctx.Cancelled() {
 		return
 	}
-	h.handleClaimUseItemOnEntity(s, pkt, ctx)
+	h.handleClaimUseItemOnEntity(c, pkt, ctx)
 	if ctx.Cancelled() {
 		return
 	}
-	h.handleClaimReleaseItem(s, pkt, ctx)
+	h.handleClaimReleaseItem(c, pkt, ctx)
 }
 
 // handleClaimUseItem ...
-func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
+func (h InventoryTransaction) handleClaimUseItem(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
 	transactionData, ok := pkt.TransactionData.(*protocol.UseItemTransactionData)
 	if !ok {
 		return
 	}
 
-	clientXUID := s.IdentityData().XUID
+	clientXUID := c.IdentityData().XUID
 
-	dat := s.Data()
+	dat, ok := c.Data().(interceptor.ClientData)
+	if !ok {
+		return
+	}
 	pos := transactionData.Position
 	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
 	if !ok {
@@ -127,7 +135,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 		if b, exists := world.BlockByRuntimeID(transactionData.BlockRuntimeID); exists {
 			switch b.(type) {
 			case block.ItemFrame, block.Lectern, block.DecoratedPot:
-				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
+				c.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
 				ctx.Cancel()
 			}
 		}
@@ -138,13 +146,17 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 		return
 	}
 
-	registry := s.handlers[packet.IDItemRegistry].(*ItemRegistryHandler)
-	if registry.items == nil {
-		return
+	itemsMu.RLock()
+	var entry *protocol.ItemEntry
+	for i := range itemsCache {
+		if int16(heldItem.NetworkID) == itemsCache[i].RuntimeID {
+			entry = &itemsCache[i]
+			break
+		}
 	}
+	itemsMu.RUnlock()
 
-	entry, ok := registry.items[int16(heldItem.NetworkID)]
-	if !ok {
+	if entry == nil {
 		return
 	}
 
@@ -153,20 +165,23 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 		return
 	}
 
-	s.Message(text.Colourf("<red>You cannot throw items inside this claim.</red>"))
+	c.Message(text.Colourf("<red>You cannot throw items inside this claim.</red>"))
 	ctx.Cancel()
 }
 
 // handleClaimUseItemEntity ...
-func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
+func (h InventoryTransaction) handleClaimUseItemOnEntity(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
 	transactionData, ok := pkt.TransactionData.(*protocol.UseItemOnEntityTransactionData)
 	if !ok {
 		return
 	}
 
-	clientXUID := s.IdentityData().XUID
+	clientXUID := c.IdentityData().XUID
 
-	dat := s.Data()
+	dat, ok := c.Data().(interceptor.ClientData)
+	if !ok {
+		return
+	}
 	pos := transactionData.Position
 	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
 	if !ok {
@@ -186,21 +201,24 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 
 	switch ent.ActorType() {
 	case "minecraft:armor_stand", "minecraft:painting":
-		s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
+		c.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
 		ctx.Cancel()
 	}
 }
 
 // handleClaimReleaseItem ...
-func (h *InventoryTransactionHandler) handleClaimReleaseItem(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
+func (h InventoryTransaction) handleClaimReleaseItem(c interceptor.Client, pkt *packet.InventoryTransaction, ctx *session.Context) {
 	transactionData, ok := pkt.TransactionData.(*protocol.ReleaseItemTransactionData)
 	if !ok {
 		return
 	}
 
-	clientXUID := s.IdentityData().XUID
+	clientXUID := c.IdentityData().XUID
 
-	dat := s.Data()
+	dat, ok := c.Data().(interceptor.ClientData)
+	if !ok {
+		return
+	}
 	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
 	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
 	if !ok {
@@ -214,7 +232,7 @@ func (h *InventoryTransactionHandler) handleClaimReleaseItem(s *Session, pkt *pa
 		return
 	}
 
-	s.Message(text.Colourf("<red>You cannot release items inside this claim.</red>"))
+	c.Message(text.Colourf("<red>You cannot release items inside this claim.</red>"))
 	ctx.Cancel()
 }
 

@@ -10,9 +10,13 @@ import (
 type MappedTranslations map[string]map[string]string
 
 var (
-	translations  = make(MappedTranslations)
+	translations  MappedTranslations
 	translationMu sync.RWMutex
 )
+
+func init() {
+	translations = make(MappedTranslations)
+}
 
 // TranslationFor ...
 func TranslationFor(lang string) (map[string]string, bool) {
@@ -33,10 +37,10 @@ func SetTranslationFor(lang string, t map[string]string) {
 }
 
 // Setup ...
-func Setup(rp *resource.Pack) error {
-	languages, exists := SupportedLanguages(rp)
-	if exists != nil {
-		return exists
+func Setup(rp *resource.Pack) (err error) {
+	languages, err := SupportedLanguages(rp)
+	if err != nil {
+		return err
 	}
 	for _, l := range languages {
 		mapped, err := TranslationMapFor(rp, l)
@@ -45,5 +49,5 @@ func Setup(rp *resource.Pack) error {
 		}
 		SetTranslationFor(l, mapped)
 	}
-	return nil
+	return
 }

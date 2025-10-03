@@ -1,4 +1,4 @@
-package session
+package handlers
 
 import (
 	"math"
@@ -9,33 +9,41 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/cmd"
+	"github.com/smell-of-curry/gobds/gobds/interceptor"
+	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
-// AvailableCommandsHandler ...
-type AvailableCommandsHandler struct {
-	cache sync.Map
-}
+// AvailableCommands ...
+type AvailableCommands struct{}
 
 // disabledCommands ...
 var disabledCommands = []string{"me", "tell", "w", "msg"}
 
+var (
+	vanillaCommandsCache []protocol.Command
+	commandsMu           sync.RWMutex
+)
+
 // Handle ...
-func (h *AvailableCommandsHandler) Handle(_ *Session, pk packet.Packet, _ *Context) error {
+func (h AvailableCommands) Handle(_ interceptor.Client, pk packet.Packet, _ *session.Context) {
 	pkt := pk.(*packet.AvailableCommands)
 
-	h.cache.Clear()
+	filtered := make([]protocol.Command, 0, len(pkt.Commands))
 	for _, c := range pkt.Commands {
 		if !slices.Contains(disabledCommands, c.Name) {
-			h.cache.Store(c.Name, c)
+			filtered = append(filtered, c)
 		}
 	}
 
+	commandsMu.Lock()
+	vanillaCommandsCache = filtered
+	commandsMu.Unlock()
+
 	*pkt = *h.appendCustomCommands(pkt)
-	return nil
 }
 
 // appendCustomCommands ...
-func (h *AvailableCommandsHandler) appendCustomCommands(pkt *packet.AvailableCommands) *packet.AvailableCommands {
+func (h AvailableCommands) appendCustomCommands(pkt *packet.AvailableCommands) *packet.AvailableCommands {
 	enumIndices := make(map[string]uint32, len(pkt.Enums))
 	for i, e := range pkt.Enums {
 		enumIndices[e.Type] = uint32(i)

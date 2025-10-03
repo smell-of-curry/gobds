@@ -2,8 +2,6 @@ github.com/avast/retry-go/v4 v4.6.1 h1:VkOLRubHdisGrHnTu89g08aQEWEgRU7LVEop3GbIc
 github.com/avast/retry-go/v4 v4.6.1/go.mod h1:V6oF8njAwxJ5gRo1Q7Cxab24xs5NCWZBeaHHBklR8mA=
 github.com/brentp/intintmap v0.0.0-20190211203843-30dc0ade9af9 h1:/G0ghZwrhou0Wq21qc1vXXMm/t/aKWkALWwITptKbE0=
 github.com/brentp/intintmap v0.0.0-20190211203843-30dc0ade9af9/go.mod h1:TOk10ahXejq9wkEaym3KPRNeuR/h5Jx+s8QRWIa2oTM=
-github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
-github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -18,8 +16,6 @@ github.com/df-mc/worldupgrader v1.0.20/go.mod h1:tsSOLTRm9mpG7VHvYpAjjZrkRHWmSbK
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/getsentry/sentry-go v0.35.3 h1:u5IJaEqZyPdWqe/hKlBKBBnMTSxB/HenCqF3QLabeds=
 github.com/getsentry/sentry-go v0.35.3/go.mod h1:mdL49ixwT2yi57k5eh7mpnDyPybixPzlzEJFu0Z76QA=
-github.com/glance-testing-ground/gophertunnel v0.0.0-20251002173403-0801dcb3b5c3 h1:Pj3cjH7326NFKiBX1NP5pqROKcmSWyGHio712Zl4cvQ=
-github.com/glance-testing-ground/gophertunnel v0.0.0-20251002173403-0801dcb3b5c3/go.mod h1:WjTvUo02TmvPULY1y5oxxAhZIeH8ew31/LUkSUD6ABw=
 github.com/go-errors/errors v1.4.2 h1:J6MZopCL4uSllY1OfXM374weqZFFItUbrImctkmUxIA=
 github.com/go-errors/errors v1.4.2/go.mod h1:sIVyrIiJhuEF+Pj9Ebtd6P/rEYROXFi3BopGUQ5a5Og=
 github.com/go-gl/mathgl v1.2.0 h1:v2eOj/y1B2afDxF6URV1qCYmo1KW08lAMtTbOn3KXCY=
@@ -64,8 +60,10 @@ github.com/restartfu/gophig v0.0.2 h1:d3Nr47RAuDMJbZlZGig+4PPdiH4hxnhLrPHsBPUmB4
 github.com/restartfu/gophig v0.0.2/go.mod h1:Ylus0e+8xhySi54351tnb3wJCzDwPnKBL4/48zx09WU=
 github.com/rogpeppe/go-internal v1.9.0 h1:73kH8U+JUqXU8lRuOHeVHaa/SZPifC7BkcraZVejAe8=
 github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
-github.com/sandertv/go-raknet v1.14.3-0.20250305181847-6af3e95113d6 h1:ZfK7NCzIDE+dzp5x6NIO4JDLsjsOxi762CNR1Obds2Q=
-github.com/sandertv/go-raknet v1.14.3-0.20250305181847-6af3e95113d6/go.mod h1:/yysjwfCXm2+2OY8mBazLzcxJ3irnylKCyG3FLgUPVU=
+github.com/sandertv/go-raknet v1.14.3-0.20250525005230-991ee492a907 h1:18u6fYr9PK0Hv94q0aQbKOij7E8rgnRRKwL7ldmaug4=
+github.com/sandertv/go-raknet v1.14.3-0.20250525005230-991ee492a907/go.mod h1:/yysjwfCXm2+2OY8mBazLzcxJ3irnylKCyG3FLgUPVU=
+github.com/sandertv/gophertunnel v1.50.0 h1:uoXQBWOD823T8snohPjIkFo+pcYrlIalEmcY2S1FUPM=
+github.com/sandertv/gophertunnel v1.50.0/go.mod h1:WjTvUo02TmvPULY1y5oxxAhZIeH8ew31/LUkSUD6ABw=
 github.com/segmentio/fasthash v1.0.3 h1:EI9+KE1EwvMLBWwjpRDc+fEM+prwxDYbslddQGtrmhM=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=

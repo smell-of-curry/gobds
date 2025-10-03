@@ -1,49 +1,49 @@
-package session
+package handlers
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
+	"github.com/smell-of-curry/gobds/gobds/interceptor"
+	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/util/translator"
 )
 
-// AddActorHandler ...
-type AddActorHandler struct{}
+// AddActor ...
+type AddActor struct{}
 
 // Handle ...
-func (*AddActorHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
+func (AddActor) Handle(c interceptor.Client, pk packet.Packet, _ *session.Context) {
 	pkt := pk.(*packet.AddActor)
 
 	entityType := pkt.EntityType
 	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, entityType))
 
 	if !strings.HasPrefix(entityType, "pokemon:") {
-		return nil
+		return
 	}
 
-	name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
-	if !ok {
-		return nil
-	}
+	// name, ok := pkt.EntityMetadata[protocol.EntityDataKeyName]
+	// if !ok {
+	// 	return
+	// }
 
-	pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, s)
-	return nil
+	//pkt.EntityMetadata[protocol.EntityDataKeyName] = translateName(name.(string), entityType, c)
 }
 
 // nickIdentifier ...
 const nickIdentifier = "§l§n§r"
 
 // translateName ...
-func translateName(name string, entityType string, s *Session) string {
+func translateName(name string, entityType string, c interceptor.Client) string {
 	if strings.HasPrefix(name, nickIdentifier) {
 		return name
 	}
 
-	translatedName := entityTranslatedName(entityType, s)
+	translatedName := entityTranslatedName(entityType, c)
 
 	name = strings.TrimSpace(name)
 	lines := strings.Split(name, "\n")
@@ -63,8 +63,8 @@ func translateName(name string, entityType string, s *Session) string {
 }
 
 // entityTranslatedName ...
-func entityTranslatedName(entityType string, s *Session) string {
-	t, ok := translator.TranslationFor(s.Locale())
+func entityTranslatedName(entityType string, c interceptor.Client) string {
+	t, ok := translator.TranslationFor(c.Locale())
 	if !ok {
 		t, _ = translator.TranslationFor("en_US") // Default to american english.
 	}

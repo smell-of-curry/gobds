@@ -1,6 +1,7 @@
 package block
 
 import (
+	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/block/model"
 	"github.com/df-mc/dragonfly/server/world"
@@ -25,7 +26,7 @@ func (b Button) Model() world.BlockModel {
 
 // Hash ...
 func (b Button) Hash() (uint64, uint64) {
-	return hashButton, uint64(b.Type.Uint8())<<8 | uint64(b.Facing)<<14 | uint64(boolByte(b.Pressed))<<17
+	return block.NextHash(), 0
 }
 
 // Buttons ...

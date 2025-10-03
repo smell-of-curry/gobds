@@ -4,81 +4,221 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/netip"
 	"os"
-	"os/signal"
+	"path/filepath"
+	"strings"
 	"sync"
-	"sync/atomic"
-	"syscall"
 	"time"
 	_ "unsafe"
 
+	"github.com/go-jose/go-jose/v4/json"
+	"github.com/google/uuid"
+	"github.com/sandertv/go-raknet"
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/sandertv/gophertunnel/minecraft/resource"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	_ "github.com/smell-of-curry/gobds/gobds/block"
+	"github.com/smell-of-curry/gobds/gobds/cmd"
 	"github.com/smell-of-curry/gobds/gobds/infra"
+	"github.com/smell-of-curry/gobds/gobds/interceptor"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
+	"github.com/smell-of-curry/gobds/gobds/service/claim"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
+	"github.com/smell-of-curry/gobds/gobds/session/handlers"
+	"github.com/smell-of-curry/gobds/gobds/util/area"
+	"github.com/smell-of-curry/gobds/gobds/util/translator"
+	"github.com/smell-of-curry/gobds/gobds/whitelist"
+
+	_ "github.com/smell-of-curry/gobds/gobds/block"
 )
 
 // GoBDS ...
 type GoBDS struct {
 	conf *Config
 
+	provider *minecraft.ForeignStatusProvider
+	listener *minecraft.Listener
+
+	resources []*resource.Pack
+
+	interceptor   *interceptor.Interceptor
+	playerManager *PlayerManager
+
+	whitelist *whitelist.Whitelist
+
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	started atomic.Pointer[time.Time]
-
-	listeners []Listener
-
-	wg sync.WaitGroup
+	log *slog.Logger
 }
 
-// New creates new GoBDS instance.
-func (c *Config) New() (*GoBDS, error) {
-	c.Log.Info("creating a new instance of gobds")
-	ctx, cancel := context.WithCancel(context.Background())
-	world_finaliseBlockRegistry()
+// NewGoBDS ...
+func NewGoBDS(conf Config, log *slog.Logger) *GoBDS {
+	log.Info("creating a new instance of gobds")
 
+	ctx, cancel := context.WithCancel(context.Background())
 	gobds := &GoBDS{
-		conf:   c,
+		conf: &conf,
+
+		resources: make([]*resource.Pack, 0),
+
 		ctx:    ctx,
 		cancel: cancel,
-	}
 
-	if c.PlayerManager == nil {
-		return nil, fmt.Errorf("start gobds: player manager is not configured")
+		log: log,
 	}
-	if len(c.Listeners) == 0 {
-		return nil, fmt.Errorf("start gobds: no listeners configured")
-	}
-	if c.StatusProvider == nil {
-		return nil, fmt.Errorf("start gobds: status provider is nil")
-	}
+	gobds.setup()
+	return gobds
+}
 
-	for _, lf := range c.Listeners {
-		l, err := lf(*c)
+// setup ...
+func (gb *GoBDS) setup() {
+	world_finaliseBlockRegistry()
+
+	gb.setupResources()
+	gb.setupServices()
+	gb.setupInterceptor()
+	gb.setupWhitelist()
+	gb.setupBorder()
+
+	gb.log.Info("completed initial setup")
+
+	go gb.tick()
+}
+
+// setupResources ...
+func (gb *GoBDS) setupResources() {
+	defer gb.setupCommands()
+
+	var packs []*resource.Pack
+	for _, url := range gb.conf.Resources.URLResources {
+		pack, err := resource.ReadURL(url)
 		if err != nil {
-			c.Log.Error("error creating listener", "error", err)
+			gb.log.Error("failed to load url pack", "err", err)
 			continue
 		}
-		gobds.listeners = append(gobds.listeners, l)
+		packs = append(packs, pack)
 	}
-	go gobds.tick()
+	for _, path := range gb.conf.Resources.PathResources {
+		pack, err := resource.ReadPath(path)
+		if err != nil {
+			gb.log.Error("failed to load path pack", "err", err)
+			continue
+		}
+		packs = append(packs, pack)
+	}
 
-	return gobds, nil
+	gb.resources = packs
+	if len(gb.resources) <= 0 {
+		gb.log.Warn("no resources found, skipping translator setup")
+		return
+	}
+
+	err := translator.Setup(gb.resources[0]) // TODO: Is this behaviour correct?
+	if err != nil {
+		gb.log.Error("failed to setup translator", "err", err)
+	}
+}
+
+// setupCommands ...
+func (gb *GoBDS) setupCommands() {
+	rawBytes, err := os.ReadFile(gb.conf.Resources.CommandPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			dir := filepath.Dir(gb.conf.Resources.CommandPath)
+			if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+				panic(err)
+			}
+			if createErr := os.WriteFile(gb.conf.Resources.CommandPath, []byte("{}"), os.ModePerm); createErr != nil {
+				panic(createErr)
+			}
+			rawBytes, err = os.ReadFile(gb.conf.Resources.CommandPath)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			gb.log.Error("failed to read commands", "err", err)
+			return
+		}
+	}
+
+	var commands map[string]cmd.EngineResponseCommand
+	if err = json.Unmarshal(rawBytes, &commands); err != nil {
+		gb.log.Error("failed to unmarshal commands", "err", err)
+		return
+	}
+
+	cmd.LoadFrom(commands)
+	gb.log.Info("loaded commands", "count", len(commands))
+}
+
+// setupServices ...
+func (gb *GoBDS) setupServices() {
+	infra.AuthenticationService = authentication.NewService(gb.log, gb.conf.AuthenticationService)
+	infra.ClaimService = claim.NewService(gb.log, gb.conf.ClaimService)
+	infra.VPNService = vpn.NewService(gb.log, gb.conf.VPNService)
+	infra.PingIndicator = gb.conf.PingIndicator
+	infra.AFKTimer = gb.conf.AFKTimer
+}
+
+// setupInterceptor ...
+func (gb *GoBDS) setupInterceptor() {
+	intercept := interceptor.NewInterceptor()
+
+	for id, h := range map[int]interceptor.Handler{
+		packet.IDAddActor:             handlers.AddActor{},
+		packet.IDAddPainting:          handlers.AddPainting{},
+		packet.IDAvailableCommands:    handlers.AvailableCommands{},
+		packet.IDCommandRequest:       handlers.CommandRequest{},
+		packet.IDInventoryTransaction: handlers.InventoryTransaction{},
+		packet.IDItemRegistry:         handlers.ItemRegistry{},
+		packet.IDItemStackRequest:     handlers.ItemStackRequest{},
+		packet.IDLevelChunk:           handlers.LevelChunk{},
+		packet.IDPlayerAuthInput:      handlers.NewPlayerAuthInput(),
+		packet.IDRemoveActor:          handlers.RemoveActor{},
+		packet.IDSetActorData:         handlers.SetActorData{},
+		packet.IDSubChunk:             handlers.SubChunk{},
+		packet.IDText:                 handlers.CustomCommandRegisterHandler{},
+	} {
+		intercept.AddHandler(id, h)
+	}
+
+	// Set the command path for the custom command register handler
+	handlers.SetCommandPath(gb.conf.Resources.CommandPath)
+
+	gb.interceptor = intercept
+}
+
+// setupWhitelist ...
+func (gb *GoBDS) setupWhitelist() {
+	conf, err := whitelist.ReadConfig(gb.conf.Network.WhitelistPath)
+	if err != nil {
+		gb.log.Error("failed to read whitelist config", "err", err)
+		return
+	}
+	gb.whitelist = whitelist.NewWhitelist(conf.Entries)
+}
+
+// setupBorder ...
+func (gb *GoBDS) setupBorder() {
+	b := gb.conf.Border
+	if !b.Enabled {
+		return // Border is disabled, just return.
+	}
+	infra.WorldBorder = area.NewArea2D(b.MinX, b.MinZ, b.MaxX, b.MaxZ)
 }
 
 // tick ...
 func (gb *GoBDS) tick() {
 	fetch := func() {
-		if gb.conf.ClaimService != nil {
-			claims, err := gb.conf.ClaimService.FetchClaims()
+		if infra.ClaimService.Enabled {
+			claims, err := infra.ClaimService.FetchClaims()
 			if err != nil {
-				gb.conf.Log.Error("failed to fetch claims", "err", err)
+				gb.log.Error("failed to fetch claims", "err", err)
 				return
 			}
 			infra.SetClaims(claims)
@@ -98,147 +238,165 @@ func (gb *GoBDS) tick() {
 	}
 }
 
-// Listen ...
-func (gb *GoBDS) Listen() error {
-	t := time.Now()
-	if !gb.started.CompareAndSwap(nil, &t) {
-		return fmt.Errorf("start gobds: already started")
+// Start ...
+func (gb *GoBDS) Start() error {
+	gb.log.Info("starting gobds")
+
+	playerManager, err := NewPlayerManager(gb.conf.Network.PlayerManagerPath, gb.log)
+	if err != nil {
+		return err
+	}
+	gb.playerManager = playerManager
+
+	remoteAddr := gb.conf.Network.RemoteAddress
+	_, err = raknet.Ping(remoteAddr)
+	if err != nil {
+		return err
 	}
 
-	gb.conf.Log.Info("starting gobds")
-	gb.conf.PlayerManager.Start(time.Minute * 3)
-
-	gb.wg.Add(len(gb.listeners))
-	for _, l := range gb.listeners {
-		go gb.listen(l)
+	gb.provider, err = minecraft.NewForeignStatusProvider(remoteAddr)
+	if err != nil {
+		return err
 	}
 
-	gb.wg.Wait()
-	gb.conf.Log.Info("proxy closed.", "uptime", time.Since(*gb.started.Load()).String())
+	cfg := minecraft.ListenConfig{
+		StatusProvider: gb.provider,
 
-	return nil
-}
+		TexturePacksRequired: gb.conf.Resources.PacksRequired,
+		ResourcePacks:        gb.resources,
 
-// listen handles listener and it's sessions.
-func (gb *GoBDS) listen(l Listener) {
-	wg := new(sync.WaitGroup)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer l.Close()
+		FlushRate: time.Millisecond * time.Duration(gb.conf.Network.FlushRate),
+		ErrorLog:  gb.log,
+	}
+	l, err := cfg.Listen("raknet", gb.conf.Network.LocalAddress)
+	if err != nil {
+		return err
+	}
+	gb.log.Info("listener established, gobds is now running",
+		"on", gb.conf.Network.LocalAddress, "to", gb.conf.Network.RemoteAddress)
 
-	go func() {
-		<-gb.ctx.Done()
-		cancel()
-		wg.Wait()
+	gb.listener = l
+	gb.playerManager.Start(time.Minute * 3)
+	defer func(l *minecraft.Listener) {
+		gb.log.Info("shutting down gobds")
+		gb.playerManager.Close()
 		_ = l.Close()
-	}()
+	}(gb.listener)
 
 	for {
-		conn, err := l.Accept()
-		if err != nil {
-			gb.wg.Done()
-			return
-		}
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			s, err := gb.accept(conn, ctx)
+		select {
+		case <-gb.ctx.Done():
+			return gb.ctx.Err()
+		default:
+			conn, err := gb.listener.Accept()
 			if err != nil {
-				_ = l.Disconnect(conn, err.Error())
-				return
+				gb.log.Error("error accepting connection", "err", err)
+				continue
 			}
 
-			gb.conf.Log.Info("player connected", "name", conn.IdentityData().DisplayName)
-			s.ReadPackets(ctx)
-			gb.conf.Log.Info("player disconnected", "name", conn.IdentityData().DisplayName)
-		}()
+			go func(conn *minecraft.Conn) {
+				gb.log.Info("accepted new connection", "name", conn.IdentityData().DisplayName)
+				gb.accept(conn)
+			}(conn.(*minecraft.Conn))
+		}
 	}
 }
 
-// accept accepts new connection.
-func (gb *GoBDS) accept(conn session.Conn, ctx context.Context) (*session.Session, error) {
+// accept ...
+func (gb *GoBDS) accept(conn *minecraft.Conn) {
 	identityData := conn.IdentityData()
-	if gb.conf.VPNService != nil {
-		if reason, allowed := gb.handleVPN(conn.LocalAddr(), ctx); !allowed {
-			return nil, fmt.Errorf(reason)
+	if infra.VPNService.Enabled {
+		if reason, allowed := gb.handleVPN(conn.LocalAddr()); !allowed {
+			_ = gb.listener.Disconnect(conn, reason)
+			return
 		}
 	}
-	if gb.conf.AuthenticationService != nil {
-		response, err := gb.conf.AuthenticationService.AuthenticationOf(identityData.XUID, ctx)
+	if infra.AuthenticationService.Enabled {
+		response, err := infra.AuthenticationService.AuthenticationOf(identityData.XUID)
 		if err != nil {
 			disconnectionMessage := err.Error()
 			if errors.Is(err, authentication.RecordNotFound) {
-				disconnectionMessage = text.Colourf("<red>you must join through the server hub.</red>")
+				disconnectionMessage = text.Colourf("<red>You must join through the server hub.</red>")
 			}
-			return nil, fmt.Errorf(disconnectionMessage)
+			_ = gb.listener.Disconnect(conn, disconnectionMessage)
+			return
 		}
 		if !response.Allowed {
-			return nil, fmt.Errorf("you must join through the server hub to play")
+			_ = gb.listener.Disconnect(conn, "You must join through the server hub to play.")
+			return
 		}
 	}
 
-	identityData = gb.conf.PlayerManager.IdentityDataOf(conn)
-	clientData := gb.conf.PlayerManager.ClientDataOf(conn)
+	identityData = gb.playerManager.IdentityDataOf(conn)
+	clientData := gb.playerManager.ClientDataOf(conn)
 
 	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
-		return nil, fmt.Errorf("You're not whitelisted")
+		_ = gb.listener.Disconnect(conn, "You're not whitelisted.")
+		return
 	}
-	if !gb.conf.AuthenticationService.Enabled && !gb.handleSecureSlots(displayName) {
-		return nil, fmt.Errorf("The server is at full capacity")
+	if !infra.AuthenticationService.Enabled && !gb.handleSecureSlots(displayName) {
+		_ = gb.listener.Disconnect(conn, "The server is at full capacity.")
+		return
 	}
 
-	ctx2, cancel := context.WithTimeout(ctx, time.Minute)
+	d := minecraft.Dialer{
+		ClientData:   clientData,
+		IdentityData: identityData,
 
-	defer cancel()
-	serverConn, err := gb.conf.DialerFunction(identityData, clientData, ctx2)
+		DownloadResourcePack: func(id uuid.UUID, version string, current, total int) bool { return false },
+
+		FlushRate:           time.Millisecond * time.Duration(gb.conf.Network.FlushRate),
+		ErrorLog:            gb.log,
+		KeepXBLIdentityData: true,
+	}
+	serverConn, err := d.DialTimeout("raknet", gb.conf.Network.RemoteAddress, time.Second*60)
 	if err != nil {
-		gb.conf.Log.Error("error dialing connection", "err", err)
-		return nil, fmt.Errorf("error dialing connection")
+		gb.log.Error("error dialing connection", "err", err)
+		_ = gb.listener.Disconnect(conn, "error dialing connection")
+		return
 	}
 
-	return gb.startGame(conn, serverConn, ctx)
+	gb.startGame(conn, serverConn)
 }
 
-// handleWhitelisted ensures that only whitelisted players can join.
+// handleWhitelisted ...
 func (gb *GoBDS) handleWhitelisted(displayName string) bool {
-	if gb.conf.Whitelist == nil {
+	if gb.whitelist == nil || !gb.conf.Network.Whitelisted {
 		return true
 	}
-	return gb.conf.Whitelist.Has(displayName)
+	return gb.whitelist.Has(displayName)
 }
 
-// handleSecureSlots secures slots for some whitelisted players.
+// handleSecureSlots ...
 func (gb *GoBDS) handleSecureSlots(displayName string) bool {
-	if gb.conf.Whitelist == nil {
+	if gb.whitelist == nil {
 		// We depend on the whitelist config to handle secured slots.
 		return true
 	}
-
-	status := gb.conf.StatusProvider.ServerStatus(-1, -1)
+	status := gb.provider.ServerStatus(-1, -1)
 	current, limit := status.PlayerCount, status.MaxPlayers
 	if current >= limit {
 		return false
 	}
 
-	securedSlots := gb.conf.SecuredSlots
+	securedSlots := gb.conf.Network.SecuredSlots
 	securedLimit := limit - securedSlots
 	if current < securedLimit {
 		return true
 	}
-	return gb.conf.Whitelist.Has(displayName)
+	return gb.whitelist.Has(displayName)
 }
 
-// handleVPN protects proxy from vpn/proxy users.
-func (gb *GoBDS) handleVPN(netAddr net.Addr, ctx context.Context) (reason string, allowed bool) {
+// handleVPN ...
+func (gb *GoBDS) handleVPN(netAddr net.Addr) (reason string, allowed bool) {
 	addr, _ := netip.ParseAddrPort(netAddr.String())
 	addrString := addr.Addr().String()
 	if addrString == "127.0.0.1" || addrString == "0.0.0.0" || addrString == "localhost" {
 		return "", true
 	}
 
-	m, err := gb.conf.VPNService.CheckIP(addrString, ctx)
+	m, err := infra.VPNService.CheckIP(addrString)
 	if err != nil {
 		return err.Error(), false
 	}
@@ -248,8 +406,8 @@ func (gb *GoBDS) handleVPN(netAddr net.Addr, ctx context.Context) (reason string
 	return "VPN/Proxy connections are not allowed.", !m.Proxy
 }
 
-// startGame starts game for new connection.
-func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (*session.Session, error) {
+// startGame ...
+func (gb *GoBDS) startGame(conn *minecraft.Conn, serverConn *minecraft.Conn) {
 	gameData := serverConn.GameData()
 	gameData.WorldSeed = 0
 	gameData.ClientSideGeneration = false
@@ -258,20 +416,20 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (
 	var g sync.WaitGroup
 	g.Add(2)
 	go func() {
-		if err := conn.StartGameContext(ctx, gameData); err != nil {
+		if err := conn.StartGame(gameData); err != nil {
 			var disc minecraft.DisconnectError
 			if ok := errors.As(err, &disc); !ok {
-				gb.conf.Log.Error("start game failed", "err", err)
+				gb.log.Error("start game failed", "err", err)
 			}
 			failed = true
 		}
 		g.Done()
 	}()
 	go func() {
-		if err := serverConn.DoSpawnContext(ctx); err != nil {
+		if err := serverConn.DoSpawn(); err != nil {
 			var disc minecraft.DisconnectError
 			if ok := errors.As(err, &disc); !ok {
-				gb.conf.Log.Error("spawn failed", "err", err)
+				gb.log.Error("spawn failed", "err", err)
 			}
 			failed = true
 		}
@@ -281,36 +439,80 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (
 
 	if failed {
 		_ = serverConn.Close()
-		return nil, fmt.Errorf("failed to start game")
+		_ = gb.listener.Disconnect(conn, "failed to start game")
+		return
 	}
 
-	s := session.Config{
-		Client:        conn,
-		Server:        serverConn,
-		PingIndicator: gb.conf.PingIndicator,
-		AfkTimer:      gb.conf.AFKTimer,
-		Border:        gb.conf.Border,
-		Log:           gb.conf.Log,
-	}.New()
-
-	s.ForwardXUID(gb.conf.EncryptionKey)
-	return s, nil
+	s := session.NewSession(conn, serverConn, gb.log)
+	s.ForwardXUID(gb.conf.Encryption.Key)
+	gb.startListening(s)
 }
 
-// Close closes all listeners.
-func (gb *GoBDS) Close() error {
-	gb.cancel()
-	return nil
+// startListening ...
+func (gb *GoBDS) startListening(s *session.Session) {
+	client, server := s.Client(), s.Server()
+	go gb.readFrom(s, client, server, client, server, "reading from client", "server")
+	go gb.readFrom(s, client, server, server, client, "reading from server", "client")
 }
 
-// CloseOnProgramEnd ...
-func (gb *GoBDS) CloseOnProgramEnd() {
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-c
-		_ = gb.Close()
+// readFrom ...
+func (gb *GoBDS) readFrom(
+	s *session.Session,
+
+	client, server *minecraft.Conn,
+	src, dst *minecraft.Conn,
+	readName, writeName string,
+) {
+	defer func() {
+		if err := gb.listener.Disconnect(client, "connection closed"); err != nil {
+			if closedConnectionErr(err) || errors.Is(err, context.Canceled) {
+				return
+			}
+			gb.log.Error("error disconnecting client", "err", err)
+		}
 	}()
+	defer server.Close()
+
+	for {
+		select {
+		case <-gb.ctx.Done():
+			return
+		default:
+		}
+
+		pkt, err := src.ReadPacket()
+		if err != nil {
+			if closedConnectionErr(err) || errors.Is(err, context.Canceled) {
+				return
+			}
+			var disc minecraft.DisconnectError
+			if errors.As(err, &disc) {
+				_ = gb.listener.Disconnect(client, disc.Error())
+				return
+			}
+			gb.log.Error(fmt.Sprintf("error %s", readName), "err", err)
+			return
+		}
+
+		ctx := session.NewContext()
+		gb.interceptor.Intercept(s, pkt, ctx)
+		if ctx.Cancelled() {
+			continue
+		}
+
+		if err = dst.WritePacket(pkt); err != nil {
+			if closedConnectionErr(err) || errors.Is(err, context.Canceled) {
+				return
+			}
+			gb.log.Error(fmt.Sprintf("error writing to %s", writeName), "err", err)
+			return
+		}
+	}
+}
+
+// closedConnectionErr ...
+func closedConnectionErr(err error) bool {
+	return strings.Contains(err.Error(), "use of closed network connection")
 }
 
 // noinspection ALL
