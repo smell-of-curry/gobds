@@ -1,21 +1,6 @@
 package session
 
+import "github.com/df-mc/dragonfly/server/event"
+
 // Context ...
-type Context struct {
-	cancel bool
-}
-
-// NewContext ...
-func NewContext() *Context {
-	return &Context{}
-}
-
-// Cancelled ...
-func (ctx *Context) Cancelled() bool {
-	return ctx.cancel
-}
-
-// Cancel ...
-func (ctx *Context) Cancel() {
-	ctx.cancel = true
-}
+type Context = event.Context[Conn]

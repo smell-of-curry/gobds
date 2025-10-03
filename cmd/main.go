@@ -28,9 +28,19 @@ func main() {
 		defer sentry.Flush(2 * time.Second)
 	}
 
-	g := gobds.NewGoBDS(conf, log)
+	c, err := conf.Config(log)
+	if err != nil {
+		panic(err)
+	}
+
+	g, err := c.New()
+	if err != nil {
+		panic(err)
+	}
+	g.CloseOnProgramEnd()
+
 	err = retry.Do(
-		g.Start,
+		g.Listen,
 		retry.Attempts(5),
 		retry.Delay(time.Second*3),
 		retry.OnRetry(func(n uint, err error) {
@@ -38,7 +48,7 @@ func main() {
 		}),
 	)
 	if err != nil {
-		log.Error("failed to start after multiple retries, shutting down", "error", err)
+		log.Error("failed to start after multiple retries, shutting down")
 		return
 	}
 }
