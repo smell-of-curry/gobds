@@ -18,10 +18,6 @@ func (*SubChunkHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.SubChunk)
 	s.Data().SetDimension(pkt.Dimension)
 
-	if s.border == nil {
-		return nil
-	}
-
 	dimension, _ := world.DimensionByID(int(pkt.Dimension))
 	virtualChunk := chunk.New(airRuntimeID, dimension.Range())
 
@@ -36,7 +32,7 @@ func (*SubChunkHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 			pkt.Position.Z() + int32(entry.Offset[2]),
 		}
 
-		if !s.border.ChunkInside(chunkPos) {
+		if s.border != nil && !s.border.ChunkInside(chunkPos) {
 			continue
 		}
 
