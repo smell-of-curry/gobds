@@ -15,7 +15,7 @@ type Data struct {
 func NewData(conn Conn) *Data {
 	d := &Data{}
 	d.dimension.Store(conn.GameData().Dimension)
-	d.lastDrop.Store(&time.Time{})
+	d.lastDrop.Store(time.Time{})
 	return d
 }
 
@@ -31,8 +31,7 @@ func (d *Data) SetDimension(dimension int32) {
 
 // SetLastDrop ...
 func (d *Data) SetLastDrop() {
-	now := time.Now()
-	d.lastDrop.Store(&now)
+	d.lastDrop.Store(time.Now())
 }
 
 // InteractWithBlock ...
