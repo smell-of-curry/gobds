@@ -40,7 +40,7 @@ func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Conte
 		}
 	}
 
-	h.handleWorldBorder(s, pkt, ctx)
+	h.handleWorldInteractions(s, pkt, ctx)
 	return nil
 }
 
@@ -67,8 +67,8 @@ func (h *PlayerAuthInputHandler) handleAFKTimer(s *Session, pkt *packet.PlayerAu
 	}
 }
 
-// handleWorldBorder ...
-func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
+// handleWorldInteractions ...
+func (h *PlayerAuthInputHandler) handleWorldInteractions(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
 	clientData := s.Data()
 	for i, blockAction := range pkt.BlockActions {
 		if blockAction.Action == protocol.PlayerActionCrackBreak {
@@ -99,6 +99,12 @@ func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.Playe
 			continue
 		}
 
+		if clientData.GameMode() == packet.GameTypeCreative {
+			s.WriteToClient(&packet.LevelChunk{
+				Position:      protocol.ChunkPos{blockPosition.X() >> 4, blockPosition.Z() >> 4},
+				SubChunkCount: protocol.SubChunkRequestModeLimited,
+			})
+		}
 		ctx.Cancel()
 	}
 }
