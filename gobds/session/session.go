@@ -237,7 +237,9 @@ func (s *Session) registerHandlers() {
 		packet.IDPlayerAuthInput:      NewPlayerAuthInputHandler(),
 		packet.IDRemoveActor:          &RemoveActorHandler{},
 		packet.IDSetActorData:         &SetActorDataHandler{},
+		packet.IDSetPlayerGameType:    &SetPlayerGameTypeHandler{},
 		packet.IDSubChunk:             &SubChunkHandler{},
 		packet.IDText:                 &TextHandler{},
+		packet.IDUpdatePlayerGameType: &UpdatePlayerGameTypeHandler{},
 	}
 }

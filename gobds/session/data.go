@@ -8,13 +8,16 @@ import (
 // Data ...
 type Data struct {
 	dimension atomic.Value
+	gamemode  atomic.Value
 	lastDrop  atomic.Value
 }
 
 // NewData ...
 func NewData(conn Conn) *Data {
+	gameData := conn.GameData()
 	d := &Data{}
-	d.dimension.Store(conn.GameData().Dimension)
+	d.dimension.Store(gameData.Dimension)
+	d.gamemode.Store(gameData.PlayerGameMode)
 	d.lastDrop.Store(time.Time{})
 	return d
 }
@@ -27,6 +30,16 @@ func (d *Data) Dimension() int32 {
 // SetDimension ...
 func (d *Data) SetDimension(dimension int32) {
 	d.dimension.Store(dimension)
+}
+
+// GameMode ...
+func (d *Data) GameMode() int32 {
+	return d.gamemode.Load().(int32)
+}
+
+// SetGameMode ...
+func (d *Data) SetGameMode(mode int32) {
+	d.gamemode.Store(mode)
 }
 
 // SetLastDrop ...
