@@ -1,8 +1,6 @@
 package session
 
 import (
-	"log/slog"
-
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/world/chunk"
 	"github.com/go-gl/mathgl/mgl32"
@@ -15,13 +13,7 @@ import (
 var (
 	airRuntimeID  uint32
 	denyRuntimeID uint32
-
-	log *slog.Logger
 )
-
-func init() {
-	log = slog.Default()
-}
 
 // SetupRuntimeIDs ...
 func SetupRuntimeIDs(hashedNetworkIDS bool) {

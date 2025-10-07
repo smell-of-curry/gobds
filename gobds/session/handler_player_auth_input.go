@@ -1,7 +1,6 @@
 package session
 
 import (
-	"slices"
 	"sync"
 	"time"
 
@@ -71,14 +70,13 @@ func (h *PlayerAuthInputHandler) handleAFKTimer(s *Session, pkt *packet.PlayerAu
 // handleWorldBorder ...
 func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
 	clientData := s.Data()
-	clientXUID := s.IdentityData().XUID
-	for i, action := range pkt.BlockActions {
-		if action.Action == protocol.PlayerActionCrackBreak {
+	for i, blockAction := range pkt.BlockActions {
+		if blockAction.Action == protocol.PlayerActionCrackBreak {
 			continue
 		}
 
-		blockPosition := action.BlockPos
-		if action.Action == protocol.PlayerActionStopBreak && (i == 0 || i == 1) && len(pkt.BlockActions) > 1 {
+		blockPosition := blockAction.BlockPos
+		if blockAction.Action == protocol.PlayerActionStopBreak && (i == 0 || i == 1) && len(pkt.BlockActions) > 1 {
 			switch i {
 			case 0:
 				blockPosition = pkt.BlockActions[i+1].BlockPos
@@ -96,10 +94,8 @@ func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.Playe
 		if !exists {
 			continue
 		}
-		if claim.ID == "" || // Invalid claim?
-			claim.OwnerXUID == "*" || // Admin claim.
-			claim.OwnerXUID == clientXUID ||
-			slices.Contains(claim.TrustedXUIDS, clientXUID) {
+		permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, blockPosToVec3(blockPosition))
+		if permitted {
 			continue
 		}
 

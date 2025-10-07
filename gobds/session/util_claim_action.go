@@ -5,10 +5,10 @@ import (
 
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
-	"github.com/smell-of-curry/gobds/gobds/interceptor"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
 )
 
+// ClaimAction ...
 type ClaimAction uint8
 
 const (
@@ -19,23 +19,23 @@ const (
 )
 
 // ClaimActionPermitted ...
-func ClaimActionPermitted(cl claim.PlayerClaim, c interceptor.Client, action ClaimAction, data any) bool {
+func ClaimActionPermitted(cl claim.PlayerClaim, s *Session, action ClaimAction, data any) bool {
 	switch action {
 	case ClaimActionRender:
-		return handleClaimActionRender(cl, c, data)
+		return handleClaimActionRender(cl, s, data)
 	case ClaimActionBlockInteract:
-		return handleClaimActionBlockInteract(cl, c, data)
+		return handleClaimActionBlockInteract(cl, s, data)
 	case ClaimActionItemRelease:
-		return handleClaimActionItemRelease(cl, c, data)
+		return handleClaimActionItemRelease(cl, s, data)
 	case ClaimActionItemThrow:
-		return handleClaimActionItemThrow(cl, c, data)
+		return handleClaimActionItemThrow(cl, s, data)
 	}
 	return true
 }
 
 // handleClaimActionRender ...
-func handleClaimActionRender(cl claim.PlayerClaim, c interceptor.Client, data any) (permitted bool) {
-	if claimOwnerOrTrusted(cl, c) {
+func handleClaimActionRender(cl claim.PlayerClaim, s *Session, data any) (permitted bool) {
+	if claimOwnerOrTrusted(cl, s) {
 		return true
 	}
 	chunkPos := data.(protocol.ChunkPos)
@@ -49,8 +49,8 @@ func handleClaimActionRender(cl claim.PlayerClaim, c interceptor.Client, data an
 }
 
 // handleClaimActionBlockInteract ...
-func handleClaimActionBlockInteract(cl claim.PlayerClaim, c interceptor.Client, data any) (permitted bool) {
-	if claimOwnerOrTrusted(cl, c) {
+func handleClaimActionBlockInteract(cl claim.PlayerClaim, s *Session, data any) (permitted bool) {
+	if claimOwnerOrTrusted(cl, s) {
 		return true
 	}
 	transactionPosition := data.(mgl32.Vec3)
@@ -67,24 +67,24 @@ func handleClaimActionBlockInteract(cl claim.PlayerClaim, c interceptor.Client, 
 }
 
 // handleClaimActionItemRelease ...
-func handleClaimActionItemRelease(cl claim.PlayerClaim, c interceptor.Client, _ any) (permitted bool) {
-	if claimOwnerOrTrusted(cl, c) {
+func handleClaimActionItemRelease(cl claim.PlayerClaim, s *Session, _ any) (permitted bool) {
+	if claimOwnerOrTrusted(cl, s) {
 		return true
 	}
 	return false
 }
 
 // handleClaimActionItemThrow ...
-func handleClaimActionItemThrow(cl claim.PlayerClaim, c interceptor.Client, _ any) (permitted bool) {
-	if claimOwnerOrTrusted(cl, c) {
+func handleClaimActionItemThrow(cl claim.PlayerClaim, s *Session, _ any) (permitted bool) {
+	if claimOwnerOrTrusted(cl, s) {
 		return true
 	}
 	return false
 }
 
 // claimOwnerOrTrusted ...
-func claimOwnerOrTrusted(cl claim.PlayerClaim, c interceptor.Client) bool {
-	clientXUID := c.IdentityData().XUID
+func claimOwnerOrTrusted(cl claim.PlayerClaim, s *Session) bool {
+	clientXUID := s.IdentityData().XUID
 	return cl.ID == "" || cl.OwnerXUID == "*" ||
 		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID)
 }

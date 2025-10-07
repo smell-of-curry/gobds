@@ -1,8 +1,6 @@
 package session
 
 import (
-	"slices"
-
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl32"
@@ -11,7 +9,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/infra"
-	"github.com/smell-of-curry/gobds/gobds/service/claim"
 )
 
 // InventoryTransactionHandler ...
@@ -106,31 +103,31 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 		return
 	}
 
-	clientXUID := s.IdentityData().XUID
-
-	dat := s.Data()
+	clientData := s.Data()
 	pos := transactionData.Position
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
-	if !ok {
-		return
-	}
-
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	claim, exists := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
+	if !exists {
 		return
 	}
 
 	if transactionData.ActionType == protocol.UseItemActionClickBlock &&
 		transactionData.TriggerType == protocol.UseItemActionClickAir {
-		if b, exists := world.BlockByRuntimeID(transactionData.BlockRuntimeID); exists {
+		permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, pos)
+		if permitted {
+			return
+		}
+		if b, found := world.BlockByRuntimeID(transactionData.BlockRuntimeID); found {
 			switch b.(type) {
 			case block.ItemFrame, block.Lectern, block.DecoratedPot:
 				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
 				ctx.Cancel()
 			}
 		}
+	}
+
+	permitted := ClaimActionPermitted(claim, s, ClaimActionItemThrow, pos)
+	if permitted {
+		return
 	}
 
 	heldItem := transactionData.HeldItem.Stack.ItemType
@@ -164,27 +161,23 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		return
 	}
 
-	clientXUID := s.IdentityData().XUID
-
-	dat := s.Data()
+	clientData := s.Data()
 	pos := transactionData.Position
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	claim, ok := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
+	if !ok {
+		return
+	}
+	permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, pos)
+	if permitted {
+		return
+	}
+
+	entity, ok := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
 	if !ok {
 		return
 	}
 
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
-		return
-	}
-	ent, ok := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
-	if !ok {
-		return
-	}
-
-	switch ent.ActorType() {
+	switch entity.ActorType() {
 	case "minecraft:armor_stand", "minecraft:painting":
 		s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
 		ctx.Cancel()
@@ -198,52 +191,17 @@ func (h *InventoryTransactionHandler) handleClaimReleaseItem(s *Session, pkt *pa
 		return
 	}
 
-	clientXUID := s.IdentityData().XUID
-
-	dat := s.Data()
+	clientData := s.Data()
 	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	claim, ok := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
 	if !ok {
 		return
 	}
-
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
+	permitted := ClaimActionPermitted(claim, s, ClaimActionItemRelease, pos)
+	if permitted {
 		return
 	}
 
 	s.Message(text.Colourf("<red>You cannot release items inside this claim.</red>"))
 	ctx.Cancel()
-}
-
-// claimDimensionToInt ...
-func claimDimensionToInt(dimension string) int32 {
-	switch dimension {
-	case "minecraft:overworld":
-		return 0
-	case "minecraft:nether":
-		return 1
-	case "minecraft:end":
-		return 2
-	default:
-		return -1
-	}
-}
-
-// ClaimAt ...
-func ClaimAt(dimension int32, x, z float32) (claim.PlayerClaim, bool) {
-	for _, c := range infra.Claims() {
-		if claimDimensionToInt(c.Location.Dimension) == dimension {
-			minX := min(c.Location.Pos1.X, c.Location.Pos2.X)
-			maxX := max(c.Location.Pos1.X, c.Location.Pos2.X)
-			minZ := min(c.Location.Pos1.Z, c.Location.Pos2.Z)
-			maxZ := max(c.Location.Pos1.Z, c.Location.Pos2.Z)
-			if x >= minX && x <= maxX && z >= minZ && z <= maxZ {
-				return c, true
-			}
-		}
-	}
-	return claim.PlayerClaim{}, false
 }
