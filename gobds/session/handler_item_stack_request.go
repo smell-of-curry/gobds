@@ -1,17 +1,15 @@
-package handlers
+package session
 
 import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"github.com/smell-of-curry/gobds/gobds/interceptor"
-	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
-// ItemStackRequest ...
-type ItemStackRequest struct{}
+// ItemStackRequestHandler ...
+type ItemStackRequestHandler struct{}
 
 // Handle ...
-func (ItemStackRequest) Handle(c interceptor.Client, pk packet.Packet, ctx *session.Context) {
+func (*ItemStackRequestHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.ItemStackRequest)
 	for _, request := range pkt.Requests {
 		for _, requestAction := range request.Actions {
@@ -19,7 +17,7 @@ func (ItemStackRequest) Handle(c interceptor.Client, pk packet.Packet, ctx *sess
 			case *protocol.PlaceStackRequestAction:
 				if action.Source.Container.ContainerID == protocol.ContainerDynamic ||
 					action.Destination.Container.ContainerID == protocol.ContainerDynamic {
-					c.WriteToClient(&packet.ItemStackResponse{Responses: []protocol.ItemStackResponse{
+					s.WriteToClient(&packet.ItemStackResponse{Responses: []protocol.ItemStackResponse{
 						{
 							Status:    protocol.ItemStackResponseStatusError,
 							RequestID: request.RequestID,
@@ -30,7 +28,7 @@ func (ItemStackRequest) Handle(c interceptor.Client, pk packet.Packet, ctx *sess
 			case *protocol.TakeStackRequestAction:
 				if action.Source.Container.ContainerID == protocol.ContainerDynamic ||
 					action.Destination.Container.ContainerID == protocol.ContainerDynamic {
-					c.WriteToClient(&packet.ItemStackResponse{Responses: []protocol.ItemStackResponse{
+					s.WriteToClient(&packet.ItemStackResponse{Responses: []protocol.ItemStackResponse{
 						{
 							Status:    protocol.ItemStackResponseStatusError,
 							RequestID: request.RequestID,
@@ -41,4 +39,5 @@ func (ItemStackRequest) Handle(c interceptor.Client, pk packet.Packet, ctx *sess
 			}
 		}
 	}
+	return nil
 }

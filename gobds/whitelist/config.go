@@ -8,7 +8,7 @@ import (
 
 // Config ...
 type Config struct {
-	Entries []string
+	Entries []string `json:"entries"`
 }
 
 // defaultConfig ...
