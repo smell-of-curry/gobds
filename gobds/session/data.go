@@ -7,23 +7,21 @@ import (
 
 // Data ...
 type Data struct {
-	dimension atomic.Int32
-	lastDrop  atomic.Pointer[time.Time]
+	dimension atomic.Value
+	lastDrop  atomic.Value
 }
 
 // NewData ...
 func NewData(conn Conn) *Data {
-	gameData := conn.GameData()
-
 	d := &Data{}
-	d.dimension.Store(gameData.Dimension)
+	d.dimension.Store(conn.GameData().Dimension)
 	d.lastDrop.Store(&time.Time{})
 	return d
 }
 
 // Dimension ...
 func (d *Data) Dimension() int32 {
-	return d.dimension.Load()
+	return d.dimension.Load().(int32)
 }
 
 // SetDimension ...
@@ -39,6 +37,6 @@ func (d *Data) SetLastDrop() {
 
 // InteractWithBlock ...
 func (d *Data) InteractWithBlock() bool {
-	lastDrop := d.lastDrop.Load()
-	return time.Since(*lastDrop) > time.Millisecond*500
+	lastDrop := d.lastDrop.Load().(time.Time)
+	return time.Since(lastDrop) > time.Millisecond*500
 }
