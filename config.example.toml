@@ -9,6 +9,7 @@ SecuredSlots = 0 # The amount of secured slots on the server for only whiteliste
 MaxRenderDistance = 16 # The view distance for players
 FlushRate = 20 # The flush rate for the server
 SentryDSN = '' # The DSN link of the sentry connection
+HashedBlockIDS = true # Whether the downstream server uses hashed block IDs
 
 [Border]
 Enabled = false # Whether to enable the world border
