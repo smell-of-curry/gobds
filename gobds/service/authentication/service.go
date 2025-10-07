@@ -34,7 +34,7 @@ func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseM
 	var lastErr error
 	for attempt := 0; attempt <= service.MaxRetries; attempt++ {
 		if s.Closed {
-			break
+			return nil, fmt.Errorf("service closed")
 		}
 		if attempt > 0 {
 			time.Sleep(service.RetryDelay)
@@ -54,26 +54,34 @@ func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseM
 			}
 			return nil, lastErr
 		}
-		defer response.Body.Close()
 
 		switch response.StatusCode {
 		case http.StatusNotFound:
+			_ = response.Body.Close()
 			lastErr = RecordNotFound
 		case http.StatusGone:
-			lastErr = fmt.Errorf("found expired authentication record found for: %s", xuid)
+			_ = response.Body.Close()
+			lastErr = fmt.Errorf("expired authentication record for: %s", xuid)
 		case http.StatusOK:
 			var responseModel ResponseModel
 			if err = json.NewDecoder(response.Body).Decode(&responseModel); err != nil {
-				return nil, err
+				_ = response.Body.Close()
+				return nil, fmt.Errorf("failed to decode response: %w", err)
 			}
+			_ = response.Body.Close()
 			return &responseModel, nil
 		case http.StatusTooManyRequests:
+			_ = response.Body.Close()
 			lastErr = fmt.Errorf("rate limited")
 			time.Sleep(time.Duration(attempt+1) * service.RetryDelay)
 			continue
 		default:
+			_ = response.Body.Close()
 			lastErr = fmt.Errorf("unexpected status code: %d", response.StatusCode)
 		}
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("authentication service unavailable")
 	}
 	return nil, lastErr
 }
