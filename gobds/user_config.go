@@ -53,7 +53,7 @@ type UserConfig struct {
 	}
 	AFKTimer struct {
 		Enabled         bool
-		TimeoutDuration time.Duration
+		TimeoutDuration string
 	}
 	Resources struct {
 		PacksRequired bool
@@ -162,7 +162,12 @@ func (c UserConfig) afkTimer() *infra.AFKTimer {
 	if !c.AFKTimer.Enabled {
 		return nil
 	}
-	return &infra.AFKTimer{TimeoutDuration: c.AFKTimer.TimeoutDuration}
+	d, err := time.ParseDuration(c.AFKTimer.TimeoutDuration)
+	if err != nil {
+		// Fallback to a sensible default to avoid crash on invalid config
+		d = 10 * time.Minute
+	}
+	return &infra.AFKTimer{TimeoutDuration: d}
 }
 
 // pingIndicator returns new PingIndicator instance.
@@ -249,6 +254,7 @@ func DefaultConfig() UserConfig {
 	c.PingIndicator.Identifier = "&_playerPing:"
 
 	c.AFKTimer.Enabled = true
+	c.AFKTimer.TimeoutDuration = "10m"
 
 	c.Resources.PacksRequired = false
 	c.Resources.CommandPath = "resources/commands.json"
