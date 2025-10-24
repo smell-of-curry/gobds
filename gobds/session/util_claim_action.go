@@ -38,11 +38,20 @@ func handleClaimActionRender(cl claim.PlayerClaim, s *Session, data any) (permit
 	if claimOwnerOrTrusted(cl, s) {
 		return true
 	}
-	chunkPos := data.(protocol.ChunkPos)
-	for _, feature := range cl.Features {
-		pos1, pos2 := feature.ToLocation, feature.FromLocation
-		if insideChunkPosition(chunkPos, pos1, pos2) {
-			return true
+	switch data := data.(type) {
+	case protocol.ChunkPos:
+		for _, feature := range cl.Features {
+			pos1, pos2 := feature.ToLocation, feature.FromLocation
+			if insideChunkPosition(data, pos1, pos2) {
+				return true
+			}
+		}
+	case mgl32.Vec3:
+		for _, feature := range cl.Features {
+			pos1, pos2 := feature.ToLocation, feature.FromLocation
+			if insideVector3(data, pos1, pos2) {
+				return true
+			}
 		}
 	}
 	return false
