@@ -104,7 +104,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 	}
 
 	clientData := s.Data()
-	pos := transactionData.Position
+	pos := transactionData.ClickedPosition
 	claim, exists := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
 	if !exists {
 		return
@@ -162,7 +162,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 	}
 
 	clientData := s.Data()
-	pos := transactionData.Position
+	pos := transactionData.ClickedPosition
 	claim, ok := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
 	if !ok {
 		return
