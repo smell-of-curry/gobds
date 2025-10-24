@@ -18,8 +18,8 @@ github.com/df-mc/worldupgrader v1.0.20/go.mod h1:tsSOLTRm9mpG7VHvYpAjjZrkRHWmSbK
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/getsentry/sentry-go v0.35.3 h1:u5IJaEqZyPdWqe/hKlBKBBnMTSxB/HenCqF3QLabeds=
 github.com/getsentry/sentry-go v0.35.3/go.mod h1:mdL49ixwT2yi57k5eh7mpnDyPybixPzlzEJFu0Z76QA=
-github.com/glance-testing-ground/gophertunnel v0.0.0-20251003175855-614e46abc95d h1:IPWfjgDu3auf1/H3xpujLulqOWSikbe97b2kkH9mNmc=
-github.com/glance-testing-ground/gophertunnel v0.0.0-20251003175855-614e46abc95d/go.mod h1:WjTvUo02TmvPULY1y5oxxAhZIeH8ew31/LUkSUD6ABw=
+github.com/glance-testing-ground/gophertunnel v0.0.0-20251024134449-ae090bb2412c h1:1d06XzAn0VpLy0nzbenx4c3FO1cR6P3LqRLQRMlUVRQ=
+github.com/glance-testing-ground/gophertunnel v0.0.0-20251024134449-ae090bb2412c/go.mod h1:WjTvUo02TmvPULY1y5oxxAhZIeH8ew31/LUkSUD6ABw=
 github.com/go-errors/errors v1.4.2 h1:J6MZopCL4uSllY1OfXM374weqZFFItUbrImctkmUxIA=
 github.com/go-errors/errors v1.4.2/go.mod h1:sIVyrIiJhuEF+Pj9Ebtd6P/rEYROXFi3BopGUQ5a5Og=
 github.com/go-gl/mathgl v1.2.0 h1:v2eOj/y1B2afDxF6URV1qCYmo1KW08lAMtTbOn3KXCY=
