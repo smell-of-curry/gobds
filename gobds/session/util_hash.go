@@ -9,9 +9,9 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// Hash ...
+// hash ...
 // Credit: https://discord.com/channels/623638955262345216/637335508166377513/1347856008038449222
-func Hash(b world.Block) int32 {
+func hash(b world.Block) uint32 {
 	name, properties := b.EncodeBlock()
 	l := int16(len(name))
 	data := []byte{
@@ -68,9 +68,9 @@ func Hash(b world.Block) int32 {
 	}
 	data = append(data, 0, 0) // TAG_End, TAG_End
 
-	hash := fnv.New32a()
-	_, _ = hash.Write(data)
-	rid := hash.Sum32()
-	hash.Reset()
-	return int32(rid)
+	fnvHash := fnv.New32a()
+	_, _ = fnvHash.Write(data)
+	rid := fnvHash.Sum32()
+	fnvHash.Reset()
+	return rid
 }

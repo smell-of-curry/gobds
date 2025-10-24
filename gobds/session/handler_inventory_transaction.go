@@ -2,7 +2,6 @@ package session
 
 import (
 	"github.com/df-mc/dragonfly/server/block"
-	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
@@ -50,7 +49,7 @@ func (h *InventoryTransactionHandler) handleInteraction(s *Session, pkt *packet.
 		transactionData.TriggerType != protocol.UseItemActionClickAir {
 		return
 	}
-	b, ok := world.BlockByRuntimeID(transactionData.BlockRuntimeID)
+	b, ok := blockByRuntimeID(transactionData.BlockRuntimeID)
 	if !ok {
 		return
 	}
@@ -116,7 +115,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 		if permitted {
 			return
 		}
-		if b, found := world.BlockByRuntimeID(transactionData.BlockRuntimeID); found {
+		if b, found := blockByRuntimeID(transactionData.BlockRuntimeID); found {
 			switch b.(type) {
 			case block.ItemFrame, block.Lectern, block.DecoratedPot:
 				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))

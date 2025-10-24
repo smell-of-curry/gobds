@@ -2,6 +2,7 @@ package session
 
 import (
 	"github.com/df-mc/dragonfly/server/block"
+	"github.com/df-mc/dragonfly/server/world"
 	"github.com/df-mc/dragonfly/server/world/chunk"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
@@ -13,13 +14,19 @@ import (
 var (
 	airRuntimeID  uint32
 	denyRuntimeID uint32
+
+	hashBlockMap = make(map[uint32]world.Block)
 )
 
 // SetupRuntimeIDs ...
 func SetupRuntimeIDs(hashedNetworkIDS bool) {
 	if hashedNetworkIDS {
-		airRuntimeID = uint32(Hash(block.Air{}))
-		denyRuntimeID = uint32(Hash(gblock.Deny{}))
+		for _, b := range world.Blocks() {
+			hashBlockMap[hash(b)] = b
+		}
+
+		airRuntimeID = hash(block.Air{})
+		denyRuntimeID = hash(gblock.Deny{})
 	} else {
 		air, ok := chunk.StateToRuntimeID("minecraft:air", nil)
 		if !ok {
@@ -33,6 +40,15 @@ func SetupRuntimeIDs(hashedNetworkIDS bool) {
 		airRuntimeID = air
 		denyRuntimeID = deny
 	}
+}
+
+// blockByRuntimeID ...
+func blockByRuntimeID(id uint32) (world.Block, bool) {
+	if len(hashBlockMap) == 0 {
+		return world.BlockByRuntimeID(id)
+	}
+	b, found := hashBlockMap[id]
+	return b, found
 }
 
 // claimDimensionToInt ...
