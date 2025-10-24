@@ -9,8 +9,6 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-var hash = fnv.New32a()
-
 // Hash ...
 // Credit: https://discord.com/channels/623638955262345216/637335508166377513/1347856008038449222
 func Hash(b world.Block) int32 {
@@ -70,6 +68,7 @@ func Hash(b world.Block) int32 {
 	}
 	data = append(data, 0, 0) // TAG_End, TAG_End
 
+	hash := fnv.New32a()
 	_, _ = hash.Write(data)
 	rid := hash.Sum32()
 	hash.Reset()
