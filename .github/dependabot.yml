@@ -10,7 +10,7 @@ updates:
     directory: '/'
     # Check for updates daily.
     schedule:
-      interval: daily
+      interval: weekly
 
   # Enable version updates for GitHub Actions.
   - package-ecosystem: github-actions
