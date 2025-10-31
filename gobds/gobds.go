@@ -15,6 +15,7 @@ import (
 	_ "unsafe"
 
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	_ "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/infra"
@@ -105,7 +106,7 @@ func (gb *GoBDS) Listen() error {
 		return fmt.Errorf("start gobds: already started")
 	}
 
-	gb.conf.Log.Info("starting gobds")
+	gb.conf.Log.Info("starting gobds", "mc-version", protocol.CurrentVersion)
 	gb.conf.PlayerManager.Start(time.Minute * 3)
 
 	gb.wg.Add(len(gb.listeners))
