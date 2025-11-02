@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/avast/retry-go/v4 v4.7.0
-	github.com/df-mc/dragonfly v0.10.9
+	github.com/df-mc/dragonfly v0.10.10-0.20251030151444-930c985297ef
 	github.com/getsentry/sentry-go v0.36.1
 	github.com/go-gl/mathgl v1.2.0
 	github.com/go-jose/go-jose/v4 v4.1.3

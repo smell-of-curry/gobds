@@ -7,8 +7,8 @@ github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/df-mc/dragonfly v0.10.9 h1:LEja8+EdU753W0eNbaQGyfntTWyL/Nz7blOUTZysW4k=
-github.com/df-mc/dragonfly v0.10.9/go.mod h1:pL3nqPtOGVdExu3+LkqWRaa89Trdpf22EjCGexqMus8=
+github.com/df-mc/dragonfly v0.10.10-0.20251030151444-930c985297ef h1:xMnKRBe1UHg6+7Omdtdq4+wtzZWwBrEZzi2IRlaQR80=
+github.com/df-mc/dragonfly v0.10.10-0.20251030151444-930c985297ef/go.mod h1:pL3nqPtOGVdExu3+LkqWRaa89Trdpf22EjCGexqMus8=
 github.com/df-mc/goleveldb v1.1.9 h1:ihdosZyy5jkQKrxucTQmN90jq/2lUwQnJZjIYIC/9YU=
 github.com/df-mc/goleveldb v1.1.9/go.mod h1:+NHCup03Sci5q84APIA21z3iPZCuk6m6ABtg4nANCSk=
 github.com/df-mc/jsonc v1.0.5 h1:O7oh07kbS5AYY+l2Fji6l4h0iHcdjKbxCtK5VlZlLMU=
