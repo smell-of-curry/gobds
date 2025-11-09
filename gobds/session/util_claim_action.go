@@ -95,7 +95,8 @@ func handleClaimActionItemThrow(cl claim.PlayerClaim, s *Session, _ any) (permit
 func claimOwnerOrTrusted(cl claim.PlayerClaim, s *Session) bool {
 	clientXUID := s.IdentityData().XUID
 	return cl.ID == "" || cl.OwnerXUID == "*" ||
-		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID)
+		cl.OwnerXUID == clientXUID || slices.Contains(cl.TrustedXUIDS, clientXUID) ||
+		s.Data().Operator()
 }
 
 // insideChunkPosition ...

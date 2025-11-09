@@ -240,6 +240,7 @@ func (s *Session) registerHandlers() {
 		packet.IDSetPlayerGameType:    &SetPlayerGameTypeHandler{},
 		packet.IDSubChunk:             &SubChunkHandler{},
 		packet.IDText:                 &TextHandler{},
+		packet.IDUpdateAbilities:      &UpdateAbilities{},
 		packet.IDUpdatePlayerGameType: &UpdatePlayerGameTypeHandler{},
 	}
 }

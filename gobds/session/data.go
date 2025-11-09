@@ -10,6 +10,7 @@ type Data struct {
 	dimension atomic.Value
 	gamemode  atomic.Value
 	lastDrop  atomic.Value
+	operator  atomic.Bool
 }
 
 // NewData ...
@@ -19,6 +20,7 @@ func NewData(conn Conn) *Data {
 	d.dimension.Store(gameData.Dimension)
 	d.gamemode.Store(gameData.PlayerGameMode)
 	d.lastDrop.Store(time.Time{})
+	d.operator.Store(false)
 	return d
 }
 
@@ -51,4 +53,14 @@ func (d *Data) SetLastDrop() {
 func (d *Data) InteractWithBlock() bool {
 	lastDrop := d.lastDrop.Load().(time.Time)
 	return time.Since(lastDrop) > time.Millisecond*500
+}
+
+// Operator ...
+func (d *Data) Operator() bool {
+	return d.operator.Load()
+}
+
+// SetOperator ...
+func (d *Data) SetOperator(operator bool) {
+	d.operator.Store(operator)
 }
