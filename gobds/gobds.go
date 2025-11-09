@@ -15,6 +15,7 @@ import (
 	_ "unsafe"
 
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	_ "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/infra"
@@ -105,7 +106,7 @@ func (gb *GoBDS) Listen() error {
 		return fmt.Errorf("start gobds: already started")
 	}
 
-	gb.conf.Log.Info("starting gobds")
+	gb.conf.Log.Info("starting gobds", "mc-version", protocol.CurrentVersion)
 	gb.conf.PlayerManager.Start(time.Minute * 3)
 
 	gb.wg.Add(len(gb.listeners))
@@ -169,12 +170,12 @@ func (gb *GoBDS) accept(conn session.Conn, ctx context.Context) (*session.Sessio
 		if err != nil {
 			disconnectionMessage := err.Error()
 			if errors.Is(err, authentication.RecordNotFound) {
-				disconnectionMessage = text.Colourf("<red>you must join through the server hub.</red>")
+				disconnectionMessage = text.Colourf("<red>You must join through the server hub.</red>")
 			}
 			return nil, fmt.Errorf(disconnectionMessage)
 		}
 		if !response.Allowed {
-			return nil, fmt.Errorf("you must join through the server hub to play")
+			return nil, fmt.Errorf("You must join through the server hub to play")
 		}
 	}
 
