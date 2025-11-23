@@ -23,7 +23,7 @@ func NewService(log *slog.Logger, c service.Config) *Service {
 }
 
 var (
-	RecordNotFound = errors.New("no authentication record found")
+	ErrRecordNotFound = errors.New("no authentication record found")
 )
 
 // AuthenticationOf ...
@@ -40,7 +40,7 @@ func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseM
 			time.Sleep(service.RetryDelay)
 		}
 
-		request, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/%s", s.Url, xuid), nil)
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/%s", s.URL, xuid), nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
@@ -58,7 +58,7 @@ func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseM
 
 		switch response.StatusCode {
 		case http.StatusNotFound:
-			lastErr = RecordNotFound
+			lastErr = ErrRecordNotFound
 		case http.StatusGone:
 			lastErr = fmt.Errorf("found expired authentication record found for: %s", xuid)
 		case http.StatusOK:

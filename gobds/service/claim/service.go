@@ -38,7 +38,7 @@ func (s *Service) FetchClaims() (map[string]PlayerClaim, error) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), service.RequestTimeout)
 		defer cancel()
-		request, err := http.NewRequestWithContext(ctx, http.MethodGet, s.Url, nil)
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, s.URL, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}

@@ -84,7 +84,7 @@ type UserConfig struct {
 
 // packs loads and returns all packs.
 func (c UserConfig) packs(log *slog.Logger) []*resource.Pack {
-	var packs []*resource.Pack
+	packs := make([]*resource.Pack, 0, len(c.Resources.URLResources)+len(c.Resources.PathResources))
 
 	for _, url := range c.Resources.URLResources {
 		pack, err := resource.ReadURL(url)
@@ -261,16 +261,17 @@ func DefaultConfig() UserConfig {
 
 	c.AuthenticationService.Enabled = false
 	c.AuthenticationService.URL = "http://127.0.0.1:8080/authentication"
-	c.AuthenticationService.Key = "secret-key"
+	const defaultKey = "secret-key"
+	c.AuthenticationService.Key = defaultKey
 
 	c.ClaimService.Enabled = false
 	c.ClaimService.URL = "http://127.0.0.1:8080/fetch/claims"
-	c.ClaimService.Key = "secret-key"
+	c.ClaimService.Key = defaultKey
 
 	c.VPNService.Enabled = false
 	c.VPNService.URL = "http://ip-api.com/json"
 
-	c.Encryption.Key = "secret-key"
+	c.Encryption.Key = defaultKey
 	return c
 }
 

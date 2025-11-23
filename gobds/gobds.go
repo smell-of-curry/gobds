@@ -161,17 +161,17 @@ func (gb *GoBDS) accept(conn session.Conn, ctx context.Context) (*session.Sessio
 	identityData := conn.IdentityData()
 	if gb.conf.VPNService != nil {
 		if reason, allowed := gb.handleVPN(conn.LocalAddr(), ctx); !allowed {
-			return nil, fmt.Errorf(reason)
+			return nil, errors.New(reason)
 		}
 	}
 	if gb.conf.AuthenticationService != nil {
 		response, err := gb.conf.AuthenticationService.AuthenticationOf(identityData.XUID, ctx)
 		if err != nil {
 			disconnectionMessage := err.Error()
-			if errors.Is(err, authentication.RecordNotFound) {
+			if errors.Is(err, authentication.ErrRecordNotFound) {
 				disconnectionMessage = text.Colourf("<red>you must join through the server hub.</red>")
 			}
-			return nil, fmt.Errorf(disconnectionMessage)
+			return nil, errors.New(disconnectionMessage)
 		}
 		if !response.Allowed {
 			return nil, fmt.Errorf("you must join through the server hub to play")
@@ -183,10 +183,10 @@ func (gb *GoBDS) accept(conn session.Conn, ctx context.Context) (*session.Sessio
 
 	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
-		return nil, fmt.Errorf("You're not whitelisted")
+		return nil, fmt.Errorf("you're not whitelisted")
 	}
 	if !gb.conf.AuthenticationService.Enabled && !gb.handleSecureSlots(displayName) {
-		return nil, fmt.Errorf("The server is at full capacity")
+		return nil, fmt.Errorf("the server is at full capacity")
 	}
 
 	ctx2, cancel := context.WithTimeout(ctx, time.Minute)

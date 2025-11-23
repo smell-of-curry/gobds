@@ -1,0 +1,42 @@
+run:
+  timeout: 5m
+  tests: false
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gocritic
+    - gocyclo
+    - goconst
+    - unparam
+    - prealloc
+    - stylecheck
+    - revive
+    - misspell
+    - unconvert
+    - nakedret
+    - dogsled
+    - copyloopvar
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  misspell:
+    locale: US
+    ignore-words:
+      - cancelled
+  revive:
+    rules:
+      - name: exported
+        disabled: false
+      - name: package-comments
+        disabled: false
