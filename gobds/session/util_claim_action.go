@@ -77,18 +77,12 @@ func handleClaimActionBlockInteract(cl claim.PlayerClaim, s *Session, data any) 
 
 // handleClaimActionItemRelease ...
 func handleClaimActionItemRelease(cl claim.PlayerClaim, s *Session, _ any) (permitted bool) {
-	if claimOwnerOrTrusted(cl, s) {
-		return true
-	}
-	return false
+	return claimOwnerOrTrusted(cl, s)
 }
 
 // handleClaimActionItemThrow ...
 func handleClaimActionItemThrow(cl claim.PlayerClaim, s *Session, _ any) (permitted bool) {
-	if claimOwnerOrTrusted(cl, s) {
-		return true
-	}
-	return false
+	return claimOwnerOrTrusted(cl, s)
 }
 
 // claimOwnerOrTrusted ...
