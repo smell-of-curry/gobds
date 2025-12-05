@@ -159,27 +159,32 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		return
 	}
 
+	entity, exists := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
+	if !exists {
+		return
+	}
+
+	var entityPosition mgl32.Vec3
+	switch entity.ActorType() {
+	case "minecraft:armor_stand", "minecraft:painting":
+		entityPosition = entity.InitialPosition()
+	default:
+		return
+	}
+
 	clientData := s.Data()
-	pos := transactionData.ClickedPosition
-	claim, ok := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
+	claim, ok := ClaimAt(clientData.Dimension(), entityPosition.X(), entityPosition.Z())
 	if !ok {
 		return
 	}
-	permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, pos)
+
+	permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, entityPosition)
 	if permitted {
 		return
 	}
 
-	entity, ok := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
-	if !ok {
-		return
-	}
-
-	switch entity.ActorType() {
-	case "minecraft:armor_stand", "minecraft:painting":
-		s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
-		ctx.Cancel()
-	}
+	s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
+	ctx.Cancel()
 }
 
 // handleClaimReleaseItem ...
