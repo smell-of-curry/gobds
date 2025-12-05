@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"maps"
 	"sync"
 
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
@@ -18,12 +19,12 @@ var (
 func Claims() MappedClaims {
 	claimsMu.RLock()
 	defer claimsMu.RUnlock()
-	return claims
+	return maps.Clone(claims)
 }
 
 // SetClaims ...
 func SetClaims(c MappedClaims) {
 	claimsMu.Lock()
 	defer claimsMu.Unlock()
-	claims = c
+	claims = maps.Clone(c)
 }

@@ -10,16 +10,17 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/cmd"
 )
 
-// todo; ...
-
+// IMinecraftRawText ...
 type IMinecraftRawText struct {
 	Text string `json:"text"`
 }
 
+// IMinecraftTextMessage ...
 type IMinecraftTextMessage struct {
 	RawText []IMinecraftRawText `json:"rawtext"`
 }
 
+// TextHandler ...
 type TextHandler struct{}
 
 // Global variable to store the command file path - set during initialization
@@ -30,6 +31,7 @@ func SetCommandPath(path string) {
 	globalCommandPath = path
 }
 
+// Handle ...
 func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.Text)
 
@@ -77,7 +79,7 @@ func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 			return err
 		}
 
-		if err := os.WriteFile(globalCommandPath, commandsJSON, os.ModePerm); err != nil {
+		if err = os.WriteFile(globalCommandPath, commandsJSON, os.ModePerm); err != nil {
 			s.log.Error("failed to write commands file", "error", err)
 			return err
 		}

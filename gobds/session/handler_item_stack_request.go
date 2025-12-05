@@ -12,8 +12,8 @@ type ItemStackRequestHandler struct{}
 func (*ItemStackRequestHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.ItemStackRequest)
 	for _, request := range pkt.Requests {
-		for _, action := range request.Actions {
-			switch action := action.(type) {
+		for _, requestAction := range request.Actions {
+			switch action := requestAction.(type) {
 			case *protocol.PlaceStackRequestAction:
 				if action.Source.Container.ContainerID == protocol.ContainerDynamic ||
 					action.Destination.Container.ContainerID == protocol.ContainerDynamic {
