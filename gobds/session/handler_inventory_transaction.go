@@ -72,9 +72,9 @@ func (h *InventoryTransactionHandler) handleWorldBorder(s *Session, pkt *packet.
 		return
 	}
 
-	if td, ok := pkt.TransactionData.(*protocol.UseItemTransactionData); ok {
-		if td.ActionType == protocol.UseItemActionClickBlock {
-			if !s.border.PositionInside(td.BlockPosition.X(), td.BlockPosition.Z()) {
+	if transaction, ok := pkt.TransactionData.(*protocol.UseItemTransactionData); ok {
+		if transaction.ActionType == protocol.UseItemActionClickBlock {
+			if !s.border.PositionInside(transaction.BlockPosition.X(), transaction.BlockPosition.Z()) {
 				ctx.Cancel()
 			}
 		}
@@ -111,36 +111,24 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 	if transactionData.ActionType == protocol.UseItemActionClickBlock &&
 		transactionData.TriggerType == protocol.UseItemActionClickAir {
 		permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, pos)
-		if !permitted {
-			if h.checkClaimBlockInteraction(s, ctx, transactionData) {
-				return
+		if permitted {
+			return
+		}
+		if b, found := blockByRuntimeID(transactionData.BlockRuntimeID); found {
+			switch b.(type) {
+			case block.ItemFrame, block.Lectern, block.DecoratedPot:
+				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
+				ctx.Cancel()
 			}
 		}
 	}
 
 	permitted := ClaimActionPermitted(claim, s, ClaimActionItemThrow, pos)
-	if !permitted {
-		h.checkClaimItemThrow(s, ctx, transactionData)
+	if permitted {
+		return
 	}
-}
 
-func (h *InventoryTransactionHandler) checkClaimBlockInteraction(s *Session, ctx *Context, td *protocol.UseItemTransactionData) bool {
-	if td.ActionType == protocol.UseItemActionClickBlock &&
-		td.TriggerType == protocol.UseItemActionClickAir {
-		if b, exists := blockByRuntimeID(td.BlockRuntimeID); exists {
-			switch b.(type) {
-			case block.ItemFrame, block.Lectern, block.DecoratedPot:
-				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
-				ctx.Cancel()
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (h *InventoryTransactionHandler) checkClaimItemThrow(s *Session, ctx *Context, td *protocol.UseItemTransactionData) {
-	heldItem := td.HeldItem.Stack.ItemType
+	heldItem := transactionData.HeldItem.Stack.ItemType
 	if heldItem.NetworkID == 0 {
 		return
 	}
