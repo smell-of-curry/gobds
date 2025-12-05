@@ -36,6 +36,31 @@ func (h *AvailableCommandsHandler) Handle(_ *Session, pk packet.Packet, _ *Conte
 
 // appendCustomCommands ...
 func (h *AvailableCommandsHandler) appendCustomCommands(pkt *packet.AvailableCommands) *packet.AvailableCommands {
+	builder := newCommandBuilder(pkt)
+	commands := cmd.Commands()
+	for _, c := range commands {
+		aliasesIndex := builder.processAliases(c)
+		overloads := builder.processParams(c)
+
+		builder.pkt.Commands = append(builder.pkt.Commands, protocol.Command{
+			Name:          c.Name(),
+			Description:   c.Description(),
+			AliasesOffset: aliasesIndex,
+			Overloads:     overloads,
+		})
+	}
+	return builder.pkt
+}
+
+type commandBuilder struct {
+	pkt                *packet.AvailableCommands
+	enumIndices        map[string]uint32
+	enumValueIndices   map[string]uint
+	dynamicEnumIndices map[string]uint32
+	suffixIndices      map[string]uint32
+}
+
+func newCommandBuilder(pkt *packet.AvailableCommands) *commandBuilder {
 	enumIndices := make(map[string]uint32, len(pkt.Enums))
 	for i, e := range pkt.Enums {
 		enumIndices[e.Type] = uint32(i)
@@ -52,113 +77,126 @@ func (h *AvailableCommandsHandler) appendCustomCommands(pkt *packet.AvailableCom
 	for i, s := range pkt.Suffixes {
 		suffixIndices[s] = uint32(i)
 	}
-
-	commands := cmd.Commands()
-	for _, c := range commands {
-		aliasesIndex := uint32(math.MaxUint32)
-		if len(c.Aliases()) > 0 {
-			aliasEnumType := c.Name() + "Aliases"
-			if idx, ok := enumIndices[aliasEnumType]; ok {
-				aliasesIndex = idx
-			} else {
-				aliasesIndex = uint32(len(pkt.Enums))
-				enumIndices[aliasEnumType] = aliasesIndex
-				var valIdxs []uint
-				for _, opt := range c.Aliases() {
-					if vi, ok := enumValueIndices[opt]; ok {
-						valIdxs = append(valIdxs, vi)
-					} else {
-						vi = uint(len(pkt.EnumValues))
-						enumValueIndices[opt] = vi
-						pkt.EnumValues = append(pkt.EnumValues, opt)
-						valIdxs = append(valIdxs, vi)
-					}
-				}
-				pkt.Enums = append(pkt.Enums, protocol.CommandEnum{
-					Type:         aliasEnumType,
-					ValueIndices: valIdxs,
-				})
-			}
-		}
-
-		params := c.Params()
-		overloads := make([]protocol.CommandOverload, len(params))
-		for i, paramList := range params {
-			for _, paramInfo := range paramList {
-				t, enumDef := valueToParamType(paramInfo)
-				t |= protocol.CommandArgValid
-				opt := byte(0)
-				if _, isBool := paramInfo.Value.(bool); isBool {
-					opt |= protocol.ParamOptionCollapseEnum
-				}
-				if enumDef.Type != "" {
-					if !enumDef.Dynamic {
-						var enumIdx uint32
-						if idx, ok := enumIndices[enumDef.Type]; ok {
-							enumIdx = idx
-						} else {
-							enumIdx = uint32(len(pkt.Enums))
-							enumIndices[enumDef.Type] = enumIdx
-							var valIdxs []uint
-							for _, optStr := range enumDef.Options {
-								if vi, ok := enumValueIndices[optStr]; ok {
-									valIdxs = append(valIdxs, vi)
-								} else {
-									vi = uint(len(pkt.EnumValues))
-									enumValueIndices[optStr] = vi
-									pkt.EnumValues = append(pkt.EnumValues, optStr)
-									valIdxs = append(valIdxs, vi)
-								}
-							}
-							pkt.Enums = append(pkt.Enums, protocol.CommandEnum{
-								Type:         enumDef.Type,
-								ValueIndices: valIdxs,
-							})
-						}
-						t |= protocol.CommandArgEnum | enumIdx
-					} else {
-						var dynIdx uint32
-						if idx, ok := dynamicEnumIndices[enumDef.Type]; ok {
-							dynIdx = idx
-						} else {
-							dynIdx = uint32(len(pkt.DynamicEnums))
-							dynamicEnumIndices[enumDef.Type] = dynIdx
-							pkt.DynamicEnums = append(pkt.DynamicEnums, protocol.DynamicEnum{
-								Type:   enumDef.Type,
-								Values: enumDef.Options,
-							})
-						}
-						t |= protocol.CommandArgSoftEnum | dynIdx
-					}
-				}
-				if paramInfo.Suffix != "" {
-					var suffIdx uint32
-					if idx, ok := suffixIndices[paramInfo.Suffix]; ok {
-						suffIdx = idx
-					} else {
-						suffIdx = uint32(len(pkt.Suffixes))
-						suffixIndices[paramInfo.Suffix] = suffIdx
-						pkt.Suffixes = append(pkt.Suffixes, paramInfo.Suffix)
-					}
-					t |= protocol.CommandArgSuffixed | suffIdx
-				}
-				overloads[i].Parameters = append(overloads[i].Parameters, protocol.CommandParameter{
-					Name:     paramInfo.Name,
-					Type:     t,
-					Optional: paramInfo.Optional,
-					Options:  opt,
-				})
-			}
-		}
-
-		pkt.Commands = append(pkt.Commands, protocol.Command{
-			Name:          c.Name(),
-			Description:   c.Description(),
-			AliasesOffset: aliasesIndex,
-			Overloads:     overloads,
-		})
+	return &commandBuilder{
+		pkt:                pkt,
+		enumIndices:        enumIndices,
+		enumValueIndices:   enumValueIndices,
+		dynamicEnumIndices: dynamicEnumIndices,
+		suffixIndices:      suffixIndices,
 	}
-	return pkt
+}
+
+func (b *commandBuilder) processAliases(c cmd.Command) uint32 {
+	if len(c.Aliases()) == 0 {
+		return math.MaxUint32
+	}
+
+	aliasEnumType := c.Name() + "Aliases"
+	if idx, ok := b.enumIndices[aliasEnumType]; ok {
+		return idx
+	}
+
+	aliasesIndex := uint32(len(b.pkt.Enums))
+	b.enumIndices[aliasEnumType] = aliasesIndex
+	var valIdxs []uint
+	for _, opt := range c.Aliases() {
+		if vi, ok := b.enumValueIndices[opt]; ok {
+			valIdxs = append(valIdxs, vi)
+		} else {
+			vi = uint(len(b.pkt.EnumValues))
+			b.enumValueIndices[opt] = vi
+			b.pkt.EnumValues = append(b.pkt.EnumValues, opt)
+			valIdxs = append(valIdxs, vi)
+		}
+	}
+	b.pkt.Enums = append(b.pkt.Enums, protocol.CommandEnum{
+		Type:         aliasEnumType,
+		ValueIndices: valIdxs,
+	})
+	return aliasesIndex
+}
+
+func (b *commandBuilder) processParams(c cmd.Command) []protocol.CommandOverload {
+	params := c.Params()
+	overloads := make([]protocol.CommandOverload, len(params))
+	for i, paramList := range params {
+		for _, paramInfo := range paramList {
+			t, enumDef := valueToParamType(paramInfo)
+			t |= protocol.CommandArgValid
+			opt := byte(0)
+			if _, isBool := paramInfo.Value.(bool); isBool {
+				opt |= protocol.ParamOptionCollapseEnum
+			}
+			if enumDef.Type != "" {
+				t = b.handleEnum(t, enumDef)
+			}
+			if paramInfo.Suffix != "" {
+				t = b.handleSuffix(t, paramInfo.Suffix)
+			}
+			overloads[i].Parameters = append(overloads[i].Parameters, protocol.CommandParameter{
+				Name:     paramInfo.Name,
+				Type:     t,
+				Optional: paramInfo.Optional,
+				Options:  opt,
+			})
+		}
+	}
+	return overloads
+}
+
+func (b *commandBuilder) handleEnum(t uint32, enumDef commandEnum) uint32 {
+	if !enumDef.Dynamic {
+		var enumIdx uint32
+		if idx, ok := b.enumIndices[enumDef.Type]; ok {
+			enumIdx = idx
+		} else {
+			enumIdx = uint32(len(b.pkt.Enums))
+			b.enumIndices[enumDef.Type] = enumIdx
+			var valIdxs []uint
+			for _, optStr := range enumDef.Options {
+				if vi, ok := b.enumValueIndices[optStr]; ok {
+					valIdxs = append(valIdxs, vi)
+				} else {
+					vi = uint(len(b.pkt.EnumValues))
+					b.enumValueIndices[optStr] = vi
+					b.pkt.EnumValues = append(b.pkt.EnumValues, optStr)
+					valIdxs = append(valIdxs, vi)
+				}
+			}
+			b.pkt.Enums = append(b.pkt.Enums, protocol.CommandEnum{
+				Type:         enumDef.Type,
+				ValueIndices: valIdxs,
+			})
+		}
+		t |= protocol.CommandArgEnum | enumIdx
+	} else {
+		var dynIdx uint32
+		if idx, ok := b.dynamicEnumIndices[enumDef.Type]; ok {
+			dynIdx = idx
+		} else {
+			dynIdx = uint32(len(b.pkt.DynamicEnums))
+			b.dynamicEnumIndices[enumDef.Type] = dynIdx
+			b.pkt.DynamicEnums = append(b.pkt.DynamicEnums, protocol.DynamicEnum{
+				Type:   enumDef.Type,
+				Values: enumDef.Options,
+			})
+		}
+		t |= protocol.CommandArgSoftEnum | dynIdx
+	}
+	return t
+}
+
+func (b *commandBuilder) handleSuffix(t uint32, suffix string) uint32 {
+	var suffIdx uint32
+	if idx, ok := b.suffixIndices[suffix]; ok {
+		suffIdx = idx
+	} else {
+		suffIdx = uint32(len(b.pkt.Suffixes))
+		b.suffixIndices[suffix] = suffIdx
+		b.pkt.Suffixes = append(b.pkt.Suffixes, suffix)
+	}
+	t |= protocol.CommandArgSuffixed | suffIdx
+	return t
 }
 
 // commandEnum ...

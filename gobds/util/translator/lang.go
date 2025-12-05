@@ -24,7 +24,7 @@ func SupportedLanguages(rp *resource.Pack) (supportedLanguages []string, err err
 
 	err = json.Unmarshal(supportedLanguagesJSON, &supportedLanguages)
 	if err != nil {
-		return nil, fmt.Errorf("error while un-marshalling languages.json: %w", err)
+		return nil, fmt.Errorf("error while unmarshaling languages.json: %w", err)
 	}
 	return supportedLanguages, nil
 }

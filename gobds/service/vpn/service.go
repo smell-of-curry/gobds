@@ -47,7 +47,7 @@ func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error
 			time.Sleep(service.RetryDelay)
 		}
 
-		url := fmt.Sprintf("%s/%s?fields=status,message,proxy", s.Url, ip)
+		url := fmt.Sprintf("%s/%s?fields=status,message,proxy", s.URL, ip)
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)

@@ -39,23 +39,23 @@ func (s *Session) SendPingIndicator() {
 	}
 
 	ping := s.Ping()
-	var colour string
+	var color string
 	switch {
 	case ping < 20:
-		colour = "§a"
+		color = "§a"
 	case ping < 50:
-		colour = "§e"
+		color = "§e"
 	case ping < 100:
-		colour = "§6"
+		color = "§6"
 	case ping < 200:
-		colour = "§c"
+		color = "§c"
 	default:
-		colour = "§4"
+		color = "§4"
 	}
 
 	s.WriteToClient(&packet.SetTitle{
 		ActionType: packet.TitleActionSetTitle,
-		Text:       fmt.Sprintf("%sCurrent Ping: %s%d", s.pingIndicator.Identifier, colour, ping),
+		Text:       fmt.Sprintf("%sCurrent Ping: %s%d", s.pingIndicator.Identifier, color, ping),
 	})
 }
 

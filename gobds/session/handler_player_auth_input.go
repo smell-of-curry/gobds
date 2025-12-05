@@ -1,7 +1,6 @@
 package session
 
 import (
-	"sync"
 	"time"
 
 	"github.com/go-gl/mathgl/mgl32"
@@ -15,7 +14,6 @@ type PlayerAuthInputHandler struct {
 	lastMoveTime       time.Time
 	lastPosition       mgl32.Vec3
 	lastYaw, lastPitch float32
-	mu                 sync.Mutex
 }
 
 // NewPlayerAuthInputHandler ...

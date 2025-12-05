@@ -72,8 +72,7 @@ func (h *InventoryTransactionHandler) handleWorldBorder(s *Session, pkt *packet.
 		return
 	}
 
-	switch td := pkt.TransactionData.(type) {
-	case *protocol.UseItemTransactionData:
+	if td, ok := pkt.TransactionData.(*protocol.UseItemTransactionData); ok {
 		if td.ActionType == protocol.UseItemActionClickBlock {
 			if !s.border.PositionInside(td.BlockPosition.X(), td.BlockPosition.Z()) {
 				ctx.Cancel()
@@ -112,24 +111,36 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 	if transactionData.ActionType == protocol.UseItemActionClickBlock &&
 		transactionData.TriggerType == protocol.UseItemActionClickAir {
 		permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, pos)
-		if permitted {
-			return
-		}
-		if b, found := blockByRuntimeID(transactionData.BlockRuntimeID); found {
-			switch b.(type) {
-			case block.ItemFrame, block.Lectern, block.DecoratedPot:
-				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
-				ctx.Cancel()
+		if !permitted {
+			if h.checkClaimBlockInteraction(s, ctx, transactionData) {
+				return
 			}
 		}
 	}
 
 	permitted := ClaimActionPermitted(claim, s, ClaimActionItemThrow, pos)
-	if permitted {
-		return
+	if !permitted {
+		h.checkClaimItemThrow(s, ctx, transactionData)
 	}
+}
 
-	heldItem := transactionData.HeldItem.Stack.ItemType
+func (h *InventoryTransactionHandler) checkClaimBlockInteraction(s *Session, ctx *Context, td *protocol.UseItemTransactionData) bool {
+	if td.ActionType == protocol.UseItemActionClickBlock &&
+		td.TriggerType == protocol.UseItemActionClickAir {
+		if b, exists := blockByRuntimeID(td.BlockRuntimeID); exists {
+			switch b.(type) {
+			case block.ItemFrame, block.Lectern, block.DecoratedPot:
+				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
+				ctx.Cancel()
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (h *InventoryTransactionHandler) checkClaimItemThrow(s *Session, ctx *Context, td *protocol.UseItemTransactionData) {
+	heldItem := td.HeldItem.Stack.ItemType
 	if heldItem.NetworkID == 0 {
 		return
 	}

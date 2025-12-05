@@ -59,7 +59,7 @@ func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	// Parse the JSON commands
 	var commands map[string]cmd.EngineResponseCommand
 	if err := json.Unmarshal([]byte(commandsRaw), &commands); err != nil {
-		s.log.Error("failed to parse commands", err)
+		s.log.Error("failed to parse commands", "error", err)
 		return err
 	}
 
@@ -87,6 +87,6 @@ func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 
 	// Reload commands immediately
 	cmd.LoadFrom(commands)
-	s.log.Info("reloaded commands from remote server", "count", len(commands))
+	s.log.Info("reloaded commands from server", "count", len(commands))
 	return nil
 }
