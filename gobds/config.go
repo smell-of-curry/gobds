@@ -46,6 +46,7 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		DialerFunction:        c.dialerFunc(log),
 		Log:                   log,
 	}
+	session.SetupRuntimeIDs(c.Network.HashedBlockIDS)
 	session.SetCommandPath(c.Resources.CommandPath)
 
 	err := c.loadCommands(log)

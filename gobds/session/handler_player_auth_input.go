@@ -1,7 +1,6 @@
 package session
 
 import (
-	"slices"
 	"time"
 
 	"github.com/go-gl/mathgl/mgl32"
@@ -39,7 +38,7 @@ func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Conte
 		}
 	}
 
-	h.handleWorldBorder(s, pkt, ctx)
+	h.handleWorldInteractions(s, pkt, ctx)
 	return nil
 }
 
@@ -66,17 +65,16 @@ func (h *PlayerAuthInputHandler) handleAFKTimer(s *Session, pkt *packet.PlayerAu
 	}
 }
 
-// handleWorldBorder ...
-func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
+// handleWorldInteractions ...
+func (h *PlayerAuthInputHandler) handleWorldInteractions(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
 	clientData := s.Data()
-	clientXUID := s.IdentityData().XUID
-	for i, action := range pkt.BlockActions {
-		if action.Action == protocol.PlayerActionCrackBreak {
+	for i, blockAction := range pkt.BlockActions {
+		if blockAction.Action == protocol.PlayerActionCrackBreak {
 			continue
 		}
 
-		blockPosition := action.BlockPos
-		if action.Action == protocol.PlayerActionStopBreak && (i == 0 || i == 1) && len(pkt.BlockActions) > 1 {
+		blockPosition := blockAction.BlockPos
+		if blockAction.Action == protocol.PlayerActionStopBreak && (i == 0 || i == 1) && len(pkt.BlockActions) > 1 {
 			switch i {
 			case 0:
 				blockPosition = pkt.BlockActions[i+1].BlockPos
@@ -94,13 +92,17 @@ func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.Playe
 		if !exists {
 			continue
 		}
-		if claim.ID == "" || // Invalid claim?
-			claim.OwnerXUID == "*" || // Admin claim.
-			claim.OwnerXUID == clientXUID ||
-			slices.Contains(claim.TrustedXUIDS, clientXUID) {
+		permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, blockPosToVec3(blockPosition))
+		if permitted {
 			continue
 		}
 
+		if clientData.GameMode() == packet.GameTypeCreative {
+			s.WriteToClient(&packet.LevelChunk{
+				Position:      protocol.ChunkPos{blockPosition.X() >> 4, blockPosition.Z() >> 4},
+				SubChunkCount: protocol.SubChunkRequestModeLimited,
+			})
+		}
 		ctx.Cancel()
 	}
 }
