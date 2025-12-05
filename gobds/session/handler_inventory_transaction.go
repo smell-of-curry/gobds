@@ -119,6 +119,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 			case block.ItemFrame, block.Lectern, block.DecoratedPot:
 				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
 				ctx.Cancel()
+				return
 			}
 		}
 	}
