@@ -5,11 +5,11 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
-// UpdateAbilities ...
-type UpdateAbilities struct{}
+// UpdateAbilitiesHandler ...
+type UpdateAbilitiesHandler struct{}
 
 // Handle ...
-func (*UpdateAbilities) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+func (*UpdateAbilitiesHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.UpdateAbilities)
 	if ctx.Val() != s.server {
 		return nil
