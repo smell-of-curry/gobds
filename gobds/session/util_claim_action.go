@@ -64,8 +64,7 @@ func handleClaimActionBlockInteract(cl claim.PlayerClaim, s *Session, data any) 
 	}
 	transactionPosition := data.(mgl32.Vec3)
 	for _, feature := range cl.Features {
-		switch feature.Type {
-		case claim.FeatureTypeBlockIntractable:
+		if feature.Type == claim.FeatureTypeBlockIntractable {
 			pos1, pos2 := feature.ToLocation, feature.FromLocation
 			if insideVector3(transactionPosition, pos1, pos2) {
 				return true

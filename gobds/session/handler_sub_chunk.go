@@ -21,7 +21,7 @@ func (*SubChunkHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 	dimension, _ := world.DimensionByID(int(pkt.Dimension))
 	virtualChunk := chunk.New(airRuntimeID, dimension.Range())
 
-	var entries []protocol.SubChunkEntry
+	entries := make([]protocol.SubChunkEntry, 0, len(pkt.SubChunkEntries))
 	for _, entry := range pkt.SubChunkEntries {
 		if entry.Result != protocol.SubChunkResultSuccess {
 			continue
