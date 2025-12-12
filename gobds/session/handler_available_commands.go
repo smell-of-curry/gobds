@@ -43,10 +43,11 @@ func (h *AvailableCommandsHandler) appendCustomCommands(pkt *packet.AvailableCom
 		overloads := builder.processParams(c)
 
 		builder.pkt.Commands = append(builder.pkt.Commands, protocol.Command{
-			Name:          c.Name(),
-			Description:   c.Description(),
-			AliasesOffset: aliasesIndex,
-			Overloads:     overloads,
+			Name:            c.Name(),
+			Description:     c.Description(),
+			PermissionLevel: protocol.CommandPermissionLevelAny,
+			AliasesOffset:   aliasesIndex,
+			Overloads:       overloads,
 		})
 	}
 	return builder.pkt
@@ -55,7 +56,7 @@ func (h *AvailableCommandsHandler) appendCustomCommands(pkt *packet.AvailableCom
 type commandBuilder struct {
 	pkt                *packet.AvailableCommands
 	enumIndices        map[string]uint32
-	enumValueIndices   map[string]uint
+	enumValueIndices   map[string]uint32
 	dynamicEnumIndices map[string]uint32
 	suffixIndices      map[string]uint32
 }
@@ -65,9 +66,9 @@ func newCommandBuilder(pkt *packet.AvailableCommands) *commandBuilder {
 	for i, e := range pkt.Enums {
 		enumIndices[e.Type] = uint32(i)
 	}
-	enumValueIndices := make(map[string]uint, len(pkt.EnumValues))
+	enumValueIndices := make(map[string]uint32, len(pkt.EnumValues))
 	for i, val := range pkt.EnumValues {
-		enumValueIndices[val] = uint(i)
+		enumValueIndices[val] = uint32(i)
 	}
 	dynamicEnumIndices := make(map[string]uint32, len(pkt.DynamicEnums))
 	for i, de := range pkt.DynamicEnums {
@@ -98,12 +99,12 @@ func (b *commandBuilder) processAliases(c cmd.Command) uint32 {
 
 	aliasesIndex := uint32(len(b.pkt.Enums))
 	b.enumIndices[aliasEnumType] = aliasesIndex
-	var valIdxs []uint
+	var valIdxs []uint32
 	for _, opt := range c.Aliases() {
 		if vi, ok := b.enumValueIndices[opt]; ok {
 			valIdxs = append(valIdxs, vi)
 		} else {
-			vi = uint(len(b.pkt.EnumValues))
+			vi = uint32(len(b.pkt.EnumValues))
 			b.enumValueIndices[opt] = vi
 			b.pkt.EnumValues = append(b.pkt.EnumValues, opt)
 			valIdxs = append(valIdxs, vi)
@@ -152,12 +153,12 @@ func (b *commandBuilder) handleEnum(t uint32, enumDef commandEnum) uint32 {
 		} else {
 			enumIdx = uint32(len(b.pkt.Enums))
 			b.enumIndices[enumDef.Type] = enumIdx
-			var valIdxs []uint
+			var valIdxs []uint32
 			for _, optStr := range enumDef.Options {
 				if vi, ok := b.enumValueIndices[optStr]; ok {
 					valIdxs = append(valIdxs, vi)
 				} else {
-					vi = uint(len(b.pkt.EnumValues))
+					vi = uint32(len(b.pkt.EnumValues))
 					b.enumValueIndices[optStr] = vi
 					b.pkt.EnumValues = append(b.pkt.EnumValues, optStr)
 					valIdxs = append(valIdxs, vi)
