@@ -19,7 +19,7 @@ func (*AddActorHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.AddActor)
 
 	entityType := pkt.EntityType
-	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, entityType))
+	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, entityType, pkt.Position))
 
 	if !strings.HasPrefix(entityType, "pokemon:") {
 		return nil
