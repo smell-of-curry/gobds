@@ -3,10 +3,10 @@ package session
 import (
 	"fmt"
 	"hash/fnv"
-	"sort"
+	"maps"
+	"slices"
 
 	"github.com/df-mc/dragonfly/server/world"
-	"golang.org/x/exp/maps"
 )
 
 // hash ...
@@ -29,8 +29,7 @@ func hash(b world.Block) uint32 {
 		115, 116, 97, 116, 101, 115, // "states"
 	)
 
-	keys := maps.Keys(properties)
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(properties))
 	for _, key := range keys {
 		value := properties[key]
 		var tagType byte
