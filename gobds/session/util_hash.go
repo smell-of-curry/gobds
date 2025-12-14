@@ -3,10 +3,10 @@ package session
 import (
 	"fmt"
 	"hash/fnv"
-	"maps"
 	"sort"
 
 	"github.com/df-mc/dragonfly/server/world"
+	"golang.org/x/exp/maps"
 )
 
 // hash ...
