@@ -82,6 +82,15 @@ type UserConfig struct {
 	Encryption struct {
 		Key string
 	}
+	HeadService struct {
+		Enabled bool
+		Address string
+	}
+	SkinConfig struct {
+		Cooldown       string
+		HeadsDirectory string
+		HeadServiceURL string
+	}
 }
 
 // packs loads and returns all packs.
@@ -276,6 +285,13 @@ func DefaultConfig() UserConfig {
 	c.VPNService.URL = "http://ip-api.com/json"
 
 	c.Encryption.Key = defaultKey
+
+	c.HeadService.Enabled = true
+	c.HeadService.Address = ":6767"
+
+	c.SkinConfig.Cooldown = "15s"
+	c.SkinConfig.HeadsDirectory = "resources/heads"
+	c.SkinConfig.HeadServiceURL = "http://127.0.0.1:6767"
 	return c
 }
 

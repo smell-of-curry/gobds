@@ -109,6 +109,8 @@ func (gb *GoBDS) Listen() error {
 	gb.conf.Log.Info("starting gobds", "mc-version", protocol.CurrentVersion)
 	gb.conf.PlayerManager.Start(time.Minute * 3)
 
+	gb.startHeadService()
+
 	gb.wg.Add(len(gb.listeners))
 	for _, l := range gb.listeners {
 		go gb.listen(l)
@@ -118,6 +120,18 @@ func (gb *GoBDS) Listen() error {
 	gb.conf.Log.Info("proxy closed.", "uptime", time.Since(*gb.started.Load()).String())
 
 	return nil
+}
+
+// startHeadService ...
+func (gb *GoBDS) startHeadService() {
+	if gb.conf.HeadService == nil {
+		return
+	}
+	go func() {
+		if err := gb.conf.HeadService.Start(); err != nil {
+			gb.conf.Log.Error("head service error", "error", err)
+		}
+	}()
 }
 
 // listen handles listener and it's sessions.
@@ -290,6 +304,7 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (
 	s := session.Config{
 		Client:        conn,
 		Server:        serverConn,
+		SkinConfig:    gb.conf.SkinConfig,
 		PingIndicator: gb.conf.PingIndicator,
 		AfkTimer:      gb.conf.AFKTimer,
 		Border:        gb.conf.Border,

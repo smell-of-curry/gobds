@@ -3,11 +3,13 @@ package gobds
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/claim"
+	"github.com/smell-of-curry/gobds/gobds/service/head"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -23,6 +25,8 @@ type Config struct {
 	AuthenticationService *authentication.Service
 	ClaimService          *claim.Service
 	VPNService            *vpn.Service
+	HeadService           *head.Service
+	SkinConfig            *infra.SkinConfig
 	PingIndicator         *infra.PingIndicator
 	AFKTimer              *infra.AFKTimer
 	Whitelist             *whitelist.Whitelist
@@ -33,12 +37,15 @@ type Config struct {
 }
 
 func (c UserConfig) Config(log *slog.Logger) (Config, error) {
+	skinConf := c.skinConfig()
 	conf := Config{
 		SecuredSlots:          c.Network.SecuredSlots,
 		EncryptionKey:         c.Encryption.Key,
 		AuthenticationService: authentication.NewService(log, c.AuthenticationService),
 		ClaimService:          claim.NewService(log, c.ClaimService),
 		VPNService:            vpn.NewService(log, c.VPNService),
+		HeadService:           head.NewService(log, c.HeadService, skinConf.HeadsDirectory),
+		SkinConfig:            skinConf,
 		PingIndicator:         c.pingIndicator(),
 		AFKTimer:              c.afkTimer(),
 		Whitelist:             c.whiteList(log),
@@ -59,8 +66,20 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 	}
 	conf.PlayerManager, err = NewPlayerManager(c.Network.PlayerManagerPath, log)
 	if err != nil {
-		return conf, fmt.Errorf("error creating player mamanger: %w", err)
+		return conf, fmt.Errorf("error creating player manager: %w", err)
 	}
 	conf.Listeners = append(conf.Listeners, c.listenerFunc)
 	return conf, nil
+}
+
+func (c UserConfig) skinConfig() *infra.SkinConfig {
+	cooldown, err := time.ParseDuration(c.SkinConfig.Cooldown)
+	if err != nil {
+		cooldown = 15 * time.Second
+	}
+	return &infra.SkinConfig{
+		SkinChangeCooldown: cooldown,
+		HeadsDirectory:     c.SkinConfig.HeadsDirectory,
+		HeadServiceURL:     c.SkinConfig.HeadServiceURL,
+	}
 }
