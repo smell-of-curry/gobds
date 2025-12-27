@@ -16,8 +16,7 @@ import (
 
 // Config ...
 type Config struct {
-	Listeners             []func(conf Config) (Listener, error)
-	StatusProvider        minecraft.ServerStatusProvider
+	Servers               []*Server
 	SecuredSlots          int
 	EncryptionKey         string
 	AuthenticationService *authentication.Service
@@ -28,11 +27,14 @@ type Config struct {
 	Whitelist             *whitelist.Whitelist
 	Border                *area.Area2D
 	PlayerManager         *PlayerManager
-	DialerFunction        DialerFunc
 	Log                   *slog.Logger
 }
 
 func (c UserConfig) Config(log *slog.Logger) (Config, error) {
+	if len(c.Network.Servers) == 0 {
+		return Config{}, fmt.Errorf("no servers configured")
+	}
+
 	conf := Config{
 		SecuredSlots:          c.Network.SecuredSlots,
 		EncryptionKey:         c.Encryption.Key,
@@ -43,7 +45,6 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		AFKTimer:              c.afkTimer(),
 		Whitelist:             c.whiteList(log),
 		Border:                c.makeBorder(),
-		DialerFunction:        c.dialerFunc(log),
 		Log:                   log,
 	}
 	session.SetCommandPath(c.Resources.CommandPath)
@@ -52,14 +53,38 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 	if err != nil {
 		return conf, fmt.Errorf("error loading commands: %w", err)
 	}
-	conf.StatusProvider, err = c.provider()
-	if err != nil {
-		return conf, fmt.Errorf("error creating status provider: %w", err)
-	}
+
 	conf.PlayerManager, err = NewPlayerManager(c.Network.PlayerManagerPath, log)
 	if err != nil {
 		return conf, fmt.Errorf("error creating player mamanger: %w", err)
 	}
-	conf.Listeners = append(conf.Listeners, c.listenerFunc)
+
+	for _, server := range c.Network.Servers {
+		localAddr := server.LocalAddress
+		remoteAddr := server.RemoteAddress
+
+		prov, err := minecraft.NewForeignStatusProvider(remoteAddr)
+		if err != nil {
+			return conf, fmt.Errorf("error creating status provider for %s: %w", remoteAddr, err)
+		}
+
+		name := server.Name
+		srv := &Server{
+			Name:          name,
+			LocalAddress:  localAddr,
+			RemoteAddress: remoteAddr,
+
+			DialerFunc:     c.dialerFunc(remoteAddr, log),
+			StatusProvider: prov,
+			Log:            log.With(slog.String("srv", name)),
+		}
+
+		srv.Listener, err = c.listenerFunc(srv)
+		if err != nil {
+			return conf, fmt.Errorf("error creating listener for %s: %w", localAddr, err)
+		}
+
+		conf.Servers = append(conf.Servers, srv)
+	}
 	return conf, nil
 }
