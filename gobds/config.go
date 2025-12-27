@@ -58,17 +58,7 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 
 	conf.PlayerManager, err = NewPlayerManager(c.Network.PlayerManagerPath, log)
 	if err != nil {
-		return conf, fmt.Errorf("error creating player manager: %w", err)
-	}
-
-	// closeListeners closes all listeners that have been created so far.
-	// Used to clean up resources when a later server fails to initialize.
-	closeListeners := func() {
-		for _, srv := range conf.Servers {
-			if srv.Listener != nil {
-				_ = srv.Listener.Close()
-			}
-		}
+		return conf, fmt.Errorf("error creating player mamanger: %w", err)
 	}
 
 	for _, server := range c.Network.Servers {
@@ -77,7 +67,6 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 
 		prov, err := minecraft.NewForeignStatusProvider(remoteAddr)
 		if err != nil {
-			closeListeners()
 			return conf, fmt.Errorf("error creating status provider for %s: %w", remoteAddr, err)
 		}
 
@@ -94,7 +83,6 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 
 		srv.Listener, err = c.listenerFunc(srv)
 		if err != nil {
-			closeListeners()
 			return conf, fmt.Errorf("error creating listener for %s: %w", localAddr, err)
 		}
 
