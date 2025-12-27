@@ -92,11 +92,10 @@ func (gb *GoBDS) listen(srv *Server) {
 	}
 	go gb.claimFetching(srv)
 
-	defer func() { _ = srv.Listener.Close() }()
-
 	go func() {
 		<-gb.ctx.Done()
 		cancel()
+		_ = srv.Listener.Close()
 		wg.Wait()
 	}()
 
