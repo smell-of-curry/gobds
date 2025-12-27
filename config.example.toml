@@ -13,12 +13,20 @@ Name = 'Some server'
 LocalAddress = '127.0.0.1:19132'
 RemoteAddress = '127.0.0.1:19133'
 
+[Network.Servers.ClaimService] # Claim Service configuration for Server A.
+Enabled = false # Whether this service is enabled
+URL = 'http://127.0.0.1:3001/api/database/testing/table/claims' # The service endpoint to fetch players claims
+Key = 'secret-key' # The API token needed to fetch claims
+
 # To append another server, just add another Network.Servers entry like this:
 
 # [[Network.Servers]] # Server B: accepts connections from ':19032', redirects to ':19033'.
 # Name = 'Another server'
 # LocalAddress = '127.0.0.1:19032'
 # RemoteAddress = '127.0.0.1:19033'
+
+# [Network.Servers.ClaimService]
+# Enabled = false
 
 [Border]
 Enabled = false # Whether to enable the world border
@@ -45,11 +53,6 @@ PathResources = [] # Paths of resource packs to require downloaded by players
 Enabled = false # Whether this service is enabled
 URL = 'http://127.0.0.1:8080/authentication' # The Hub API Endpoint to verify players joining through queue
 Key = 'secret-key' # The authentication key for the queues API
-
-[ClaimService]
-Enabled = false # Whether this service is enabled
-URL = 'http://127.0.0.1:3001/api/database/testing/table/claims' # The service endpoint to fetch players claims
-Key = 'secret-key' # The API token needed to fetch claims
 
 [VPNService]
 Enabled = false # Whether this service is enabled
