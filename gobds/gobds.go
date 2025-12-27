@@ -112,7 +112,7 @@ func (gb *GoBDS) Listen() error {
 func (gb *GoBDS) listen(srv *Server) {
 	wg := new(sync.WaitGroup)
 	ctx, cancel := context.WithCancel(context.Background())
-  defer func() { _ = srv.Listener.Close() }()
+	defer func() { _ = srv.Listener.Close() }()
 
 	go func() {
 		<-gb.ctx.Done()
@@ -174,8 +174,10 @@ func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*s
 	if !gb.handleWhitelisted(displayName) {
 		return nil, fmt.Errorf("you're not whitelisted")
 	}
-	if !gb.conf.AuthenticationService.Enabled && !gb.handleSecureSlots(srv, displayName) {
-		return nil, fmt.Errorf("the server is at full capacity")
+	if auth := gb.conf.AuthenticationService; auth != nil && !auth.Enabled {
+		if !gb.handleSecureSlots(srv, displayName) {
+			return nil, fmt.Errorf("the server is at full capacity")
+		}
 	}
 
 	ctx2, cancel := context.WithTimeout(ctx, time.Minute)
