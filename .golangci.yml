@@ -7,7 +7,6 @@ run:
 linters:
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
@@ -17,7 +16,6 @@ linters:
     - goconst
     - unparam
     - prealloc
-    - stylecheck
     - revive
     - misspell
     - unconvert
