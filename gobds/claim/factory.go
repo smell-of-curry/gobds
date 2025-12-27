@@ -3,6 +3,7 @@ package claim
 
 import (
 	"log/slog"
+	"maps"
 	"sync"
 
 	"github.com/smell-of-curry/gobds/gobds/service"
@@ -30,7 +31,7 @@ func NewFactory(c service.Config, log *slog.Logger) *Factory {
 func (f *Factory) All() map[string]PlayerClaim {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	return f.data
+	return maps.Clone(f.data)
 }
 
 // Set ...
