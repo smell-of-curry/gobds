@@ -13,17 +13,12 @@ Name = 'Some server'
 LocalAddress = '127.0.0.1:19132'
 RemoteAddress = '127.0.0.1:19133'
 
-[[Network.Servers]] # Server B: accepts connections from ':19032', redirects to ':19033'.
-Name = 'Another server'
-LocalAddress = '127.0.0.1:19032'
-RemoteAddress = '127.0.0.1:19033'
-
 # To append another server, just add another Network.Servers entry like this:
 
-# [[Network.Servers]]
-# Name = 'Third server'
-# LocalAddress = '127.0.0.1:19232'
-# RemoteAddress = '127.0.0.1:19233'
+# [[Network.Servers]] # Server B: accepts connections from ':19032', redirects to ':19033'.
+# Name = 'Another server'
+# LocalAddress = '127.0.0.1:19032'
+# RemoteAddress = '127.0.0.1:19033'
 
 [Border]
 Enabled = false # Whether to enable the world border

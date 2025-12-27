@@ -244,11 +244,6 @@ func DefaultConfig() UserConfig {
 			LocalAddress:  "127.0.0.1:19132",
 			RemoteAddress: "127.0.0.1:19133",
 		},
-		{
-			Name:          "Another server",
-			LocalAddress:  "127.0.0.1:19032",
-			RemoteAddress: "127.0.0.1:19033",
-		},
 	}
 
 	c.Network.PlayerManagerPath = "players/manager.json"
