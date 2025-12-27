@@ -1,3 +1,4 @@
+// Package gobds implements a bedrock proxy server for Minecraft with authentication and claim support.
 package gobds
 
 import (
@@ -30,6 +31,7 @@ type Config struct {
 	Log                   *slog.Logger
 }
 
+// Config converts the user configuration into a runtime configuration.
 func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 	if len(c.Network.Servers) == 0 {
 		return Config{}, fmt.Errorf("no servers configured")

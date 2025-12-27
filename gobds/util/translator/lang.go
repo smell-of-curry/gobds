@@ -1,3 +1,4 @@
+// Package translator provides language translation utilities for the GoBDS proxy.
 package translator
 
 import (
