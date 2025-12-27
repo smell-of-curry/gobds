@@ -1,3 +1,4 @@
+// Package whitelist provides whitelist management functionality for the GoBDS proxy.
 package whitelist
 
 import (

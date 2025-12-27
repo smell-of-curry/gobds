@@ -1,3 +1,4 @@
+// Package authentication provides authentication service models and types.
 package authentication
 
 // ResponseModel ...

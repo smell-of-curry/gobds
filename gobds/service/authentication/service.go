@@ -23,6 +23,7 @@ func NewService(log *slog.Logger, c service.Config) *Service {
 }
 
 var (
+	// ErrRecordNotFound is returned when no authentication record is found.
 	ErrRecordNotFound = errors.New("no authentication record found")
 )
 
@@ -54,7 +55,7 @@ func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseM
 			}
 			return nil, lastErr
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 
 		switch response.StatusCode {
 		case http.StatusNotFound:
