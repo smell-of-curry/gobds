@@ -80,74 +80,17 @@ func (gb *GoBDS) Listen() error {
 	return nil
 }
 
-const (
-	maxRetries    = 30
-	retryInterval = time.Minute
-)
-
 // listen handles a server and its sessions.
 func (gb *GoBDS) listen(srv *Server) {
 	wg := new(sync.WaitGroup)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	for retry := 0; retry < maxRetries; retry++ {
-		prov, err := srv.StatusProviderFunc()
-		if err != nil {
-			srv.Log.Error("failed to create provider", "err", err)
-			if retry < maxRetries-1 {
-				select {
-				case <-gb.ctx.Done():
-					gb.wg.Done()
-					return
-				case <-time.After(retryInterval):
-					continue
-				}
-			}
-			continue
-		}
-		srv.StatusProvider = prov
 
-		l, err := srv.ListenerFunc()
-		if err != nil {
-			srv.Log.Error("failed to create listener", "err", err)
-			if retry < maxRetries-1 {
-				select {
-				case <-gb.ctx.Done():
-					gb.wg.Done()
-					return
-				case <-time.After(retryInterval):
-					continue
-				}
-			}
-			continue
-		}
-		srv.Listener = l
-		break
-	}
-	if srv.Listener == nil || srv.StatusProvider == nil {
-		srv.Log.Error("failed to init server", "addr", srv.LocalAddress)
+	if !gb.initServer(srv) {
 		gb.wg.Done()
 		return
 	}
-
-	go func() {
-		fetch := func() {
-			if err := srv.ClaimFactory.Fetch(); err != nil {
-				srv.Log.Error("failed to fetch claims", "err", err)
-			}
-		}
-		fetch()
-		t := time.NewTicker(5 * time.Minute)
-		defer t.Stop()
-		for {
-			select {
-			case <-gb.ctx.Done():
-				return
-			case <-t.C:
-				fetch()
-			}
-		}
-	}()
+	go gb.claimFetching(srv)
 
 	defer func() { _ = srv.Listener.Close() }()
 
@@ -155,7 +98,6 @@ func (gb *GoBDS) listen(srv *Server) {
 		<-gb.ctx.Done()
 		cancel()
 		wg.Wait()
-		_ = srv.Listener.Close()
 	}()
 
 	for {

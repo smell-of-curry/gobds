@@ -1,3 +1,4 @@
+// Package claim provides claim management including fetching & storage.
 package claim
 
 import (

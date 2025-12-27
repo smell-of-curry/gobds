@@ -1,3 +1,4 @@
+// Package infra provides infrastructure level components & utilities.
 package infra
 
 import (
