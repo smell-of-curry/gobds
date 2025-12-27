@@ -17,7 +17,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	_ "github.com/smell-of-curry/gobds/gobds/block"
-	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
@@ -57,34 +56,7 @@ func (c *Config) New() (*GoBDS, error) {
 	}
 	gobds.servers = c.Servers
 
-	go gobds.tick()
 	return gobds, nil
-}
-
-// tick ...
-func (gb *GoBDS) tick() {
-	fetch := func() {
-		if gb.conf.ClaimService != nil {
-			claims, err := gb.conf.ClaimService.FetchClaims()
-			if err != nil {
-				gb.conf.Log.Error("failed to fetch claims", "err", err)
-				return
-			}
-			infra.SetClaims(claims)
-		}
-	}
-	fetch()
-
-	t := time.NewTicker(time.Minute * 5)
-	defer t.Stop()
-	for {
-		select {
-		case <-gb.ctx.Done():
-			return
-		case <-t.C:
-			fetch()
-		}
-	}
 }
 
 // Listen ...
@@ -108,10 +80,75 @@ func (gb *GoBDS) Listen() error {
 	return nil
 }
 
+const (
+	maxRetries    = 30
+	retryInterval = time.Minute
+)
+
 // listen handles a server and its sessions.
 func (gb *GoBDS) listen(srv *Server) {
 	wg := new(sync.WaitGroup)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	for retry := 0; retry < maxRetries; retry++ {
+		prov, err := srv.StatusProviderFunc()
+		if err != nil {
+			srv.Log.Error("failed to create provider", "err", err)
+			if retry < maxRetries-1 {
+				select {
+				case <-gb.ctx.Done():
+					gb.wg.Done()
+					return
+				case <-time.After(retryInterval):
+					continue
+				}
+			}
+			continue
+		}
+		srv.StatusProvider = prov
+
+		l, err := srv.ListenerFunc()
+		if err != nil {
+			srv.Log.Error("failed to create listener", "err", err)
+			if retry < maxRetries-1 {
+				select {
+				case <-gb.ctx.Done():
+					gb.wg.Done()
+					return
+				case <-time.After(retryInterval):
+					continue
+				}
+			}
+			continue
+		}
+		srv.Listener = l
+		break
+	}
+	if srv.Listener == nil || srv.StatusProvider == nil {
+		srv.Log.Error("failed to init server", "addr", srv.LocalAddress)
+		gb.wg.Done()
+		return
+	}
+
+	go func() {
+		fetch := func() {
+			if err := srv.ClaimFactory.Fetch(); err != nil {
+				srv.Log.Error("failed to fetch claims", "err", err)
+			}
+		}
+		fetch()
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-gb.ctx.Done():
+				return
+			case <-t.C:
+				fetch()
+			}
+		}
+	}()
+
 	defer func() { _ = srv.Listener.Close() }()
 
 	go func() {
@@ -189,7 +226,7 @@ func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*s
 		return nil, fmt.Errorf("error dialing connection")
 	}
 
-	return gb.startGame(conn, serverConn, ctx)
+	return gb.startGame(conn, serverConn, srv, ctx)
 }
 
 // handleWhitelisted ensures that only whitelisted players can join.
@@ -240,7 +277,7 @@ func (gb *GoBDS) handleVPN(netAddr net.Addr, ctx context.Context) (reason string
 }
 
 // startGame starts game for new connection.
-func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (*session.Session, error) {
+func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx context.Context) (*session.Session, error) {
 	gameData := serverConn.GameData()
 	gameData.WorldSeed = 0
 	gameData.ClientSideGeneration = false
@@ -276,12 +313,17 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (
 	}
 
 	s := session.Config{
-		Client:        conn,
-		Server:        serverConn,
+		Client: conn,
+		Server: serverConn,
+
 		PingIndicator: gb.conf.PingIndicator,
-		AfkTimer:      gb.conf.AFKTimer,
-		Border:        gb.conf.Border,
-		Log:           gb.conf.Log,
+		AFKTimer:      gb.conf.AFKTimer,
+
+		EntityFactory: srv.EntityFactory,
+		ClaimFactory:  srv.ClaimFactory,
+
+		Border: gb.conf.Border,
+		Log:    gb.conf.Log,
 	}.New()
 
 	s.ForwardXUID(gb.conf.EncryptionKey)

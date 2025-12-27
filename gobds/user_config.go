@@ -28,11 +28,7 @@ type UserConfig struct {
 	Network struct {
 		ServerRegion string
 
-		Servers []struct {
-			Name          string
-			LocalAddress  string
-			RemoteAddress string
-		}
+		Servers []ServerConfig
 
 		PlayerManagerPath string
 
@@ -66,11 +62,6 @@ type UserConfig struct {
 		PathResources []string
 	}
 	AuthenticationService struct {
-		Enabled bool
-		URL     string
-		Key     string
-	}
-	ClaimService struct {
 		Enabled bool
 		URL     string
 		Key     string
@@ -234,15 +225,21 @@ func DefaultConfig() UserConfig {
 
 	c.Network.ServerRegion = "Some region"
 
-	c.Network.Servers = []struct {
-		Name          string
-		LocalAddress  string
-		RemoteAddress string
-	}{
+	const defaultKey = "secret-key"
+	c.Network.Servers = []ServerConfig{
 		{
 			Name:          "Some server",
 			LocalAddress:  "127.0.0.1:19132",
 			RemoteAddress: "127.0.0.1:19133",
+			ClaimService: struct {
+				Enabled bool
+				URL     string
+				Key     string
+			}{
+				Enabled: false,
+				URL:     "http://127.0.0.1:8080/fetch/claims",
+				Key:     defaultKey,
+			},
 		},
 	}
 
@@ -268,12 +265,7 @@ func DefaultConfig() UserConfig {
 
 	c.AuthenticationService.Enabled = false
 	c.AuthenticationService.URL = "http://127.0.0.1:8080/authentication"
-	const defaultKey = "secret-key"
 	c.AuthenticationService.Key = defaultKey
-
-	c.ClaimService.Enabled = false
-	c.ClaimService.URL = "http://127.0.0.1:8080/fetch/claims"
-	c.ClaimService.Key = defaultKey
 
 	c.VPNService.Enabled = false
 	c.VPNService.URL = "http://ip-api.com/json"

@@ -11,6 +11,8 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/smell-of-curry/gobds/gobds/claim"
+	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/util"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -21,6 +23,9 @@ type Session struct {
 	client   Conn
 	server   Conn
 	handlers map[uint32]packetHandler
+
+	entityFactory *entity.Factory
+	claimFactory  *claim.Factory
 
 	pingIndicator *infra.PingIndicator
 	afkTimer      *infra.AFKTimer

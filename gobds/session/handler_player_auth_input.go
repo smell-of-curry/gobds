@@ -90,7 +90,7 @@ func (h *PlayerAuthInputHandler) handleWorldBorder(s *Session, pkt *packet.Playe
 			continue
 		}
 
-		claim, exists := ClaimAt(clientData.Dimension(), float32(blockPosition.X()), float32(blockPosition.Z()))
+		claim, exists := ClaimAt(s.claimFactory.All(), clientData.Dimension(), float32(blockPosition.X()), float32(blockPosition.Z()))
 		if !exists {
 			continue
 		}

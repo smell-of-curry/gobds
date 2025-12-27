@@ -6,9 +6,10 @@ import (
 	"log/slog"
 
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/smell-of-curry/gobds/gobds/claim"
+	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
-	"github.com/smell-of-curry/gobds/gobds/service/claim"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -21,7 +22,6 @@ type Config struct {
 	SecuredSlots          int
 	EncryptionKey         string
 	AuthenticationService *authentication.Service
-	ClaimService          *claim.Service
 	VPNService            *vpn.Service
 	PingIndicator         *infra.PingIndicator
 	AFKTimer              *infra.AFKTimer
@@ -41,7 +41,6 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		SecuredSlots:          c.Network.SecuredSlots,
 		EncryptionKey:         c.Encryption.Key,
 		AuthenticationService: authentication.NewService(log, c.AuthenticationService),
-		ClaimService:          claim.NewService(log, c.ClaimService),
 		VPNService:            vpn.NewService(log, c.VPNService),
 		PingIndicator:         c.pingIndicator(),
 		AFKTimer:              c.afkTimer(),
@@ -58,34 +57,28 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 
 	conf.PlayerManager, err = NewPlayerManager(c.Network.PlayerManagerPath, log)
 	if err != nil {
-		return conf, fmt.Errorf("error creating player mamanger: %w", err)
+		return conf, fmt.Errorf("error creating player manager: %w", err)
 	}
 
 	for _, server := range c.Network.Servers {
-		localAddr := server.LocalAddress
-		remoteAddr := server.RemoteAddress
-
-		prov, err := minecraft.NewForeignStatusProvider(remoteAddr)
-		if err != nil {
-			return conf, fmt.Errorf("error creating status provider for %s: %w", remoteAddr, err)
-		}
-
-		name := server.Name
 		srv := &Server{
-			Name:          name,
-			LocalAddress:  localAddr,
-			RemoteAddress: remoteAddr,
+			Name:          server.Name,
+			LocalAddress:  server.LocalAddress,
+			RemoteAddress: server.RemoteAddress,
 
-			DialerFunc:     c.dialerFunc(remoteAddr, log),
-			StatusProvider: prov,
-			Log:            log.With(slog.String("srv", name)),
+			EntityFactory: entity.NewFactory(),
+			ClaimFactory:  claim.NewFactory(server.ClaimService, log),
+
+			DialerFunc: c.dialerFunc(server.RemoteAddress, log),
+
+			Log: log.With(slog.String("srv", server.Name)),
 		}
-
-		srv.Listener, err = c.listenerFunc(srv)
-		if err != nil {
-			return conf, fmt.Errorf("error creating listener for %s: %w", localAddr, err)
+		srv.StatusProviderFunc = func() (minecraft.ServerStatusProvider, error) {
+			return minecraft.NewForeignStatusProvider(server.RemoteAddress)
 		}
-
+		srv.ListenerFunc = func() (Listener, error) {
+			return c.listenerFunc(srv)
+		}
 		conf.Servers = append(conf.Servers, srv)
 	}
 	return conf, nil

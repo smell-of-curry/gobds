@@ -1,4 +1,3 @@
-// Package claim provides claim service models and types for territory management.
 package claim
 
 // ResponseModel ...
