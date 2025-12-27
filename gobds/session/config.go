@@ -1,3 +1,4 @@
+// Package session provides session management and packet handling for the GoBDS proxy.
 package session
 
 import (

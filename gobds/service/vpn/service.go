@@ -68,10 +68,10 @@ func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error
 		case http.StatusOK:
 			var responseModel ResponseModel
 			if err = json.NewDecoder(response.Body).Decode(&responseModel); err != nil {
-				response.Body.Close()
+				_ = response.Body.Close()
 				return nil, fmt.Errorf("failed to decode response body: %w", err)
 			}
-			response.Body.Close()
+			_ = response.Body.Close()
 			if strings.EqualFold(responseModel.Status, "fail") {
 				failMessage := responseModel.Message
 				if strings.EqualFold(failMessage, "reserved range") {
@@ -88,7 +88,7 @@ func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error
 		default:
 			lastErr = fmt.Errorf("unexpected status code: %d", response.StatusCode)
 		}
-		response.Body.Close()
+		_ = response.Body.Close()
 	}
 	return nil, lastErr
 }

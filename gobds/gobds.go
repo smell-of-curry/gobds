@@ -123,7 +123,7 @@ func (gb *GoBDS) Listen() error {
 func (gb *GoBDS) listen(l Listener) {
 	wg := new(sync.WaitGroup)
 	ctx, cancel := context.WithCancel(context.Background())
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 
 	go func() {
 		<-gb.ctx.Done()

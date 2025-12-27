@@ -94,7 +94,7 @@ func (s *Session) ReadPackets(ctx context.Context) {
 	wg.Add(2)
 
 	go func() {
-		defer s.server.Close()
+		defer func() { _ = s.server.Close() }()
 		defer wg.Done()
 		for {
 			pk, err := s.client.ReadPacket()
@@ -112,7 +112,7 @@ func (s *Session) ReadPackets(ctx context.Context) {
 	}()
 
 	go func() {
-		defer s.client.Close()
+		defer func() { _ = s.client.Close() }()
 		defer wg.Done()
 		for {
 			pk, err := s.server.ReadPacket()

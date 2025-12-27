@@ -1,3 +1,4 @@
+// Package area provides utilities for handling 2D area calculations.
 package area
 
 import (

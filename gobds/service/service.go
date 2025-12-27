@@ -21,9 +21,13 @@ type Service struct {
 }
 
 const (
-	MaxRetries            = 3
-	RetryDelay            = 300 * time.Millisecond
-	RequestTimeout        = 5 * time.Second
+	// MaxRetries is the maximum number of retry attempts for service requests.
+	MaxRetries = 3
+	// RetryDelay is the delay between retry attempts.
+	RetryDelay = 300 * time.Millisecond
+	// RequestTimeout is the timeout duration for HTTP requests.
+	RequestTimeout = 5 * time.Second
+	// MaxConcurrentRequests is the maximum number of concurrent HTTP requests allowed.
 	MaxConcurrentRequests = 5
 )
 

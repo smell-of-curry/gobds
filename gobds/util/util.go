@@ -1,3 +1,4 @@
+// Package util provides general utility functions for the GoBDS proxy.
 package util
 
 import (

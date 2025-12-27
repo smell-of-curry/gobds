@@ -52,7 +52,7 @@ func (s *Service) FetchClaims() (map[string]PlayerClaim, error) {
 			}
 			return nil, lastErr
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 
 		switch response.StatusCode {
 		case http.StatusOK:

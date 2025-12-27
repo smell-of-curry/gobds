@@ -1,3 +1,4 @@
+// Package block provides custom block implementations for the GoBDS proxy.
 package block
 
 import (

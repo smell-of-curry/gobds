@@ -1,3 +1,4 @@
+// Package main provides the entry point for the GoBDS bedrock proxy server.
 package main
 
 import (

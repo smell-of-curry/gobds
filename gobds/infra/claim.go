@@ -1,3 +1,4 @@
+// Package infra provides infrastructure-level components and factories for the GoBDS proxy.
 package infra
 
 import (
