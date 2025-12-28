@@ -1,7 +1,5 @@
 [Network]
-ServerName = 'Some server' # An identifier/name for the server, this is used for Sentry
-LocalAddress = '0.0.0.0:19132' # The port that players will connect to
-RemoteAddress = '0.0.0.0:19134' # The port that the BDS server is hosted on
+ServerRegion = 'Some region' # An identifier/name for the region, this is used for Sentry
 PlayerManagerPath = 'players/manager.json' # The path with the player-list file
 Whitelisted = false # If whitelist block is enabled
 WhitelistPath = 'whitelist.json' # The path to the whitelist file
@@ -9,6 +7,26 @@ SecuredSlots = 0 # The amount of secured slots on the server for only whiteliste
 MaxRenderDistance = 16 # The view distance for players
 FlushRate = 20 # The flush rate for the server
 SentryDSN = '' # The DSN link of the sentry connection
+
+[[Network.Servers]] # Server A: accepts connections from ':19132', redirects to ':19133'.
+Name = 'Some server'
+LocalAddress = '127.0.0.1:19132'
+RemoteAddress = '127.0.0.1:19133'
+
+[Network.Servers.ClaimService] # Claim Service configuration for Server A.
+Enabled = false # Whether this service is enabled
+URL = 'http://127.0.0.1:3001/api/database/testing/table/claims' # The service endpoint to fetch players claims
+Key = 'secret-key' # The API token needed to fetch claims
+
+# To append another server, just add another Network.Servers entry like this:
+
+# [[Network.Servers]] # Server B: accepts connections from ':19032', redirects to ':19033'.
+# Name = 'Another server'
+# LocalAddress = '127.0.0.1:19032'
+# RemoteAddress = '127.0.0.1:19033'
+
+# [Network.Servers.ClaimService]
+# Enabled = false
 
 [Border]
 Enabled = false # Whether to enable the world border
@@ -35,11 +53,6 @@ PathResources = [] # Paths of resource packs to require downloaded by players
 Enabled = false # Whether this service is enabled
 URL = 'http://127.0.0.1:8080/authentication' # The Hub API Endpoint to verify players joining through queue
 Key = 'secret-key' # The authentication key for the queues API
-
-[ClaimService]
-Enabled = false # Whether this service is enabled
-URL = 'http://127.0.0.1:3001/api/database/testing/table/claims' # The service endpoint to fetch players claims
-Key = 'secret-key' # The API token needed to fetch claims
 
 [VPNService]
 Enabled = false # Whether this service is enabled

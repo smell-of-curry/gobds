@@ -5,7 +5,6 @@ import (
 
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"github.com/smell-of-curry/gobds/gobds/infra"
 )
 
 // SetActorDataHandler ...
@@ -15,7 +14,7 @@ type SetActorDataHandler struct{}
 func (*SetActorDataHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.SetActorData)
 
-	ent, ok := infra.EntityFactory.ByRuntimeID(pkt.EntityRuntimeID)
+	ent, ok := s.entityFactory.ByRuntimeID(pkt.EntityRuntimeID)
 	if !ok {
 		return nil
 	}

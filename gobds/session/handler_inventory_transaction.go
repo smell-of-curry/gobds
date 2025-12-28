@@ -10,8 +10,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
-	"github.com/smell-of-curry/gobds/gobds/infra"
-	"github.com/smell-of-curry/gobds/gobds/service/claim"
+	"github.com/smell-of-curry/gobds/gobds/claim"
 )
 
 // InventoryTransactionHandler ...
@@ -109,7 +108,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 
 	dat := s.Data()
 	pos := transactionData.Position
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	cl, ok := ClaimAt(s.claimFactory.All(), dat.Dimension(), pos.X(), pos.Z())
 	if !ok {
 		return
 	}
@@ -179,7 +178,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 
 	dat := s.Data()
 	pos := transactionData.Position
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	cl, ok := ClaimAt(s.claimFactory.All(), dat.Dimension(), pos.X(), pos.Z())
 	if !ok {
 		return
 	}
@@ -190,7 +189,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		slices.Contains(cl.TrustedXUIDS, clientXUID) {
 		return
 	}
-	ent, ok := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
+	ent, ok := s.entityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
 	if !ok {
 		return
 	}
@@ -213,7 +212,7 @@ func (h *InventoryTransactionHandler) handleClaimReleaseItem(s *Session, pkt *pa
 
 	dat := s.Data()
 	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
-	cl, ok := ClaimAt(dat.Dimension(), pos.X(), pos.Z())
+	cl, ok := ClaimAt(s.claimFactory.All(), dat.Dimension(), pos.X(), pos.Z())
 	if !ok {
 		return
 	}
@@ -244,8 +243,8 @@ func claimDimensionToInt(dimension string) int32 {
 }
 
 // ClaimAt ...
-func ClaimAt(dimension int32, x, z float32) (claim.PlayerClaim, bool) {
-	for _, c := range infra.Claims() {
+func ClaimAt(claims map[string]claim.PlayerClaim, dimension int32, x, z float32) (claim.PlayerClaim, bool) {
+	for _, c := range claims {
 		if claimDimensionToInt(c.Location.Dimension) == dimension {
 			minX := min(c.Location.Pos1.X, c.Location.Pos2.X)
 			maxX := max(c.Location.Pos1.X, c.Location.Pos2.X)

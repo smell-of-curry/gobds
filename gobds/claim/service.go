@@ -18,7 +18,7 @@ type Service struct {
 }
 
 // NewService ...
-func NewService(log *slog.Logger, c service.Config) *Service {
+func NewService(c service.Config, log *slog.Logger) *Service {
 	return &Service{Service: service.NewService(log, c)}
 }
 
