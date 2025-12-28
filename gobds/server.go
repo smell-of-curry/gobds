@@ -53,13 +53,12 @@ type StatusProviderFunc func() (minecraft.ServerStatusProvider, error)
 type DialerFunc func(identityData login.IdentityData, clientData login.ClientData, ctx context.Context) (session.Conn, error)
 
 const (
-	maxRetries    = 30
 	retryInterval = time.Minute
 )
 
 // initServer ...
 func (gb *GoBDS) initServer(srv *Server) bool {
-	for retry := 0; retry < maxRetries; retry++ {
+	for {
 		if gb.ctx.Err() != nil {
 			return false
 		}
@@ -68,11 +67,8 @@ func (gb *GoBDS) initServer(srv *Server) bool {
 			prov, err := srv.StatusProviderFunc()
 			if err != nil {
 				srv.Log.Error("failed to create provider", "err", err)
-				if retry < maxRetries-1 {
-					gb.waitOrAbort(retryInterval)
-					continue
-				}
-				return false
+				gb.waitOrAbort(retryInterval)
+				continue
 			}
 			srv.StatusProvider = prov
 		}
@@ -81,11 +77,8 @@ func (gb *GoBDS) initServer(srv *Server) bool {
 			l, err := srv.ListenerFunc()
 			if err != nil {
 				srv.Log.Error("failed to create listener", "err", err)
-				if retry < maxRetries-1 {
-					gb.waitOrAbort(retryInterval)
-					continue
-				}
-				return false
+				gb.waitOrAbort(retryInterval)
+				continue
 			}
 			srv.Listener = l
 		}
@@ -94,8 +87,6 @@ func (gb *GoBDS) initServer(srv *Server) bool {
 			return true
 		}
 	}
-	srv.Log.Error("failed to init server", "addr", srv.LocalAddress)
-	return false
 }
 
 // waitOrAbort ...
