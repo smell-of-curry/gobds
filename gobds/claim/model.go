@@ -25,11 +25,16 @@ type Location struct {
 }
 
 const (
-	FeatureTypeMineable          = "mineable"
-	FeatureTypeBlockPlaceable    = "blockPlaceable"
-	FeatureTypeBlockIntractable  = "blockIntractable"
+	// FeatureTypeMineable ...
+	FeatureTypeMineable = "mineable"
+	// FeatureTypeBlockPlaceable ...
+	FeatureTypeBlockPlaceable = "blockPlaceable"
+	// FeatureTypeBlockIntractable ...
+	FeatureTypeBlockIntractable = "blockIntractable"
+	// FeatureTypeEntityIntractable ...
 	FeatureTypeEntityIntractable = "entityIntractable"
-	FeatureTypeEntityHurt        = "entityHurt"
+	// FeatureTypeEntityHurt ...
+	FeatureTypeEntityHurt = "entityHurt"
 )
 
 // Feature ...

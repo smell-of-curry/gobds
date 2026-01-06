@@ -12,9 +12,13 @@ import (
 type ClaimAction uint8
 
 const (
+	// ClaimActionRender ...
 	ClaimActionRender ClaimAction = iota
+	// ClaimActionBlockInteract ...
 	ClaimActionBlockInteract
+	// ClaimActionItemRelease ...
 	ClaimActionItemRelease
+	// ClaimActionItemThrow ...
 	ClaimActionItemThrow
 )
 
