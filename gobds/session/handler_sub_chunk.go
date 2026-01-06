@@ -56,7 +56,7 @@ func (*SubChunkHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 					blockPos := protocol.BlockPos{
 						(chunkPos.X() << 4) + int32(x), 0, (chunkPos.Z() << 4) + int32(z),
 					}
-					claim, exists := ClaimAt(pkt.Dimension, float32(blockPos.X()), float32(blockPos.Z()))
+					claim, exists := ClaimAt(s.claimFactory.All(), pkt.Dimension, float32(blockPos.X()), float32(blockPos.Z()))
 					if !exists || ClaimActionPermitted(claim, s, ClaimActionRender, blockPosToVec3(blockPos)) {
 						continue
 					}

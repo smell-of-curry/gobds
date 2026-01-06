@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
-	"github.com/smell-of-curry/gobds/gobds/service/claim"
+	"github.com/smell-of-curry/gobds/gobds/claim"
 )
 
 // ClaimAction ...
