@@ -1,8 +1,11 @@
+// Package vpn provides VPN detection service models and types.
 package vpn
 
 const (
+	// StatusSuccess indicates a successful VPN check response.
 	StatusSuccess = "success"
-	StatusFail    = "fail"
+	// StatusFail indicates a failed VPN check response.
+	StatusFail = "fail"
 )
 
 // ResponseModel ...

@@ -23,6 +23,7 @@ func NewService(log *slog.Logger, c service.Config) *Service {
 }
 
 var (
+	// ErrRecordNotFound is returned when no authentication record is found.
 	ErrRecordNotFound = errors.New("no authentication record found")
 )
 

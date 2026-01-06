@@ -4,16 +4,27 @@ package cmd
 type EngineResponseCommandType string
 
 const (
-	EngineResponseCommandTypeLiteral    EngineResponseCommandType = "literal"
-	EngineResponseCommandTypeString     EngineResponseCommandType = "string"
-	EngineResponseCommandTypeInt        EngineResponseCommandType = "int"
-	EngineResponseCommandTypeFloat      EngineResponseCommandType = "float"
-	EngineResponseCommandTypeLocation   EngineResponseCommandType = "location"
-	EngineResponseCommandTypeBoolean    EngineResponseCommandType = "boolean"
-	EngineResponseCommandTypePlayer     EngineResponseCommandType = "player"
-	EngineResponseCommandTypeTarget     EngineResponseCommandType = "target"
-	EngineResponseCommandTypeArray      EngineResponseCommandType = "array"
-	EngineResponseCommandTypeDuration   EngineResponseCommandType = "duration"
+	// EngineResponseCommandTypeLiteral represents a literal command type
+	EngineResponseCommandTypeLiteral EngineResponseCommandType = "literal"
+	// EngineResponseCommandTypeString represents a string command parameter type
+	EngineResponseCommandTypeString EngineResponseCommandType = "string"
+	// EngineResponseCommandTypeInt represents an integer command parameter type
+	EngineResponseCommandTypeInt EngineResponseCommandType = "int"
+	// EngineResponseCommandTypeFloat represents a float command parameter type
+	EngineResponseCommandTypeFloat EngineResponseCommandType = "float"
+	// EngineResponseCommandTypeLocation represents a location command parameter type
+	EngineResponseCommandTypeLocation EngineResponseCommandType = "location"
+	// EngineResponseCommandTypeBoolean represents a boolean command parameter type
+	EngineResponseCommandTypeBoolean EngineResponseCommandType = "boolean"
+	// EngineResponseCommandTypePlayer represents a player command parameter type
+	EngineResponseCommandTypePlayer EngineResponseCommandType = "player"
+	// EngineResponseCommandTypeTarget represents a target command parameter type
+	EngineResponseCommandTypeTarget EngineResponseCommandType = "target"
+	// EngineResponseCommandTypeArray represents an array command parameter type
+	EngineResponseCommandTypeArray EngineResponseCommandType = "array"
+	// EngineResponseCommandTypeDuration represents a duration command parameter type
+	EngineResponseCommandTypeDuration EngineResponseCommandType = "duration"
+	// EngineResponseCommandTypePlayerName represents a player name command parameter type
 	EngineResponseCommandTypePlayerName EngineResponseCommandType = "playerName"
 )
 

@@ -1,3 +1,4 @@
+// Package service provides HTTP-based service clients for authentication, VPN checks, and claims.
 package service
 
 // Config ...

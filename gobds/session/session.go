@@ -11,6 +11,8 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/smell-of-curry/gobds/gobds/claim"
+	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/util"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -21,6 +23,9 @@ type Session struct {
 	client   Conn
 	server   Conn
 	handlers map[uint32]packetHandler
+
+	entityFactory *entity.Factory
+	claimFactory  *claim.Factory
 
 	pingIndicator *infra.PingIndicator
 	afkTimer      *infra.AFKTimer
@@ -94,7 +99,7 @@ func (s *Session) ReadPackets(ctx context.Context) {
 	wg.Add(2)
 
 	go func() {
-		defer s.server.Close()
+		defer func() { _ = s.server.Close() }()
 		defer wg.Done()
 		for {
 			pk, err := s.client.ReadPacket()
@@ -112,7 +117,7 @@ func (s *Session) ReadPackets(ctx context.Context) {
 	}()
 
 	go func() {
-		defer s.client.Close()
+		defer func() { _ = s.client.Close() }()
 		defer wg.Done()
 		for {
 			pk, err := s.server.ReadPacket()

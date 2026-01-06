@@ -26,10 +26,9 @@ import (
 // UserConfig ...
 type UserConfig struct {
 	Network struct {
-		ServerName string
+		ServerRegion string
 
-		LocalAddress  string
-		RemoteAddress string
+		Servers []ServerConfig
 
 		PlayerManagerPath string
 
@@ -65,11 +64,6 @@ type UserConfig struct {
 		PathResources []string
 	}
 	AuthenticationService struct {
-		Enabled bool
-		URL     string
-		Key     string
-	}
-	ClaimService struct {
 		Enabled bool
 		URL     string
 		Key     string
@@ -154,11 +148,6 @@ func (c UserConfig) makeBorder() *area.Area2D {
 	return area.NewArea2D(c.Border.MinX, c.Border.MinZ, c.Border.MaxX, c.Border.MaxZ)
 }
 
-// provider returns default provider.
-func (c UserConfig) provider() (minecraft.ServerStatusProvider, error) {
-	return minecraft.NewForeignStatusProvider(c.Network.RemoteAddress)
-}
-
 // afkTimer returns new AFKTimer instance.
 func (c UserConfig) afkTimer() *infra.AFKTimer {
 	if !c.AFKTimer.Enabled {
@@ -193,8 +182,8 @@ func (c UserConfig) whiteList(log *slog.Logger) *whitelist.Whitelist {
 	return whitelist.NewWhitelist(conf.Entries)
 }
 
-// dialerFunc returns default dialer func.
-func (c UserConfig) dialerFunc(log *slog.Logger) DialerFunc {
+// dialerFunc returns a dialer func for a specific server.
+func (c UserConfig) dialerFunc(remoteAddress string, log *slog.Logger) DialerFunc {
 	return func(identityData login.IdentityData, clientData login.ClientData, ctx context.Context) (session.Conn, error) {
 		d := minecraft.Dialer{
 			ClientData:   clientData,
@@ -206,29 +195,29 @@ func (c UserConfig) dialerFunc(log *slog.Logger) DialerFunc {
 			ErrorLog:            log,
 			KeepXBLIdentityData: true,
 		}
-		return d.DialContext(ctx, "raknet", c.Network.RemoteAddress)
+		return d.DialContext(ctx, "raknet", remoteAddress)
 	}
 }
 
-// listenerFunc returns default listener func.
-func (c UserConfig) listenerFunc(conf Config) (Listener, error) {
+// listenerFunc returns a listener func for a specific server.
+func (c UserConfig) listenerFunc(srv *Server) (Listener, error) {
 	cfg := minecraft.ListenConfig{
-		ErrorLog:       conf.Log,
-		StatusProvider: conf.StatusProvider,
+		ErrorLog:       srv.Log,
+		StatusProvider: srv.StatusProvider,
 
 		FlushRate:            time.Millisecond * time.Duration(c.Network.FlushRate),
-		ResourcePacks:        c.packs(conf.Log),
+		ResourcePacks:        c.packs(srv.Log),
 		TexturePacksRequired: c.Resources.PacksRequired,
 	}
 
-	if conf.Log.Enabled(context.Background(), slog.LevelDebug) {
-		cfg.ErrorLog = conf.Log.With("net origin", "gophertunnel")
+	if srv.Log.Enabled(context.Background(), slog.LevelDebug) {
+		cfg.ErrorLog = srv.Log.With("net origin", "gophertunnel")
 	}
-	l, err := cfg.Listen("raknet", c.Network.LocalAddress)
+	l, err := cfg.Listen("raknet", srv.LocalAddress)
 	if err != nil {
 		return nil, fmt.Errorf("create listener: %w", err)
 	}
-	conf.Log.Info("listener running.", "addr", l.Addr())
+	srv.Log.Info("listener running.", "addr", l.Addr())
 	return listener{l}, nil
 }
 
@@ -236,10 +225,25 @@ func (c UserConfig) listenerFunc(conf Config) (Listener, error) {
 func DefaultConfig() UserConfig {
 	c := UserConfig{}
 
-	c.Network.ServerName = "Some server"
+	c.Network.ServerRegion = "Some region"
 
-	c.Network.LocalAddress = "127.0.0.1:19132"
-	c.Network.RemoteAddress = "127.0.0.1:19133"
+	const defaultKey = "secret-key"
+	c.Network.Servers = []ServerConfig{
+		{
+			Name:          "Some server",
+			LocalAddress:  "127.0.0.1:19132",
+			RemoteAddress: "127.0.0.1:19133",
+			ClaimService: struct {
+				Enabled bool
+				URL     string
+				Key     string
+			}{
+				Enabled: false,
+				URL:     "http://127.0.0.1:8080/fetch/claims",
+				Key:     defaultKey,
+			},
+		},
+	}
 
 	c.Network.PlayerManagerPath = "players/manager.json"
 
@@ -265,12 +269,7 @@ func DefaultConfig() UserConfig {
 
 	c.AuthenticationService.Enabled = false
 	c.AuthenticationService.URL = "http://127.0.0.1:8080/authentication"
-	const defaultKey = "secret-key"
 	c.AuthenticationService.Key = defaultKey
-
-	c.ClaimService.Enabled = false
-	c.ClaimService.URL = "http://127.0.0.1:8080/fetch/claims"
-	c.ClaimService.Key = defaultKey
 
 	c.VPNService.Enabled = false
 	c.VPNService.URL = "http://ip-api.com/json"

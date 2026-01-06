@@ -1,3 +1,4 @@
+// Package main provides the entry point for the GoBDS bedrock proxy server.
 package main
 
 import (
@@ -20,7 +21,7 @@ func main() {
 	if dsn != "" {
 		err = sentry.Init(sentry.ClientOptions{
 			Dsn:        conf.Network.SentryDSN,
-			ServerName: conf.Network.ServerName,
+			ServerName: conf.Network.ServerRegion,
 		})
 		if err != nil {
 			panic(err)

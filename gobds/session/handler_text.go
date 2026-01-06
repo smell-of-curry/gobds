@@ -10,17 +10,17 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/cmd"
 )
 
-// IMinecraftRawText ...
+// IMinecraftRawText represents a raw text component in Minecraft messages.
 type IMinecraftRawText struct {
 	Text string `json:"text"`
 }
 
-// IMinecraftTextMessage ...
+// IMinecraftTextMessage represents a complete Minecraft text message.
 type IMinecraftTextMessage struct {
 	RawText []IMinecraftRawText `json:"rawtext"`
 }
 
-// TextHandler ...
+// TextHandler handles text-based packets from the server.
 type TextHandler struct{}
 
 // Global variable to store the command file path - set during initialization
@@ -31,7 +31,7 @@ func SetCommandPath(path string) {
 	globalCommandPath = path
 }
 
-// Handle ...
+// Handle processes text packets from the server and executes commands.
 func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.Text)
 

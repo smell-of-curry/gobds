@@ -18,7 +18,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	_ "github.com/smell-of-curry/gobds/gobds/block"
-	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
@@ -33,7 +32,7 @@ type GoBDS struct {
 
 	started atomic.Pointer[time.Time]
 
-	listeners []Listener
+	servers []*Server
 
 	wg sync.WaitGroup
 }
@@ -53,50 +52,12 @@ func (c *Config) New() (*GoBDS, error) {
 	if c.PlayerManager == nil {
 		return nil, fmt.Errorf("start gobds: player manager is not configured")
 	}
-	if len(c.Listeners) == 0 {
-		return nil, fmt.Errorf("start gobds: no listeners configured")
+	if len(c.Servers) == 0 {
+		return nil, fmt.Errorf("start gobds: no servers configured")
 	}
-	if c.StatusProvider == nil {
-		return nil, fmt.Errorf("start gobds: status provider is nil")
-	}
-
-	for _, lf := range c.Listeners {
-		l, err := lf(*c)
-		if err != nil {
-			c.Log.Error("error creating listener", "error", err)
-			continue
-		}
-		gobds.listeners = append(gobds.listeners, l)
-	}
-	go gobds.tick()
+	gobds.servers = c.Servers
 
 	return gobds, nil
-}
-
-// tick ...
-func (gb *GoBDS) tick() {
-	fetch := func() {
-		if gb.conf.ClaimService != nil {
-			claims, err := gb.conf.ClaimService.FetchClaims()
-			if err != nil {
-				gb.conf.Log.Error("failed to fetch claims", "err", err)
-				return
-			}
-			infra.SetClaims(claims)
-		}
-	}
-	fetch()
-
-	t := time.NewTicker(time.Minute * 5)
-	defer t.Stop()
-	for {
-		select {
-		case <-gb.ctx.Done():
-			return
-		case <-t.C:
-			fetch()
-		}
-	}
 }
 
 // Listen ...
@@ -109,9 +70,9 @@ func (gb *GoBDS) Listen() error {
 	gb.conf.Log.Info("starting gobds", "mc-version", protocol.CurrentVersion)
 	gb.conf.PlayerManager.Start(time.Minute * 3)
 
-	gb.wg.Add(len(gb.listeners))
-	for _, l := range gb.listeners {
-		go gb.listen(l)
+	gb.wg.Add(len(gb.servers))
+	for _, srv := range gb.servers {
+		go gb.listen(srv)
 	}
 
 	gb.wg.Wait()
@@ -120,21 +81,27 @@ func (gb *GoBDS) Listen() error {
 	return nil
 }
 
-// listen handles listener and it's sessions.
-func (gb *GoBDS) listen(l Listener) {
+// listen handles a server and its sessions.
+func (gb *GoBDS) listen(srv *Server) {
 	wg := new(sync.WaitGroup)
 	ctx, cancel := context.WithCancel(context.Background())
-	defer l.Close()
+	defer cancel()
+
+	if !gb.initServer(srv) {
+		gb.wg.Done()
+		return
+	}
+	go gb.claimFetching(srv)
 
 	go func() {
 		<-gb.ctx.Done()
 		cancel()
+		_ = srv.Listener.Close()
 		wg.Wait()
-		_ = l.Close()
 	}()
 
 	for {
-		conn, err := l.Accept()
+		conn, err := srv.Listener.Accept()
 		if err != nil {
 			gb.wg.Done()
 			return
@@ -144,15 +111,15 @@ func (gb *GoBDS) listen(l Listener) {
 		go func() {
 			defer wg.Done()
 
-			s, err := gb.accept(conn, ctx)
+			s, err := gb.accept(conn, srv, ctx)
 			if err != nil {
-				_ = l.Disconnect(conn, err.Error())
+				_ = srv.Listener.Disconnect(conn, err.Error())
 				return
 			}
 
-			gb.conf.Log.Info("player connected", "name", conn.IdentityData().DisplayName)
+			srv.Log.Info("player connected", "name", conn.IdentityData().DisplayName)
 			s.ReadPackets(ctx)
-			gb.conf.Log.Info("player disconnected", "name", conn.IdentityData().DisplayName)
+			srv.Log.Info("player disconnected", "name", conn.IdentityData().DisplayName)
 		}()
 	}
 }
@@ -160,7 +127,7 @@ func (gb *GoBDS) listen(l Listener) {
 var errInvalidJoinPath = errors.New("you must join through the server hub to play")
 
 // accept accepts new connection.
-func (gb *GoBDS) accept(conn session.Conn, ctx context.Context) (*session.Session, error) {
+func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*session.Session, error) {
 	identityData := conn.IdentityData()
 	if gb.conf.VPNService != nil {
 		if reason, allowed := gb.handleVPN(conn.LocalAddr(), ctx); !allowed {
@@ -188,20 +155,22 @@ func (gb *GoBDS) accept(conn session.Conn, ctx context.Context) (*session.Sessio
 	if !gb.handleWhitelisted(displayName) {
 		return nil, fmt.Errorf("you're not whitelisted")
 	}
-	if !gb.conf.AuthenticationService.Enabled && !gb.handleSecureSlots(displayName) {
-		return nil, fmt.Errorf("the server is at full capacity")
+	if auth := gb.conf.AuthenticationService; auth != nil && !auth.Enabled {
+		if !gb.handleSecureSlots(srv, displayName) {
+			return nil, fmt.Errorf("the server is at full capacity")
+		}
 	}
 
 	ctx2, cancel := context.WithTimeout(ctx, time.Minute)
 
 	defer cancel()
-	serverConn, err := gb.conf.DialerFunction(identityData, clientData, ctx2)
+	serverConn, err := srv.DialerFunc(identityData, clientData, ctx2)
 	if err != nil {
-		gb.conf.Log.Error("error dialing connection", "err", err)
+		srv.Log.Error("error dialing connection", "err", err)
 		return nil, fmt.Errorf("error dialing connection")
 	}
 
-	return gb.startGame(conn, serverConn, ctx)
+	return gb.startGame(conn, serverConn, srv, ctx)
 }
 
 // handleWhitelisted ensures that only whitelisted players can join.
@@ -213,13 +182,13 @@ func (gb *GoBDS) handleWhitelisted(displayName string) bool {
 }
 
 // handleSecureSlots secures slots for some whitelisted players.
-func (gb *GoBDS) handleSecureSlots(displayName string) bool {
+func (gb *GoBDS) handleSecureSlots(srv *Server, displayName string) bool {
 	if gb.conf.Whitelist == nil {
 		// We depend on the whitelist config to handle secured slots.
 		return true
 	}
 
-	status := gb.conf.StatusProvider.ServerStatus(-1, -1)
+	status := srv.StatusProvider.ServerStatus(-1, -1)
 	current, limit := status.PlayerCount, status.MaxPlayers
 	if current >= limit {
 		return false
@@ -252,7 +221,7 @@ func (gb *GoBDS) handleVPN(netAddr net.Addr, ctx context.Context) (reason string
 }
 
 // startGame starts game for new connection.
-func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (*session.Session, error) {
+func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx context.Context) (*session.Session, error) {
 	gameData := serverConn.GameData()
 	gameData.WorldSeed = 0
 	gameData.ClientSideGeneration = false
@@ -288,12 +257,17 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, ctx context.Context) (
 	}
 
 	s := session.Config{
-		Client:        conn,
-		Server:        serverConn,
+		Client: conn,
+		Server: serverConn,
+
 		PingIndicator: gb.conf.PingIndicator,
-		AfkTimer:      gb.conf.AFKTimer,
-		Border:        gb.conf.Border,
-		Log:           gb.conf.Log,
+		AFKTimer:      gb.conf.AFKTimer,
+
+		EntityFactory: srv.EntityFactory,
+		ClaimFactory:  srv.ClaimFactory,
+
+		Border: gb.conf.Border,
+		Log:    gb.conf.Log,
 	}.New()
 
 	s.ForwardXUID(gb.conf.EncryptionKey)

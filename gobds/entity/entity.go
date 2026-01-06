@@ -1,3 +1,4 @@
+// Package entity provides entity-related functionality for the GoBDS proxy.
 package entity
 
 import "github.com/go-gl/mathgl/mgl32"

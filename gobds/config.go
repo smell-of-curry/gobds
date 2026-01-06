@@ -1,3 +1,4 @@
+// Package gobds implements a bedrock proxy server for Minecraft with authentication and claim support.
 package gobds
 
 import (
@@ -5,9 +6,10 @@ import (
 	"log/slog"
 
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/smell-of-curry/gobds/gobds/claim"
+	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
-	"github.com/smell-of-curry/gobds/gobds/service/claim"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -16,34 +18,34 @@ import (
 
 // Config ...
 type Config struct {
-	Listeners             []func(conf Config) (Listener, error)
-	StatusProvider        minecraft.ServerStatusProvider
+	Servers               []*Server
 	SecuredSlots          int
 	EncryptionKey         string
 	AuthenticationService *authentication.Service
-	ClaimService          *claim.Service
 	VPNService            *vpn.Service
 	PingIndicator         *infra.PingIndicator
 	AFKTimer              *infra.AFKTimer
 	Whitelist             *whitelist.Whitelist
 	Border                *area.Area2D
 	PlayerManager         *PlayerManager
-	DialerFunction        DialerFunc
 	Log                   *slog.Logger
 }
 
+// Config converts the user configuration into a runtime configuration.
 func (c UserConfig) Config(log *slog.Logger) (Config, error) {
+	if len(c.Network.Servers) == 0 {
+		return Config{}, fmt.Errorf("no servers configured")
+	}
+
 	conf := Config{
 		SecuredSlots:          c.Network.SecuredSlots,
 		EncryptionKey:         c.Encryption.Key,
 		AuthenticationService: authentication.NewService(log, c.AuthenticationService),
-		ClaimService:          claim.NewService(log, c.ClaimService),
 		VPNService:            vpn.NewService(log, c.VPNService),
 		PingIndicator:         c.pingIndicator(),
 		AFKTimer:              c.afkTimer(),
 		Whitelist:             c.whiteList(log),
 		Border:                c.makeBorder(),
-		DialerFunction:        c.dialerFunc(log),
 		Log:                   log,
 	}
 	session.SetupRuntimeIDs(c.Network.HashedBlockIDS)
@@ -53,14 +55,32 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 	if err != nil {
 		return conf, fmt.Errorf("error loading commands: %w", err)
 	}
-	conf.StatusProvider, err = c.provider()
-	if err != nil {
-		return conf, fmt.Errorf("error creating status provider: %w", err)
-	}
+
 	conf.PlayerManager, err = NewPlayerManager(c.Network.PlayerManagerPath, log)
 	if err != nil {
-		return conf, fmt.Errorf("error creating player mamanger: %w", err)
+		return conf, fmt.Errorf("error creating player manager: %w", err)
 	}
-	conf.Listeners = append(conf.Listeners, c.listenerFunc)
+
+	for _, server := range c.Network.Servers {
+		srv := &Server{
+			Name:          server.Name,
+			LocalAddress:  server.LocalAddress,
+			RemoteAddress: server.RemoteAddress,
+
+			EntityFactory: entity.NewFactory(),
+			ClaimFactory:  claim.NewFactory(server.ClaimService, log),
+
+			DialerFunc: c.dialerFunc(server.RemoteAddress, log),
+
+			Log: log.With(slog.String("srv", server.Name)),
+		}
+		srv.StatusProviderFunc = func() (minecraft.ServerStatusProvider, error) {
+			return minecraft.NewForeignStatusProvider(server.RemoteAddress)
+		}
+		srv.ListenerFunc = func() (Listener, error) {
+			return c.listenerFunc(srv)
+		}
+		conf.Servers = append(conf.Servers, srv)
+	}
 	return conf, nil
 }

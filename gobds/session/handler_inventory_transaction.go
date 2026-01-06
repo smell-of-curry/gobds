@@ -7,7 +7,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
-	"github.com/smell-of-curry/gobds/gobds/infra"
 )
 
 // InventoryTransactionHandler ...
@@ -103,7 +102,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 
 	clientData := s.Data()
 	pos := transactionData.ClickedPosition
-	claim, exists := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
+	claim, exists := ClaimAt(s.claimFactory.All(), clientData.Dimension(), pos.X(), pos.Z())
 	if !exists {
 		return
 	}
@@ -160,7 +159,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		return
 	}
 
-	entity, exists := infra.EntityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
+	entity, exists := s.entityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
 	if !exists {
 		return
 	}
@@ -174,7 +173,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 	}
 
 	clientData := s.Data()
-	claim, ok := ClaimAt(clientData.Dimension(), entityPosition.X(), entityPosition.Z())
+	claim, ok := ClaimAt(s.claimFactory.All(), clientData.Dimension(), entityPosition.X(), entityPosition.Z())
 	if !ok {
 		return
 	}
@@ -197,7 +196,7 @@ func (h *InventoryTransactionHandler) handleClaimReleaseItem(s *Session, pkt *pa
 
 	clientData := s.Data()
 	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
-	claim, ok := ClaimAt(clientData.Dimension(), pos.X(), pos.Z())
+	claim, ok := ClaimAt(s.claimFactory.All(), clientData.Dimension(), pos.X(), pos.Z())
 	if !ok {
 		return
 	}

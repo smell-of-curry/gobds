@@ -7,7 +7,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/entity"
-	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/util/translator"
 )
 
@@ -19,7 +18,7 @@ func (*AddActorHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
 	pkt := pk.(*packet.AddActor)
 
 	entityType := pkt.EntityType
-	infra.EntityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, entityType, pkt.Position))
+	s.entityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, entityType, pkt.Position))
 
 	if !strings.HasPrefix(entityType, "pokemon:") {
 		return nil
