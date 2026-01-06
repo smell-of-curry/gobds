@@ -7,8 +7,7 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
-	"github.com/smell-of-curry/gobds/gobds/infra"
-	"github.com/smell-of-curry/gobds/gobds/service/claim"
+	"github.com/smell-of-curry/gobds/gobds/claim"
 )
 
 var (
@@ -66,8 +65,8 @@ func claimDimensionToInt(dimension string) int32 {
 }
 
 // ClaimAt ...
-func ClaimAt(dimension int32, x, z float32) (claim.PlayerClaim, bool) {
-	for _, c := range infra.Claims() {
+func ClaimAt(claims map[string]claim.PlayerClaim, dimension int32, x, z float32) (claim.PlayerClaim, bool) {
+	for _, c := range claims {
 		if claimDimensionToInt(c.Location.Dimension) == dimension {
 			minX := min(c.Location.Pos1.X, c.Location.Pos2.X)
 			maxX := max(c.Location.Pos1.X, c.Location.Pos2.X)
@@ -82,12 +81,12 @@ func ClaimAt(dimension int32, x, z float32) (claim.PlayerClaim, bool) {
 }
 
 // ClaimAtChunk ...
-func ClaimAtChunk(dimension int32, chunkPos protocol.ChunkPos) (claim.PlayerClaim, bool) {
+func ClaimAtChunk(claims map[string]claim.PlayerClaim, dimension int32, chunkPos protocol.ChunkPos) (claim.PlayerClaim, bool) {
 	chunkMinX := float32(chunkPos.X() << 4)
 	chunkMinZ := float32(chunkPos.Z() << 4)
 	chunkMaxX := chunkMinX + 15
 	chunkMaxZ := chunkMinZ + 15
-	for _, c := range infra.Claims() {
+	for _, c := range claims {
 		if claimDimensionToInt(c.Location.Dimension) != dimension {
 			continue
 		}
