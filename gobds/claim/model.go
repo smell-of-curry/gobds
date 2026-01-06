@@ -10,10 +10,11 @@ type ResponseModel struct {
 
 // PlayerClaim ...
 type PlayerClaim struct {
-	ID           string   `json:"claimId"`
-	OwnerXUID    string   `json:"playerXUID"`
-	Location     Location `json:"location"`
-	TrustedXUIDS []string `json:"trusts"`
+	ID           string    `json:"claimId"`
+	OwnerXUID    string    `json:"playerXUID"`
+	Location     Location  `json:"location"`
+	Features     []Feature `json:"features"`
+	TrustedXUIDS []string  `json:"trusts"`
 }
 
 // Location ...
@@ -21,6 +22,26 @@ type Location struct {
 	Dimension string  `json:"dimension"`
 	Pos1      Vector2 `json:"pos2"`
 	Pos2      Vector2 `json:"pos1"`
+}
+
+const (
+	// FeatureTypeMineable ...
+	FeatureTypeMineable = "mineable"
+	// FeatureTypeBlockPlaceable ...
+	FeatureTypeBlockPlaceable = "blockPlaceable"
+	// FeatureTypeBlockIntractable ...
+	FeatureTypeBlockIntractable = "blockIntractable"
+	// FeatureTypeEntityIntractable ...
+	FeatureTypeEntityIntractable = "entityIntractable"
+	// FeatureTypeEntityHurt ...
+	FeatureTypeEntityHurt = "entityHurt"
+)
+
+// Feature ...
+type Feature struct {
+	Type         string  `json:"type"`
+	FromLocation Vector2 `json:"fromLocation"`
+	ToLocation   Vector2 `json:"toLocation"`
 }
 
 // Vector2 ...

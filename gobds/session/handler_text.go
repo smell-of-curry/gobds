@@ -79,7 +79,7 @@ func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 			return err
 		}
 
-		if err := os.WriteFile(globalCommandPath, commandsJSON, os.ModePerm); err != nil {
+		if err = os.WriteFile(globalCommandPath, commandsJSON, os.ModePerm); err != nil {
 			s.log.Error("failed to write commands file", "error", err)
 			return err
 		}
