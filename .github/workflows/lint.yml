@@ -35,6 +35,5 @@ jobs:
         uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: Dockerfile
-          ignores:
-            - DL3008
+          ignores: DL3008
 
