@@ -1,6 +1,6 @@
 services:
   gobds:
-    name: gobds-proxy
+    container_name: gobds-proxy
     build:
       context: .
       dockerfile: Dockerfile
