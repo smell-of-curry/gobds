@@ -11,13 +11,16 @@ require (
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.1.0
-	github.com/sandertv/gophertunnel v1.52.2
+	github.com/sandertv/gophertunnel v1.53.0
 	github.com/tailscale/hujson v0.0.0-20250605163823-992244df8c5a
 )
 
 require (
 	github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.17.0 // indirect
+	github.com/df-mc/go-playfab v1.0.0 // indirect
+	github.com/df-mc/go-xsapi v1.0.1 // indirect
 	github.com/df-mc/goleveldb v1.1.9 // indirect
 	github.com/df-mc/jsonc v1.0.5 // indirect
 	github.com/df-mc/worldupgrader v1.0.20 // indirect
