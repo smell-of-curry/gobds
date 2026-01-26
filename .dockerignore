@@ -1,0 +1,13 @@
+# IDE files.
+/.idea/
+
+# Mocks.
+/mocks/
+
+# Configuration files.
+/*.toml
+/*.json
+/*.lock
+
+# Executables.
+/*.exe
