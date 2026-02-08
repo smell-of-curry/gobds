@@ -67,7 +67,8 @@ func entityTranslatedName(entityType string, s *Session) string {
 	if !ok {
 		t, _ = translator.TranslationFor("en_US") // Default to american english.
 	}
-	name, ok := t["item.spawn_egg.entity."+entityType+".name"]
+	translationKey := strings.Replace(entityType, "pokemon:", "pokeb:", 1)
+	name, ok := t["item."+translationKey+".name"]
 	if !ok {
 		return fmt.Sprintf("name not found for %s", entityType)
 	}
