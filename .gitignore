@@ -1,4 +1,5 @@
 /.idea/
+/resources/heads/
 /mocks/
 
 *.toml

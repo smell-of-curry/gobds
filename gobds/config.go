@@ -4,12 +4,14 @@ package gobds
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
+	"github.com/smell-of-curry/gobds/gobds/service/head"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -23,6 +25,8 @@ type Config struct {
 	EncryptionKey         string
 	AuthenticationService *authentication.Service
 	VPNService            *vpn.Service
+	HeadService           *head.Service
+	SkinConfig            *infra.SkinConfig
 	PingIndicator         *infra.PingIndicator
 	AFKTimer              *infra.AFKTimer
 	Whitelist             *whitelist.Whitelist
@@ -37,11 +41,14 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		return Config{}, fmt.Errorf("no servers configured")
 	}
 
+	skinConf := c.skinConfig()
 	conf := Config{
 		SecuredSlots:          c.Network.SecuredSlots,
 		EncryptionKey:         c.Encryption.Key,
 		AuthenticationService: authentication.NewService(log, c.AuthenticationService),
 		VPNService:            vpn.NewService(log, c.VPNService),
+		HeadService:           head.NewService(log, c.HeadService, skinConf.HeadsDirectory),
+		SkinConfig:            skinConf,
 		PingIndicator:         c.pingIndicator(),
 		AFKTimer:              c.afkTimer(),
 		Whitelist:             c.whiteList(log),
@@ -82,4 +89,16 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		conf.Servers = append(conf.Servers, srv)
 	}
 	return conf, nil
+}
+
+func (c UserConfig) skinConfig() *infra.SkinConfig {
+	cooldown, err := time.ParseDuration(c.SkinConfig.Cooldown)
+	if err != nil {
+		cooldown = 15 * time.Second
+	}
+	return &infra.SkinConfig{
+		SkinChangeCooldown: cooldown,
+		HeadsDirectory:     c.SkinConfig.HeadsDirectory,
+		HeadServiceURL:     c.SkinConfig.HeadServiceURL,
+	}
 }

@@ -27,6 +27,7 @@ type Session struct {
 	entityFactory *entity.Factory
 	claimFactory  *claim.Factory
 
+	skinConfig    *infra.SkinConfig
 	pingIndicator *infra.PingIndicator
 	afkTimer      *infra.AFKTimer
 	border        *area.Area2D
@@ -239,7 +240,9 @@ func (s *Session) registerHandlers() {
 		packet.IDItemRegistry:         &ItemRegistryHandler{},
 		packet.IDItemStackRequest:     &ItemStackRequestHandler{},
 		packet.IDLevelChunk:           &LevelChunkHandler{},
+		packet.IDModalFormRequest:     &ModalFormRequestHandler{},
 		packet.IDPlayerAuthInput:      NewPlayerAuthInputHandler(),
+		packet.IDPlayerSkin:           &PlayerSkinHandler{},
 		packet.IDRemoveActor:          &RemoveActorHandler{},
 		packet.IDSetActorData:         &SetActorDataHandler{},
 		packet.IDSubChunk:             &SubChunkHandler{},
