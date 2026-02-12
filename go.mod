@@ -11,7 +11,7 @@ require (
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.1.0
-	github.com/sandertv/gophertunnel v1.53.0
+	github.com/sandertv/gophertunnel v1.54.0
 	github.com/tailscale/hujson v0.0.0-20250605163823-992244df8c5a
 )
 
