@@ -40,6 +40,8 @@ type UserConfig struct {
 		FlushRate         int
 
 		SentryDSN string
+
+		HashedBlockIDS bool
 	}
 	Border struct {
 		Enabled    bool
@@ -251,6 +253,8 @@ func DefaultConfig() UserConfig {
 	c.Network.SecuredSlots = 0
 	c.Network.MaxRenderDistance = 16
 	c.Network.FlushRate = 20
+
+	c.Network.HashedBlockIDS = true
 
 	c.Border.Enabled = false
 

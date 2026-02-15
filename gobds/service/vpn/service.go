@@ -41,7 +41,7 @@ func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error
 	var lastErr error
 	for attempt := 0; attempt <= 1; attempt++ {
 		if s.Closed {
-			break
+			return nil, fmt.Errorf("service closed")
 		}
 		if attempt > 0 {
 			time.Sleep(service.RetryDelay)
@@ -82,13 +82,14 @@ func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error
 			}
 			return &responseModel, nil
 		case http.StatusTooManyRequests:
+			_ = response.Body.Close()
 			lastErr = fmt.Errorf("rate limited by api")
 			time.Sleep(time.Duration(attempt+1) * service.RetryDelay)
 			continue
 		default:
+			_ = response.Body.Close()
 			lastErr = fmt.Errorf("unexpected status code: %d", response.StatusCode)
 		}
-		_ = response.Body.Close()
 	}
 	return nil, lastErr
 }

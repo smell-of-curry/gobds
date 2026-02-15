@@ -48,6 +48,7 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		Border:                c.makeBorder(),
 		Log:                   log,
 	}
+	session.SetupRuntimeIDs(c.Network.HashedBlockIDS)
 	session.SetCommandPath(c.Resources.CommandPath)
 
 	err := c.loadCommands(log)
