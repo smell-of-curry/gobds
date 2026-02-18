@@ -1,21 +1,21 @@
+// Package formutil provides utilities for parsing and modifying form data.
 package formutil
 
 import (
 	"encoding/json"
 )
 
-// FormType ...
-type FormType string
+type formType string
 
 const (
-	FormTypeMenu   FormType = "form"
-	FormTypeModal  FormType = "modal"
-	FormTypeCustom FormType = "custom_form"
+	formTypeMenu   formType = "form"
+	formTypeModal  formType = "modal"
+	formTypeCustom formType = "custom_form"
 )
 
 // MenuForm ...
 type MenuForm struct {
-	Type     FormType        `json:"type"`
+	Type     formType        `json:"type"`
 	Title    string          `json:"title"`
 	Content  string          `json:"content"`
 	Elements []ButtonElement `json:"elements"`
@@ -49,7 +49,7 @@ func ParseMenuForm(data []byte) (*MenuForm, error) {
 	if err := json.Unmarshal(data, &form); err != nil {
 		return nil, err
 	}
-	if form.Type != FormTypeMenu {
+	if form.Type != formTypeMenu {
 		// We only care about menu forms, for now.
 		return nil, nil
 	}
