@@ -26,7 +26,7 @@ type ButtonElement struct {
 	Type string `json:"type"`
 
 	Text  string      `json:"text"`
-	Image ButtonImage `json:"image,omitempty"`
+	Image ButtonImage `json:"image,omitzero"`
 }
 
 // ButtonImage ...
