@@ -4,14 +4,14 @@ go 1.25.0
 
 require (
 	github.com/avast/retry-go/v4 v4.7.0
-	github.com/df-mc/dragonfly v0.10.11-0.20260211105526-1ec432bade04
+	github.com/df-mc/dragonfly v0.10.12
 	github.com/getsentry/sentry-go v0.44.1
 	github.com/go-gl/mathgl v1.2.0
 	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.1.0
-	github.com/sandertv/gophertunnel v1.55.0
+	github.com/sandertv/gophertunnel v1.55.1
 	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
 )
 

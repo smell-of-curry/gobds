@@ -11,6 +11,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/df-mc/dragonfly v0.10.11-0.20260211105526-1ec432bade04 h1:ep9XGHGhiib6fy7Aa9VddPTFyHXChBQRWXTLlxng5PA=
 github.com/df-mc/dragonfly v0.10.11-0.20260211105526-1ec432bade04/go.mod h1:7AWEHUohzndTvm0TAhe0RmGhG8REITR3aZIf4iSG7k0=
+github.com/df-mc/dragonfly v0.10.12 h1:+tarvb+mNJicZmAqIxwrnJOKI/Y4NtPq58M1SrSqB+M=
+github.com/df-mc/dragonfly v0.10.12/go.mod h1:jzMbcoFiO0YFjCjBml1cpEeAC14en+k24x3/CQaXGCY=
 github.com/df-mc/go-playfab v1.0.0 h1:6gVukk3aQbJ934GJFdcZJHVIw9lhauK+KHOevbwJA10=
 github.com/df-mc/go-playfab v1.0.0/go.mod h1:nGOlE+JFGOH5Z0iidEgJapHhndFi/oNk17RN9pKCF+k=
 github.com/df-mc/go-xsapi v1.0.1 h1:H1SbxYr4rXOqZSB8MwiODbDUsHRihxbHf+YOljUWgXw=
@@ -58,6 +60,7 @@ github.com/onsi/ginkgo v1.7.0 h1:WSHQ+IS43OoUrWtD1/bbclrwK8TTH5hzp+umCiuxHgs=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.3 h1:RE1xgDvH7imwFD45h+u2SgIfERHlS2yNG4DObb5BSKU=
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
+github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
 github.com/pelletier/go-toml/v2 v2.3.0 h1:k59bC/lIZREW0/iVaQR8nDHxVq8OVlIzYCOJf421CaM=
 github.com/pelletier/go-toml/v2 v2.3.0/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
@@ -74,6 +77,8 @@ github.com/sandertv/go-raknet v1.15.1-0.20260112202637-beca0b10c217 h1:UZQq2253Q
 github.com/sandertv/go-raknet v1.15.1-0.20260112202637-beca0b10c217/go.mod h1:/yysjwfCXm2+2OY8mBazLzcxJ3irnylKCyG3FLgUPVU=
 github.com/sandertv/gophertunnel v1.55.0 h1:0GMBOOl3NEzSOOUz6qNTWQ7S/seSYLh/4zAgy8RPyaY=
 github.com/sandertv/gophertunnel v1.55.0/go.mod h1:F8+ZPbzxJ0LqunXEaDjqeyUgHVB0rI5ZU+PHnptXGfI=
+github.com/sandertv/gophertunnel v1.55.1 h1:Tdce2StAtuIohHacQeNi/UPs4AtjJMZNX+suTDKcHbs=
+github.com/sandertv/gophertunnel v1.55.1/go.mod h1:F8+ZPbzxJ0LqunXEaDjqeyUgHVB0rI5ZU+PHnptXGfI=
 github.com/segmentio/fasthash v1.0.3 h1:EI9+KE1EwvMLBWwjpRDc+fEM+prwxDYbslddQGtrmhM=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
