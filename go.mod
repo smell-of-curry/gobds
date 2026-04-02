@@ -7,7 +7,7 @@ require (
 	github.com/df-mc/dragonfly v0.10.12
 	github.com/getsentry/sentry-go v0.44.1
 	github.com/go-gl/mathgl v1.2.0
-	github.com/go-jose/go-jose/v4 v4.1.3
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.1.0
