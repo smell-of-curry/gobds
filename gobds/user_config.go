@@ -30,8 +30,6 @@ type UserConfig struct {
 
 		Servers []ServerConfig
 
-		PlayerManagerPath string
-
 		Whitelisted   bool
 		WhitelistPath string
 
@@ -242,8 +240,6 @@ func DefaultConfig() UserConfig {
 			},
 		},
 	}
-
-	c.Network.PlayerManagerPath = "players/manager.json"
 
 	c.Network.Whitelisted = false
 	c.Network.WhitelistPath = "whitelist.json"

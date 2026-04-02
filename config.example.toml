@@ -1,6 +1,5 @@
 [Network]
 ServerRegion = 'Some region' # An identifier/name for the region, this is used for Sentry
-PlayerManagerPath = 'players/manager.json' # The path with the player-list file
 Whitelisted = false # If whitelist block is enabled
 WhitelistPath = 'whitelist.json' # The path to the whitelist file
 SecuredSlots = 0 # The amount of secured slots on the server for only whitelisted players
