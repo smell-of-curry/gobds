@@ -27,7 +27,6 @@ type Config struct {
 	AFKTimer              *infra.AFKTimer
 	Whitelist             *whitelist.Whitelist
 	Border                *area.Area2D
-	PlayerManager         *PlayerManager
 	Log                   *slog.Logger
 }
 
@@ -53,11 +52,6 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 	err := c.loadCommands(log)
 	if err != nil {
 		return conf, fmt.Errorf("error loading commands: %w", err)
-	}
-
-	conf.PlayerManager, err = NewPlayerManager(c.Network.PlayerManagerPath, log)
-	if err != nil {
-		return conf, fmt.Errorf("error creating player manager: %w", err)
 	}
 
 	for _, server := range c.Network.Servers {

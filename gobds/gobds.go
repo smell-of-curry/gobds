@@ -48,9 +48,6 @@ func (c *Config) New() (*GoBDS, error) {
 		cancel: cancel,
 	}
 
-	if c.PlayerManager == nil {
-		return nil, fmt.Errorf("start gobds: player manager is not configured")
-	}
 	if len(c.Servers) == 0 {
 		return nil, fmt.Errorf("start gobds: no servers configured")
 	}
@@ -67,7 +64,6 @@ func (gb *GoBDS) Listen() error {
 	}
 
 	gb.conf.Log.Info("starting gobds")
-	gb.conf.PlayerManager.Start(time.Minute * 3)
 
 	gb.wg.Add(len(gb.servers))
 	for _, srv := range gb.servers {
@@ -145,8 +141,9 @@ func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*s
 		}
 	}
 
-	identityData = gb.conf.PlayerManager.IdentityDataOf(conn)
-	clientData := gb.conf.PlayerManager.ClientDataOf(conn)
+	identityData = conn.IdentityData()
+	clientData := conn.ClientData()
+	clientData.SelfSignedID = selfSignedIDFromXUID(identityData.XUID)
 
 	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
