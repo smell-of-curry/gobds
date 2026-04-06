@@ -239,6 +239,7 @@ func (s *Session) registerHandlers() {
 		packet.IDItemRegistry:         &ItemRegistryHandler{},
 		packet.IDItemStackRequest:     &ItemStackRequestHandler{},
 		packet.IDLevelChunk:           &LevelChunkHandler{},
+		packet.IDModalFormRequest:     &ModalFormRequestHandler{},
 		packet.IDPlayerAuthInput:      NewPlayerAuthInputHandler(),
 		packet.IDRemoveActor:          &RemoveActorHandler{},
 		packet.IDSetActorData:         &SetActorDataHandler{},
