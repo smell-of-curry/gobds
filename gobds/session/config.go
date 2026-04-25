@@ -3,6 +3,7 @@ package session
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/entity"
@@ -43,6 +44,7 @@ func (c Config) New() *Session {
 		data: NewData(c.Client),
 		log:  c.Log,
 	}
+	s.afk.lastMoveTime = time.Now()
 	s.registerHandlers()
 	return s
 }

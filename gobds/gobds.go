@@ -87,6 +87,7 @@ func (gb *GoBDS) listen(srv *Server) {
 		return
 	}
 	go gb.claimFetching(srv)
+	go gb.afkEvaluator(srv, ctx)
 
 	go func() {
 		<-gb.ctx.Done()
@@ -112,8 +113,10 @@ func (gb *GoBDS) listen(srv *Server) {
 				return
 			}
 
+			srv.AddSession(s)
 			srv.Log.Info("player connected", "name", conn.IdentityData().DisplayName)
 			s.ReadPackets(ctx)
+			srv.RemoveSession(s)
 			srv.Log.Info("player disconnected", "name", conn.IdentityData().DisplayName)
 		}()
 	}

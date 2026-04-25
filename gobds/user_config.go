@@ -51,6 +51,18 @@ type UserConfig struct {
 	AFKTimer struct {
 		Enabled         bool
 		TimeoutDuration string
+		// WarnApproaching is how long a player must be idle before receiving
+		// an "AFK in 1 minute" soft warning. Always sent regardless of fullness.
+		WarnApproaching string
+		// MarkAFK is how long a player must be idle before being told they
+		// are now AFK. Always sent regardless of fullness.
+		MarkAFK string
+		// FinalWarning is how long a player must be idle before receiving the
+		// near-capacity hard warning. Only sent when fullness >= FullnessThreshold.
+		FinalWarning string
+		// FullnessThreshold is the fraction (0..1) of MaxPlayers at or above
+		// which the proxy will start kicking AFK players, longest-AFK first.
+		FullnessThreshold float64
 	}
 	Resources struct {
 		PacksRequired bool
@@ -149,12 +161,34 @@ func (c UserConfig) afkTimer() *infra.AFKTimer {
 	if !c.AFKTimer.Enabled {
 		return nil
 	}
-	d, err := time.ParseDuration(c.AFKTimer.TimeoutDuration)
-	if err != nil {
-		// Fallback to a sensible default to avoid crash on invalid config
-		d = 10 * time.Minute
+	parse := func(s string, fallback time.Duration) time.Duration {
+		if s == "" {
+			return fallback
+		}
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return fallback
+		}
+		return d
 	}
-	return &infra.AFKTimer{TimeoutDuration: d}
+
+	timeout := parse(c.AFKTimer.TimeoutDuration, 10*time.Minute)
+	warn := parse(c.AFKTimer.WarnApproaching, 4*time.Minute)
+	mark := parse(c.AFKTimer.MarkAFK, 5*time.Minute)
+	final := parse(c.AFKTimer.FinalWarning, 9*time.Minute)
+
+	threshold := c.AFKTimer.FullnessThreshold
+	if threshold <= 0 || threshold > 1 {
+		threshold = 0.9
+	}
+
+	return &infra.AFKTimer{
+		TimeoutDuration:   timeout,
+		WarnApproaching:   warn,
+		MarkAFK:           mark,
+		FinalWarning:      final,
+		FullnessThreshold: threshold,
+	}
 }
 
 // pingIndicator returns new PingIndicator instance.
@@ -255,6 +289,10 @@ func DefaultConfig() UserConfig {
 
 	c.AFKTimer.Enabled = true
 	c.AFKTimer.TimeoutDuration = "10m"
+	c.AFKTimer.WarnApproaching = "4m"
+	c.AFKTimer.MarkAFK = "5m"
+	c.AFKTimer.FinalWarning = "9m"
+	c.AFKTimer.FullnessThreshold = 0.9
 
 	c.Resources.PacksRequired = false
 	c.Resources.CommandPath = "resources/commands.json"
