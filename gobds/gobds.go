@@ -17,6 +17,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	_ "github.com/smell-of-curry/gobds/gobds/block"
+	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
@@ -257,7 +258,11 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 		PingIndicator: gb.conf.PingIndicator,
 		AFKTimer:      gb.conf.AFKTimer,
 
-		EntityFactory: srv.EntityFactory,
+		// EntityFactory must be per-session: each session has its own backend connection
+		// and BDS issues runtime IDs scoped to that connection. Sharing this map between
+		// sessions causes runtime-ID collisions where one session's lookup returns another
+		// session's entity, swapping Pokémon/item names on SetActorData (issue #53).
+		EntityFactory: entity.NewFactory(),
 		ClaimFactory:  srv.ClaimFactory,
 
 		Border: gb.conf.Border,

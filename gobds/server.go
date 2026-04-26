@@ -8,7 +8,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/smell-of-curry/gobds/gobds/claim"
-	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
@@ -30,8 +29,9 @@ type Server struct {
 	LocalAddress  string
 	RemoteAddress string
 
-	EntityFactory *entity.Factory
-	ClaimFactory  *claim.Factory
+	// ClaimFactory is shared across all sessions on this server because claims are world-state
+	// fetched periodically from an external service.
+	ClaimFactory *claim.Factory
 
 	Listener       Listener
 	StatusProvider minecraft.ServerStatusProvider

@@ -7,7 +7,6 @@ import (
 
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/smell-of-curry/gobds/gobds/claim"
-	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
@@ -60,8 +59,7 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 			LocalAddress:  server.LocalAddress,
 			RemoteAddress: server.RemoteAddress,
 
-			EntityFactory: entity.NewFactory(),
-			ClaimFactory:  claim.NewFactory(server.ClaimService, log),
+			ClaimFactory: claim.NewFactory(server.ClaimService, log),
 
 			DialerFunc: c.dialerFunc(server.RemoteAddress, log),
 
