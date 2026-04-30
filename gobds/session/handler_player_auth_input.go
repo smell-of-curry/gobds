@@ -2,29 +2,18 @@ package session
 
 import (
 	"slices"
-	"time"
 
-	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"github.com/sandertv/gophertunnel/minecraft/text"
 )
 
-// PlayerAuthInputHandler ...
-type PlayerAuthInputHandler struct {
-	lastMoveTime       time.Time
-	lastPosition       mgl32.Vec3
-	lastYaw, lastPitch float32
-}
+// PlayerAuthInputHandler handles PlayerAuthInput packets. AFK state lives on
+// the Session; this handler only feeds movement updates into it.
+type PlayerAuthInputHandler struct{}
 
 // NewPlayerAuthInputHandler ...
 func NewPlayerAuthInputHandler() *PlayerAuthInputHandler {
-	return &PlayerAuthInputHandler{
-		lastMoveTime: time.Now(),
-		lastPosition: mgl32.Vec3{},
-		lastYaw:      0,
-		lastPitch:    0,
-	}
+	return &PlayerAuthInputHandler{}
 }
 
 // Handle ...
@@ -33,37 +22,13 @@ func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Conte
 
 	if pkt.Tick%20 == 0 {
 		s.SendPingIndicator()
-		h.handleAFKTimer(s, pkt, ctx)
-		if ctx.Cancelled() {
-			return nil
+		if s.afkTimer != nil {
+			s.TouchMovement(pkt.Position, pkt.Yaw, pkt.Pitch)
 		}
 	}
 
 	h.handleWorldBorder(s, pkt, ctx)
 	return nil
-}
-
-// handleAFKTimer ...
-func (h *PlayerAuthInputHandler) handleAFKTimer(s *Session, pkt *packet.PlayerAuthInput, ctx *Context) {
-	if s.afkTimer == nil {
-		return
-	}
-
-	moved := !h.lastPosition.ApproxEqual(pkt.Position) ||
-		!mgl32.FloatEqual(h.lastYaw, pkt.Yaw) ||
-		!mgl32.FloatEqual(h.lastPitch, pkt.Pitch)
-	if moved {
-		h.lastMoveTime = time.Now()
-		h.lastPosition = pkt.Position
-		h.lastYaw = pkt.Yaw
-		h.lastPitch = pkt.Pitch
-		return
-	}
-
-	if time.Since(h.lastMoveTime) > s.afkTimer.TimeoutDuration {
-		s.Disconnect(text.Colourf("<red>You've been kicked for being AFK.</red>"))
-		ctx.Cancel()
-	}
 }
 
 // handleWorldBorder ...

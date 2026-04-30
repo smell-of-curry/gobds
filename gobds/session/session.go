@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/df-mc/dragonfly/server/event"
 	"github.com/df-mc/dragonfly/server/session"
+	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
@@ -33,8 +35,116 @@ type Session struct {
 
 	close chan struct{}
 
+	afk afkState
+
 	data *Data
 	log  *slog.Logger
+}
+
+// afkState tracks per-session AFK bookkeeping used by the AFK evaluator.
+//
+// The last position/rotation are stored here so the packet handler can be a
+// pure movement tracker without holding private state that the evaluator
+// goroutine cannot read.
+type afkState struct {
+	mu sync.RWMutex
+
+	lastMoveTime time.Time
+	lastPosition mgl32.Vec3
+	lastYaw      float32
+	lastPitch    float32
+
+	warnedApproaching bool
+	markedAFK         bool
+	warnedFinal       bool
+}
+
+// AFKTimer returns the session's AFK configuration, or nil if disabled.
+func (s *Session) AFKTimer() *infra.AFKTimer {
+	return s.afkTimer
+}
+
+// TouchMovement updates the last movement bookkeeping for the session. When
+// the position or orientation has changed it also resets the AFK warning
+// flags so the next idle streak starts from scratch. Returns true if the
+// session was considered to have moved.
+func (s *Session) TouchMovement(pos mgl32.Vec3, yaw, pitch float32) bool {
+	s.afk.mu.Lock()
+	defer s.afk.mu.Unlock()
+
+	moved := !s.afk.lastPosition.ApproxEqual(pos) ||
+		!mgl32.FloatEqual(s.afk.lastYaw, yaw) ||
+		!mgl32.FloatEqual(s.afk.lastPitch, pitch)
+	if !moved {
+		return false
+	}
+
+	s.afk.lastMoveTime = time.Now()
+	s.afk.lastPosition = pos
+	s.afk.lastYaw = yaw
+	s.afk.lastPitch = pitch
+	s.afk.warnedApproaching = false
+	s.afk.markedAFK = false
+	s.afk.warnedFinal = false
+	return true
+}
+
+// AFKDuration returns how long the session has been idle. Before the first
+// movement packet is received the session is considered to have just started
+// so the duration is measured from session creation.
+func (s *Session) AFKDuration() time.Duration {
+	s.afk.mu.RLock()
+	defer s.afk.mu.RUnlock()
+
+	if s.afk.lastMoveTime.IsZero() {
+		return 0
+	}
+	return time.Since(s.afk.lastMoveTime)
+}
+
+// WarnedApproaching returns whether the approaching-AFK soft warning has
+// already been sent for the current idle streak.
+func (s *Session) WarnedApproaching() bool {
+	s.afk.mu.RLock()
+	defer s.afk.mu.RUnlock()
+	return s.afk.warnedApproaching
+}
+
+// SetWarnedApproaching marks the approaching-AFK soft warning as sent.
+func (s *Session) SetWarnedApproaching(v bool) {
+	s.afk.mu.Lock()
+	s.afk.warnedApproaching = v
+	s.afk.mu.Unlock()
+}
+
+// MarkedAFK returns whether the "you are now AFK" soft warning has already
+// been sent for the current idle streak.
+func (s *Session) MarkedAFK() bool {
+	s.afk.mu.RLock()
+	defer s.afk.mu.RUnlock()
+	return s.afk.markedAFK
+}
+
+// SetMarkedAFK marks the "you are now AFK" soft warning as sent.
+func (s *Session) SetMarkedAFK(v bool) {
+	s.afk.mu.Lock()
+	s.afk.markedAFK = v
+	s.afk.mu.Unlock()
+}
+
+// WarnedFinal returns whether the near-capacity final warning has already
+// been sent for the current idle streak.
+func (s *Session) WarnedFinal() bool {
+	s.afk.mu.RLock()
+	defer s.afk.mu.RUnlock()
+	return s.afk.warnedFinal
+}
+
+// SetWarnedFinal marks the near-capacity final warning as sent.
+func (s *Session) SetWarnedFinal(v bool) {
+	s.afk.mu.Lock()
+	s.afk.warnedFinal = v
+	s.afk.mu.Unlock()
 }
 
 // SendPingIndicator ...
