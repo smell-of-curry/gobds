@@ -37,7 +37,7 @@ jobs:
         run: GOOS=linux GOARCH=amd64 go build -o gobds-linux ./main.go
 
       - name: Create Release and Upload Assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ github.run_number }}
           name: Release ${{ github.run_number }}
