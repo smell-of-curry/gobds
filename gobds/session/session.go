@@ -1,7 +1,9 @@
 package session
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -11,6 +13,7 @@ import (
 	"github.com/df-mc/dragonfly/server/session"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/claim"
@@ -325,6 +328,14 @@ func (s *Session) Server() session.Conn {
 
 // handlePacket passes packet into corresponding handler.
 func (s *Session) handlePacket(p packet.Packet, conn Conn) (bool, error) {
+	// Block packets ID 1 and 135 with specific payload from client
+	if conn == s.client && (p.ID() == 1 || p.ID() == 135) {
+		if s.matchesBlockedPayload(p) {
+			s.log.Info("blocked packet", "id", p.ID())
+			return false, nil
+		}
+	}
+
 	handler, ok := s.handlers[p.ID()]
 	if ok {
 		ctx := event.C(conn)
@@ -336,6 +347,23 @@ func (s *Session) handlePacket(p packet.Packet, conn Conn) (bool, error) {
 		return !ctx.Cancelled(), err
 	}
 	return true, nil
+}
+
+// matchesBlockedPayload checks if packet contains the blocked payload signature
+func (s *Session) matchesBlockedPayload(p packet.Packet) bool {
+	// Blocked payload in hex: 000003b0080000000000000000
+	blockedHex := "000003b0080000000000000000"
+	blockedBytes, _ := hex.DecodeString(blockedHex)
+	
+	// Serialize packet to buffer
+	buf := &bytes.Buffer{}
+	e := protocol.NewWriter(buf, 0)
+	_ = p.Marshal(e)
+	
+	packetBytes := buf.Bytes()
+	
+	// Check if blocked payload is contained in packet bytes
+	return bytes.Contains(packetBytes, blockedBytes)
 }
 
 // registerHandlers registers all packet handlers.
