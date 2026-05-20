@@ -358,7 +358,7 @@ func (s *Session) matchesBlockedPayload(p packet.Packet) bool {
 	// Serialize packet to buffer
 	buf := &bytes.Buffer{}
 	e := protocol.NewWriter(buf, 0)
-	_ = p.Marshal(e)
+	p.Marshal(e)
 	
 	packetBytes := buf.Bytes()
 	
