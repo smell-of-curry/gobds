@@ -348,7 +348,7 @@ func (s *Session) handlePacket(p packet.Packet, conn Conn) (bool, error) {
 	}
 	return true, nil
 }
-
+ 
 // matchesBlockedPayload checks if packet contains the blocked payload signature
 func (s *Session) matchesBlockedPayload(p packet.Packet) bool {
 	// Blocked payload in hex: 000003b0080000000000000000
