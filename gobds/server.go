@@ -17,7 +17,11 @@ type ServerConfig struct {
 	Name          string
 	LocalAddress  string
 	RemoteAddress string
-	ClaimService  struct {
+	// MOTD is the name shown in the server list. Falls back to Name when empty.
+	MOTD string
+	// MaxPlayers is the player capacity advertised in the server list.
+	MaxPlayers   int
+	ClaimService struct {
 		Enabled bool
 		URL     string
 		Key     string

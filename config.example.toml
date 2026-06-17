@@ -11,6 +11,8 @@ SentryDSN = '' # The DSN link of the sentry connection
 Name = 'Some server'
 LocalAddress = '127.0.0.1:19132'
 RemoteAddress = '127.0.0.1:19133'
+MOTD = 'Some server' # The name shown in the server list. Falls back to Name when empty.
+MaxPlayers = 80 # Capacity advertised in the server list. The proxy reports its own live player count against this, so status stays correct even if the backend hides its pong (e.g. enable-lan-visibility=false).
 
 [Network.Servers.ClaimService] # Claim Service configuration for Server A.
 Enabled = false # Whether this service is enabled
