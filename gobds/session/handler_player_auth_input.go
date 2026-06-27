@@ -18,7 +18,23 @@ func NewPlayerAuthInputHandler() *PlayerAuthInputHandler {
 
 // Handle ...
 func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
-	pkt := pk.(*packet.PlayerAuthInput)
+	pkt, ok := pk.(*packet.PlayerAuthInput)
+	if !ok || pkt == nil {
+		// invalid / malformed packet → drop silently
+		ctx.Cancel()
+		return nil
+	}
+
+	// basic sanity checks (IMPORTANT)
+	if len(pkt.BlockActions) > 1000 {
+		ctx.Cancel()
+		return nil
+	}
+
+	if pkt.Tick < 0 {
+		ctx.Cancel()
+		return nil
+	}
 
 	if pkt.Tick%20 == 0 {
 		s.SendPingIndicator()
