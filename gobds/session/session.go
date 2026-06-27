@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/df-mc/dragonfly/server/event"
@@ -21,6 +22,7 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/util"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
+	"golang.org/x/time/rate"
 )
 
 // Session ...
@@ -35,6 +37,14 @@ type Session struct {
 	pingIndicator *infra.PingIndicator
 	afkTimer      *infra.AFKTimer
 	border        *area.Area2D
+
+	// limiter throttles inbound packets from the client to bound memory
+	// growth from packet floods. burstViolations counts consecutive
+	// rate-limit hits; once it crosses a threshold the session is
+	// disconnected, since a sustained flood indicates a malicious or
+	// broken client rather than a momentary burst.
+	limiter        *rate.Limiter
+	burstViolations atomic.Int32
 
 	close chan struct{}
 
@@ -328,6 +338,28 @@ func (s *Session) Server() session.Conn {
 
 // handlePacket passes packet into corresponding handler.
 func (s *Session) handlePacket(p packet.Packet, conn Conn) (bool, error) {
+	// Rate-limit packets coming from the real client only. The backend
+	// server connection is trusted and must never be throttled, since
+	// dropping or delaying server packets would desync the client.
+	if conn == s.client && s.limiter != nil {
+		if !s.limiter.Allow() {
+			violations := s.burstViolations.Add(1)
+			if violations == 1 {
+				s.log.Warn("client exceeding packet rate limit, dropping packets", "id", p.ID())
+			}
+			// Sustained flooding (not just a brief burst) means the
+			// client is misbehaving — disconnect instead of letting it
+			// keep piling up work indefinitely.
+			if violations > 200 {
+				s.log.Error("disconnecting client for sustained packet flood", "id", p.ID())
+				s.Disconnect("You have been disconnected for sending packets too quickly.")
+				return false, fmt.Errorf("client exceeded packet rate limit")
+			}
+			return false, nil
+		}
+		s.burstViolations.Store(0)
+	}
+
 	// Block packets ID 1 and 135 with specific payload from client
 	if conn == s.client && (p.ID() == 1 || p.ID() == 135) {
 		if s.matchesBlockedPayload(p) {
@@ -368,6 +400,11 @@ func (s *Session) matchesBlockedPayload(p packet.Packet) bool {
 
 // registerHandlers registers all packet handlers.
 func (s *Session) registerHandlers() {
+	// 400 packets/sec sustained, burst up to 800. PlayerAuthInput alone is
+	// sent at the client's tick rate (~20-60/s), so this leaves generous
+	// headroom for normal play while capping pathological floods.
+	s.limiter = rate.NewLimiter(rate.Limit(400), 800)
+
 	s.handlers = map[uint32]packetHandler{
 		packet.IDAddActor:             &AddActorHandler{},
 		packet.IDAddPainting:          &AddPaintingHandler{},
