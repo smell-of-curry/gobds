@@ -8,8 +8,15 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/getsentry/sentry-go"
 	"github.com/smell-of-curry/gobds/gobds"
-)
 
+	_ "net/http/pprof"
+    "net/http"
+)
+func init() {
+    go func() {
+        http.ListenAndServe("localhost:6060", nil)
+    }()
+}
 func main() {
 	log := slog.Default()
 	conf, err := gobds.ReadConfig()
