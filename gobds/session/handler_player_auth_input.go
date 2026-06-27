@@ -30,7 +30,7 @@ func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Conte
 		ctx.Cancel()
 		return nil
 	} 
-
+ 
 	if pkt.Tick < 0 {
 		ctx.Cancel()
 		return nil
