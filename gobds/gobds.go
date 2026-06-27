@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
-	_ "unsafe"
 
+	"github.com/df-mc/dragonfly/server/world"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	_ "github.com/smell-of-curry/gobds/gobds/block"
@@ -41,7 +41,7 @@ type GoBDS struct {
 func (c *Config) New() (*GoBDS, error) {
 	c.Log.Info("creating a new instance of gobds")
 	ctx, cancel := context.WithCancel(context.Background())
-	world_finaliseBlockRegistry()
+	world.DefaultBlockRegistry.Finalize()
 
 	gobds := &GoBDS{
 		conf:   c,
@@ -291,8 +291,3 @@ func (gb *GoBDS) CloseOnProgramEnd() {
 		_ = gb.Close()
 	}()
 }
-
-// noinspection ALL
-//
-//go:linkname world_finaliseBlockRegistry github.com/df-mc/dragonfly/server/world.finaliseBlockRegistry
-func world_finaliseBlockRegistry()

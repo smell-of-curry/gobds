@@ -65,8 +65,16 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 
 			Log: log.With(slog.String("srv", server.Name)),
 		}
+		motd := server.MOTD
+		if motd == "" {
+			motd = server.Name
+		}
+		maxPlayers := server.MaxPlayers
+		if maxPlayers <= 0 {
+			maxPlayers = 80
+		}
 		srv.StatusProviderFunc = func() (minecraft.ServerStatusProvider, error) {
-			return minecraft.NewForeignStatusProvider(server.RemoteAddress)
+			return newProxyStatusProvider(srv, motd, maxPlayers), nil
 		}
 		srv.ListenerFunc = func() (Listener, error) {
 			return c.listenerFunc(srv)
