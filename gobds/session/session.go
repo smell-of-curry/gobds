@@ -381,21 +381,23 @@ func (s *Session) handlePacket(p packet.Packet, conn Conn) (bool, error) {
 	return true, nil
 }
 
+// blockedPayload is the blocked payload signature, precomputed once instead
+// of being hex-decoded on every single packet check (this ran on every
+// client packet with ID 1/135, adding avoidable CPU/allocation pressure to
+// the already CPU-bound packet decode path).
+var blockedPayload = func() []byte {
+	b, _ := hex.DecodeString("000003b0080000000000000000")
+	return b
+}()
+
 // matchesBlockedPayload checks if packet contains the blocked payload signature
 func (s *Session) matchesBlockedPayload(p packet.Packet) bool {
-	// Blocked payload in hex: 000003b0080000000000000000
-	blockedHex := "000003b0080000000000000000"
-	blockedBytes, _ := hex.DecodeString(blockedHex)
-	
 	// Serialize packet to buffer
 	buf := &bytes.Buffer{}
 	e := protocol.NewWriter(buf, 0)
 	p.Marshal(e)
-	
-	packetBytes := buf.Bytes()
-	
-	// Check if blocked payload is contained in packet bytes
-	return bytes.Contains(packetBytes, blockedBytes)
+
+	return bytes.Contains(buf.Bytes(), blockedPayload)
 }
 
 // registerHandlers registers all packet handlers.

@@ -21,6 +21,7 @@ import (
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
+	"golang.org/x/time/rate"
 )
 
 // GoBDS ...
@@ -33,6 +34,14 @@ type GoBDS struct {
 	started atomic.Pointer[time.Time]
 
 	servers []*Server
+
+	// joinLimiter paces how quickly new connections are allowed to proceed
+	// past Accept and into the chunk-loading part of startGame. Without
+	// this, a burst of simultaneous joins (e.g. right after a restart) all
+	// load chunks at once, which can overwhelm packet decoding and pile up
+	// gophertunnel's internal deferred-packet backlog across many sessions
+	// at the same time, spiking memory.
+	joinLimiter *rate.Limiter
 
 	wg sync.WaitGroup
 }
@@ -47,6 +56,10 @@ func (c *Config) New() (*GoBDS, error) {
 		conf:   c,
 		ctx:    ctx,
 		cancel: cancel,
+		// Allow at most ~2 joins/sec to proceed into chunk loading at once,
+		// with a small burst allowance so a handful of players can still
+		// join almost instantly. Tune to your hardware/backend.
+		joinLimiter: rate.NewLimiter(rate.Limit(2), 5),
 	}
 
 	if len(c.Servers) == 0 {
@@ -107,6 +120,12 @@ func (gb *GoBDS) listen(srv *Server) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
+			// Wait our turn before proceeding into the expensive part of
+			// the join sequence (dialing the backend, StartGame, chunk
+			// load). This staggers bursts of simultaneous joins so they
+			// don't all hit packet decoding at once.
+			_ = gb.joinLimiter.Wait(ctx)
 
 			s, err := gb.accept(conn, srv, ctx)
 			if err != nil {

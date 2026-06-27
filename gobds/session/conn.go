@@ -21,22 +21,3 @@ type Conn interface {
 	IdentityData() login.IdentityData
 	ClientData() login.ClientData
 }
-
-packets: make(chan *packetData, 8),   // nur 8 Slots Puffer!
-
-func (conn *Conn) receive(data []byte) error {
-    ...
-    if conn.loggedIn && !conn.waitingForSpawn.Load() {
-        select {
-        case previous := <-conn.packets:
-            // Channel ist voll → ältestes Packet raus, in deferredPackets verschieben
-            conn.deferPacket(previous)
-        default:
-        }
-        select {
-        case conn.packets <- pkData:   // neues Packet rein
-        }
-        return nil
-    }
-    ...
-}
