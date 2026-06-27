@@ -29,7 +29,7 @@ func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Conte
 	if len(pkt.BlockActions) > 1000 {
 		ctx.Cancel()
 		return nil
-	}
+	} 
 
 	if pkt.Tick < 0 {
 		ctx.Cancel()
