@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gobds ./main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gobds .
 
 FROM alpine:latest AS runner
 
