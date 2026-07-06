@@ -8,6 +8,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/infra"
+	"github.com/smell-of-curry/gobds/gobds/service"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
@@ -39,7 +40,11 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		SecuredSlots:          c.Network.SecuredSlots,
 		EncryptionKey:         c.Encryption.Key,
 		AuthenticationService: authentication.NewService(log, c.AuthenticationService),
-		VPNService:            vpn.NewService(log, c.VPNService),
+		VPNService: vpn.NewService(log, service.Config{
+			Enabled: c.VPNService.Enabled,
+			URL:     c.VPNService.URL,
+			Key:     c.VPNService.Key,
+		}, c.VPNService.WhitelistedCIDRs),
 		PingIndicator:         c.pingIndicator(),
 		AFKTimer:              c.afkTimer(),
 		Whitelist:             c.whiteList(log),

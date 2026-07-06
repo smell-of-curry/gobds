@@ -80,6 +80,10 @@ type UserConfig struct {
 		Enabled bool
 		URL     string
 		Key     string
+		// WhitelistedCIDRs are IP ranges (e.g. "45.230.64.0/22") never
+		// treated as VPN/proxy connections. Used for residential ISP
+		// blocks the detection API misclassifies.
+		WhitelistedCIDRs []string
 	}
 	Encryption struct {
 		Key string
@@ -305,6 +309,8 @@ func DefaultConfig() UserConfig {
 
 	c.VPNService.Enabled = false
 	c.VPNService.URL = "http://ip-api.com/json"
+	// Megalink S.R.L. (Argentina) — residential ISP flagged as proxy by ip-api.
+	c.VPNService.WhitelistedCIDRs = []string{"45.230.64.0/22"}
 
 	c.Encryption.Key = defaultKey
 	return c

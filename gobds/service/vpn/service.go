@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,17 +20,39 @@ type Service struct {
 	*service.Service
 	rateLimitReset time.Time
 	mu             sync.Mutex
+
+	// whitelist holds CIDR ranges never treated as proxies, regardless of
+	// what the upstream detection API says.
+	whitelist []netip.Prefix
 }
 
-// NewService ...
-func NewService(log *slog.Logger, c service.Config) *Service {
-	return &Service{Service: service.NewService(log, c)}
+// NewService creates a VPN detection service. whitelistCIDRs are IP ranges
+// (e.g. "45.230.64.0/22") that always pass the check; invalid entries are
+// logged and skipped.
+func NewService(log *slog.Logger, c service.Config, whitelistCIDRs []string) *Service {
+	whitelist := make([]netip.Prefix, 0, len(whitelistCIDRs))
+	for _, cidr := range whitelistCIDRs {
+		p, err := netip.ParsePrefix(strings.TrimSpace(cidr))
+		if err != nil {
+			log.Warn("ignoring invalid vpn whitelist cidr", "cidr", cidr, "error", err)
+			continue
+		}
+		whitelist = append(whitelist, p.Masked())
+	}
+	return &Service{Service: service.NewService(log, c), whitelist: whitelist}
 }
 
 // CheckIP ...
 func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error) {
 	if !s.Enabled {
 		return &ResponseModel{Status: "success", Proxy: false}, nil
+	}
+	if addr, err := netip.ParseAddr(ip); err == nil {
+		for _, p := range s.whitelist {
+			if p.Contains(addr) {
+				return &ResponseModel{Status: "success", Proxy: false}, nil
+			}
+		}
 	}
 	s.mu.Lock()
 	if time.Now().Before(s.rateLimitReset) {
