@@ -44,10 +44,10 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 			URL:     c.VPNService.URL,
 			Key:     c.VPNService.Key,
 		}, c.VPNService.WhitelistedCIDRs),
-		AFKTimer:              c.afkTimer(),
-		Whitelist:             c.whiteList(log),
-		Border:                c.makeBorder(),
-		Log:                   log,
+		AFKTimer:  c.afkTimer(),
+		Whitelist: c.whiteList(log),
+		Border:    c.makeBorder(),
+		Log:       log,
 	}
 	session.SetCommandPath(c.Resources.CommandPath)
 
@@ -74,7 +74,7 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		}
 		maxPlayers := server.MaxPlayers
 		if maxPlayers <= 0 {
-			maxPlayers = 80
+			maxPlayers = 85
 		}
 		srv.StatusProviderFunc = func() (minecraft.ServerStatusProvider, error) {
 			return newProxyStatusProvider(srv, motd, maxPlayers), nil

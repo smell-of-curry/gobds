@@ -256,7 +256,7 @@ func DefaultConfig() UserConfig {
 			LocalAddress:  "127.0.0.1:19132",
 			RemoteAddress: "127.0.0.1:19133",
 			MOTD:          "Some server",
-			MaxPlayers:    80,
+			MaxPlayers:    85,
 			ClaimService: struct {
 				Enabled bool
 				URL     string
