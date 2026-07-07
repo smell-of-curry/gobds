@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-// PingIndicator represents session ping indicator.
-type PingIndicator struct {
-	Identifier string
-}
-
 // AFKTimer represents session afk timer configuration.
 //
 // TimeoutDuration is the idle duration after which a player becomes eligible

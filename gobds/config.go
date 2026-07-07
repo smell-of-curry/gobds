@@ -23,7 +23,6 @@ type Config struct {
 	EncryptionKey         string
 	AuthenticationService *authentication.Service
 	VPNService            *vpn.Service
-	PingIndicator         *infra.PingIndicator
 	AFKTimer              *infra.AFKTimer
 	Whitelist             *whitelist.Whitelist
 	Border                *area.Area2D
@@ -45,7 +44,6 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 			URL:     c.VPNService.URL,
 			Key:     c.VPNService.Key,
 		}, c.VPNService.WhitelistedCIDRs),
-		PingIndicator:         c.pingIndicator(),
 		AFKTimer:              c.afkTimer(),
 		Whitelist:             c.whiteList(log),
 		Border:                c.makeBorder(),

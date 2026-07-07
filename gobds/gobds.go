@@ -258,7 +258,6 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 		Client: conn,
 		Server: serverConn,
 
-		PingIndicator: gb.conf.PingIndicator,
 		AFKTimer:      gb.conf.AFKTimer,
 
 		// EntityFactory must be per-session: each session has its own backend connection

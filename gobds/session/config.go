@@ -16,7 +16,6 @@ type Config struct {
 	Client Conn
 	Server Conn
 
-	PingIndicator *infra.PingIndicator
 	AFKTimer      *infra.AFKTimer
 	Border        *area.Area2D
 
@@ -32,7 +31,6 @@ func (c Config) New() *Session {
 		client: c.Client,
 		server: c.Server,
 
-		pingIndicator: c.PingIndicator,
 		afkTimer:      c.AFKTimer,
 		border:        c.Border,
 

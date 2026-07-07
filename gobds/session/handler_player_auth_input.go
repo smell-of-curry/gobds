@@ -20,11 +20,8 @@ func NewPlayerAuthInputHandler() *PlayerAuthInputHandler {
 func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.PlayerAuthInput)
 
-	if pkt.Tick%20 == 0 {
-		s.SendPingIndicator()
-		if s.afkTimer != nil {
-			s.TouchMovement(pkt.Position, pkt.Yaw, pkt.Pitch)
-		}
+	if pkt.Tick%20 == 0 && s.afkTimer != nil {
+		s.TouchMovement(pkt.Position, pkt.Yaw, pkt.Pitch)
 	}
 
 	h.handleWorldBorder(s, pkt, ctx)

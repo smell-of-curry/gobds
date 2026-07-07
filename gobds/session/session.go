@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -29,7 +28,6 @@ type Session struct {
 	entityFactory *entity.Factory
 	claimFactory  *claim.Factory
 
-	pingIndicator *infra.PingIndicator
 	afkTimer      *infra.AFKTimer
 	border        *area.Area2D
 
@@ -147,41 +145,9 @@ func (s *Session) SetWarnedFinal(v bool) {
 	s.afk.mu.Unlock()
 }
 
-// SendPingIndicator ...
-func (s *Session) SendPingIndicator() {
-	if s.pingIndicator == nil {
-		return
-	}
-
-	ping := s.Ping()
-	var color string
-	switch {
-	case ping < 20:
-		color = "§a"
-	case ping < 50:
-		color = "§e"
-	case ping < 100:
-		color = "§6"
-	case ping < 200:
-		color = "§c"
-	default:
-		color = "§4"
-	}
-
-	s.WriteToClient(&packet.SetTitle{
-		ActionType: packet.TitleActionSetTitle,
-		Text:       fmt.Sprintf("%sCurrent Ping: %s%d", s.pingIndicator.Identifier, color, ping),
-	})
-}
-
 // Data ...
 func (s *Session) Data() *Data {
 	return s.data
-}
-
-// Ping ...
-func (s *Session) Ping() int64 {
-	return s.client.Latency().Milliseconds()
 }
 
 // WriteToClient ...

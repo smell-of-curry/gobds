@@ -44,10 +44,6 @@ type UserConfig struct {
 		MinX, MinZ int32
 		MaxX, MaxZ int32
 	}
-	PingIndicator struct {
-		Enabled    bool
-		Identifier string
-	}
 	AFKTimer struct {
 		Enabled         bool
 		TimeoutDuration string
@@ -195,14 +191,6 @@ func (c UserConfig) afkTimer() *infra.AFKTimer {
 	}
 }
 
-// pingIndicator returns new PingIndicator instance.
-func (c UserConfig) pingIndicator() *infra.PingIndicator {
-	if !c.PingIndicator.Enabled {
-		return nil
-	}
-	return &infra.PingIndicator{Identifier: c.PingIndicator.Identifier}
-}
-
 // whiteList returns new Whitelist instance.
 func (c UserConfig) whiteList(log *slog.Logger) *whitelist.Whitelist {
 	if !c.Network.Whitelisted {
@@ -289,9 +277,6 @@ func DefaultConfig() UserConfig {
 	c.Network.FlushRate = 20
 
 	c.Border.Enabled = false
-
-	c.PingIndicator.Enabled = true
-	c.PingIndicator.Identifier = "&_playerPing:"
 
 	c.AFKTimer.Enabled = true
 	c.AFKTimer.TimeoutDuration = "10m"
