@@ -50,8 +50,8 @@ func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error
 	if s.isWhitelisted(ip) {
 		return &ResponseModel{Status: "success", Proxy: false}, nil
 	}
-	if s.rateLimitActive() {
-		return nil, fmt.Errorf("rate limit active, please wait until %v", s.rateLimitReset)
+	if active, reset := s.rateLimitActive(); active {
+		return nil, fmt.Errorf("rate limit active, please wait until %v", reset)
 	}
 
 	var lastErr error
@@ -122,10 +122,10 @@ func (s *Service) isWhitelisted(ip string) bool {
 	return false
 }
 
-func (s *Service) rateLimitActive() bool {
+func (s *Service) rateLimitActive() (bool, time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return time.Now().Before(s.rateLimitReset)
+	return time.Now().Before(s.rateLimitReset), s.rateLimitReset
 }
 
 // handleRateLimitHeaders ...
