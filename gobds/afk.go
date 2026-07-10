@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
@@ -58,18 +59,7 @@ func (gb *GoBDS) evaluateAFK(srv *Server) {
 		cands = append(cands, afkCandidate{s: s, dur: s.AFKDuration()})
 	}
 
-	// Soft warnings always fire regardless of fullness. They only fire once
-	// per idle streak because the flags are reset on movement.
-	for _, c := range cands {
-		if c.dur >= timer.WarnApproaching && !c.s.WarnedApproaching() {
-			c.s.Message(text.Colourf("<yellow>You will be marked AFK in 1 minute. Move to reset your timer.</yellow>"))
-			c.s.SetWarnedApproaching(true)
-		}
-		if c.dur >= timer.MarkAFK && !c.s.MarkedAFK() {
-			c.s.Message(text.Colourf("<gold>You are now AFK. Move to reset your timer.</gold>"))
-			c.s.SetMarkedAFK(true)
-		}
-	}
+	gb.warnAFKSessions(cands, timer)
 
 	if srv.StatusProvider == nil {
 		return
@@ -83,12 +73,7 @@ func (gb *GoBDS) evaluateAFK(srv *Server) {
 		return
 	}
 
-	for _, c := range cands {
-		if c.dur >= timer.FinalWarning && !c.s.WarnedFinal() {
-			c.s.Message(text.Colourf("<red>Server is near capacity. Move now or you will be kicked for being AFK.</red>"))
-			c.s.SetWarnedFinal(true)
-		}
-	}
+	gb.warnFinalAFKSessions(cands, timer)
 
 	// Only sessions that are past the kick threshold are eligible, sorted
 	// longest-AFK first so the most-idle players go before the borderline ones.
@@ -114,5 +99,30 @@ func (gb *GoBDS) evaluateAFK(srv *Server) {
 		}
 		c.s.Disconnect(text.Colourf("<red>You've been kicked for being AFK.</red>"))
 		remaining--
+	}
+}
+
+// warnAFKSessions sends soft AFK warnings regardless of server fullness. The
+// warning flags are reset by movement, so each message only fires once per idle
+// streak.
+func (gb *GoBDS) warnAFKSessions(cands []afkCandidate, timer *infra.AFKTimer) {
+	for _, c := range cands {
+		if c.dur >= timer.WarnApproaching && !c.s.WarnedApproaching() {
+			c.s.Message(text.Colourf("<yellow>You will be marked AFK in 1 minute. Move to reset your timer.</yellow>"))
+			c.s.SetWarnedApproaching(true)
+		}
+		if c.dur >= timer.MarkAFK && !c.s.MarkedAFK() {
+			c.s.Message(text.Colourf("<gold>You are now AFK. Move to reset your timer.</gold>"))
+			c.s.SetMarkedAFK(true)
+		}
+	}
+}
+
+func (gb *GoBDS) warnFinalAFKSessions(cands []afkCandidate, timer *infra.AFKTimer) {
+	for _, c := range cands {
+		if c.dur >= timer.FinalWarning && !c.s.WarnedFinal() {
+			c.s.Message(text.Colourf("<red>Server is near capacity. Move now or you will be kicked for being AFK.</red>"))
+			c.s.SetWarnedFinal(true)
+		}
 	}
 }

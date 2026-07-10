@@ -45,7 +45,7 @@ type rateLimitHandler struct {
 	state *rateLimiterState
 }
 
-// newRateLimitHandler wraps inner so that recognised backend-down log spam is
+// newRateLimitHandler wraps inner so that recognized backend-down log spam is
 // throttled to one line per window.
 //
 // @param inner The underlying handler to forward non-suppressed records to.

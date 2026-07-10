@@ -47,19 +47,12 @@ func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error
 	if !s.Enabled {
 		return &ResponseModel{Status: "success", Proxy: false}, nil
 	}
-	if addr, err := netip.ParseAddr(ip); err == nil {
-		for _, p := range s.whitelist {
-			if p.Contains(addr) {
-				return &ResponseModel{Status: "success", Proxy: false}, nil
-			}
-		}
+	if s.isWhitelisted(ip) {
+		return &ResponseModel{Status: "success", Proxy: false}, nil
 	}
-	s.mu.Lock()
-	if time.Now().Before(s.rateLimitReset) {
-		s.mu.Unlock()
-		return nil, fmt.Errorf("rate limit active, please wait until %v", s.rateLimitReset)
+	if active, reset := s.rateLimitActive(); active {
+		return nil, fmt.Errorf("rate limit active, please wait until %v", reset)
 	}
-	s.mu.Unlock()
 
 	var lastErr error
 	for attempt := 0; attempt <= 1; attempt++ {
@@ -114,6 +107,25 @@ func (s *Service) CheckIP(ip string, ctx context.Context) (*ResponseModel, error
 		_ = response.Body.Close()
 	}
 	return nil, lastErr
+}
+
+func (s *Service) isWhitelisted(ip string) bool {
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return false
+	}
+	for _, p := range s.whitelist {
+		if p.Contains(addr) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) rateLimitActive() (bool, time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return time.Now().Before(s.rateLimitReset), s.rateLimitReset
 }
 
 // handleRateLimitHeaders ...

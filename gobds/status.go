@@ -37,7 +37,7 @@ func newProxyStatusProvider(srv *Server, name string, maxPlayers int) *proxyStat
 // The Listener calls this with its own live connection count as playerCount;
 // internal callers (e.g. the AFK evaluator) pass a negative playerCount, in
 // which case the authoritative live session count of the server is used. The
-// caller's maxPlayers is ignored in favour of the configured capacity.
+// caller's maxPlayers is ignored in favor of the configured capacity.
 //
 // playerCount is the listener's live connection count, or negative to request
 // the server's tracked session count.
