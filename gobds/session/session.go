@@ -161,7 +161,7 @@ func (s *Session) Ping() int64 {
 }
 
 // ForwardPing sends the real client↔proxy latency to BDS when it changes.
-// BDS getPing() only sees proxy↔BDS (~0 on same box), so the behaviour pack
+// BDS getPing() only sees proxy↔BDS (~0 on same box), so the behavior pack
 // must receive this via chat and drive the PHUD indicator itself.
 func (s *Session) ForwardPing() {
 	ping := s.Ping()
