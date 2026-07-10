@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
 
@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gobds ./main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gobds .
 
 FROM alpine:latest AS runner
 

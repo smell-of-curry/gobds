@@ -1,18 +1,18 @@
 [Network]
 ServerRegion = 'Some region' # An identifier/name for the region, this is used for Sentry
-PlayerManagerPath = 'players/manager.json' # The path with the player-list file
 Whitelisted = false # If whitelist block is enabled
 WhitelistPath = 'whitelist.json' # The path to the whitelist file
 SecuredSlots = 0 # The amount of secured slots on the server for only whitelisted players
 MaxRenderDistance = 16 # The view distance for players
 FlushRate = 20 # The flush rate for the server
 SentryDSN = '' # The DSN link of the sentry connection
-HashedBlockIDS = true # Whether the downstream server uses hashed block IDs
 
 [[Network.Servers]] # Server A: accepts connections from ':19132', redirects to ':19133'.
 Name = 'Some server'
 LocalAddress = '127.0.0.1:19132'
 RemoteAddress = '127.0.0.1:19133'
+MOTD = 'Some server' # The name shown in the server list. Falls back to Name when empty.
+MaxPlayers = 85 # Capacity advertised in the server list. The proxy reports its own live player count against this, so status stays correct even if the backend hides its pong (e.g. enable-lan-visibility=false).
 
 [Network.Servers.ClaimService] # Claim Service configuration for Server A.
 Enabled = false # Whether this service is enabled

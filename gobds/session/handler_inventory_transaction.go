@@ -44,11 +44,11 @@ func (h *InventoryTransactionHandler) handleInteraction(s *Session, pkt *packet.
 	if !ok {
 		return
 	}
-	if transactionData.ActionType != protocol.UseItemActionClickBlock &&
-		transactionData.TriggerType != protocol.UseItemActionClickAir {
+	if transactionData.ActionType != protocol.UseItemActionClickBlock ||
+		transactionData.TriggerType != protocol.TriggerTypePlayerInput {
 		return
 	}
-	b, ok := blockByRuntimeID(transactionData.BlockRuntimeID)
+	b, ok := blockByRuntimeID(transactionData.BlockRuntimeID, s.GameData().UseBlockNetworkIDHashes)
 	if !ok {
 		return
 	}
@@ -100,31 +100,62 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 		return
 	}
 
-	clientData := s.Data()
-	pos := transactionData.ClickedPosition
-	claim, exists := ClaimAt(s.claimFactory.All(), clientData.Dimension(), pos.X(), pos.Z())
+	switch transactionData.ActionType {
+	case protocol.UseItemActionClickBlock:
+		h.handleClaimClickBlock(s, transactionData, ctx)
+	case protocol.UseItemActionClickAir:
+		h.handleClaimClickAir(s, transactionData, ctx)
+	}
+}
+
+func (*InventoryTransactionHandler) handleClaimClickBlock(
+	s *Session,
+	transactionData *protocol.UseItemTransactionData,
+	ctx *Context,
+) {
+	pos := blockPosToVec3(transactionData.BlockPosition)
+	cl, exists := ClaimAt(
+		s.claimFactory.All(),
+		s.Data().Dimension(),
+		s.GameData().Dimensions,
+		pos.X(),
+		pos.Z(),
+	)
 	if !exists {
 		return
 	}
-
-	if transactionData.ActionType == protocol.UseItemActionClickBlock &&
-		transactionData.TriggerType == protocol.UseItemActionClickAir {
-		permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, pos)
-		if permitted {
-			return
-		}
-		if b, found := blockByRuntimeID(transactionData.BlockRuntimeID); found {
-			switch b.(type) {
-			case block.ItemFrame, block.Lectern, block.DecoratedPot:
-				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
-				ctx.Cancel()
-				return
-			}
-		}
+	b, found := blockByRuntimeID(transactionData.BlockRuntimeID, s.GameData().UseBlockNetworkIDHashes)
+	var typeID string
+	if found {
+		typeID, _ = b.EncodeBlock()
 	}
+	if ClaimActionPermitted(cl, s, ClaimActionBlockInteract, claimActionData{position: pos, typeID: typeID}) {
+		return
+	}
+	if !found {
+		return
+	}
+	switch b.(type) {
+	case block.ItemFrame, block.Lectern, block.DecoratedPot:
+		s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
+		ctx.Cancel()
+	}
+}
 
-	permitted := ClaimActionPermitted(claim, s, ClaimActionItemThrow, pos)
-	if permitted {
+func (*InventoryTransactionHandler) handleClaimClickAir(
+	s *Session,
+	transactionData *protocol.UseItemTransactionData,
+	ctx *Context,
+) {
+	pos := transactionData.Position
+	cl, exists := ClaimAt(
+		s.claimFactory.All(),
+		s.Data().Dimension(),
+		s.GameData().Dimensions,
+		pos.X(),
+		pos.Z(),
+	)
+	if !exists || ClaimActionPermitted(cl, s, ClaimActionItemThrow, pos) {
 		return
 	}
 
@@ -134,11 +165,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 	}
 
 	registry := s.handlers[packet.IDItemRegistry].(*ItemRegistryHandler)
-	if registry.items == nil {
-		return
-	}
-
-	entry, ok := registry.items[int16(heldItem.NetworkID)]
+	entry, ok := registry.Item(int16(heldItem.NetworkID))
 	if !ok {
 		return
 	}
@@ -164,26 +191,46 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		return
 	}
 
-	var entityPosition mgl32.Vec3
 	switch entity.ActorType() {
 	case "minecraft:armor_stand", "minecraft:painting":
-		entityPosition = entity.InitialPosition()
 	default:
 		return
 	}
+	entityPosition := entity.Position()
 
 	clientData := s.Data()
-	claim, ok := ClaimAt(s.claimFactory.All(), clientData.Dimension(), entityPosition.X(), entityPosition.Z())
+	claim, ok := ClaimAt(
+		s.claimFactory.All(),
+		clientData.Dimension(),
+		s.GameData().Dimensions,
+		entityPosition.X(),
+		entityPosition.Z(),
+	)
 	if !ok {
 		return
 	}
 
-	permitted := ClaimActionPermitted(claim, s, ClaimActionBlockInteract, entityPosition)
+	var action ClaimAction
+	var actionName string
+	switch transactionData.ActionType {
+	case protocol.UseItemOnEntityActionInteract:
+		action = ClaimActionEntityInteract
+		actionName = "interact with"
+	case protocol.UseItemOnEntityActionAttack:
+		action = ClaimActionEntityHurt
+		actionName = "hurt"
+	default:
+		return
+	}
+	permitted := ClaimActionPermitted(claim, s, action, claimActionData{
+		position: entityPosition,
+		typeID:   entity.ActorType(),
+	})
 	if permitted {
 		return
 	}
 
-	s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
+	s.Message(text.Colourf("<red>You cannot %s entities inside this claim.</red>", actionName))
 	ctx.Cancel()
 }
 
@@ -196,7 +243,13 @@ func (h *InventoryTransactionHandler) handleClaimReleaseItem(s *Session, pkt *pa
 
 	clientData := s.Data()
 	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
-	claim, ok := ClaimAt(s.claimFactory.All(), clientData.Dimension(), pos.X(), pos.Z())
+	claim, ok := ClaimAt(
+		s.claimFactory.All(),
+		clientData.Dimension(),
+		s.GameData().Dimensions,
+		pos.X(),
+		pos.Z(),
+	)
 	if !ok {
 		return
 	}

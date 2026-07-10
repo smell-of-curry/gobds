@@ -12,12 +12,13 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
-	_ "unsafe"
 
+	"github.com/df-mc/dragonfly/server/world"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	_ "github.com/smell-of-curry/gobds/gobds/block"
+	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
 	"github.com/smell-of-curry/gobds/gobds/service/vpn"
 	"github.com/smell-of-curry/gobds/gobds/session"
@@ -41,7 +42,8 @@ type GoBDS struct {
 func (c *Config) New() (*GoBDS, error) {
 	c.Log.Info("creating a new instance of gobds")
 	ctx, cancel := context.WithCancel(context.Background())
-	world_finaliseBlockRegistry()
+	world.DefaultBlockRegistry.Finalize()
+	session.SetupRuntimeIDs()
 
 	gobds := &GoBDS{
 		conf:   c,
@@ -49,9 +51,6 @@ func (c *Config) New() (*GoBDS, error) {
 		cancel: cancel,
 	}
 
-	if c.PlayerManager == nil {
-		return nil, fmt.Errorf("start gobds: player manager is not configured")
-	}
 	if len(c.Servers) == 0 {
 		return nil, fmt.Errorf("start gobds: no servers configured")
 	}
@@ -68,7 +67,6 @@ func (gb *GoBDS) Listen() error {
 	}
 
 	gb.conf.Log.Info("starting gobds", "mc-version", protocol.CurrentVersion)
-	gb.conf.PlayerManager.Start(time.Minute * 3)
 
 	gb.wg.Add(len(gb.servers))
 	for _, srv := range gb.servers {
@@ -92,6 +90,7 @@ func (gb *GoBDS) listen(srv *Server) {
 		return
 	}
 	go gb.claimFetching(srv)
+	go gb.afkEvaluator(srv, ctx)
 
 	go func() {
 		<-gb.ctx.Done()
@@ -117,8 +116,10 @@ func (gb *GoBDS) listen(srv *Server) {
 				return
 			}
 
+			srv.AddSession(s)
 			srv.Log.Info("player connected", "name", conn.IdentityData().DisplayName)
 			s.ReadPackets(ctx)
+			srv.RemoveSession(s)
 			srv.Log.Info("player disconnected", "name", conn.IdentityData().DisplayName)
 		}()
 	}
@@ -148,8 +149,9 @@ func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*s
 		}
 	}
 
-	identityData = gb.conf.PlayerManager.IdentityDataOf(conn)
-	clientData := gb.conf.PlayerManager.ClientDataOf(conn)
+	identityData = conn.IdentityData()
+	clientData := conn.ClientData()
+	clientData.SelfSignedID = selfSignedIDFromXUID(identityData.XUID)
 
 	displayName := identityData.DisplayName
 	if !gb.handleWhitelisted(displayName) {
@@ -260,10 +262,13 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 		Client: conn,
 		Server: serverConn,
 
-		PingIndicator: gb.conf.PingIndicator,
-		AFKTimer:      gb.conf.AFKTimer,
+		AFKTimer: gb.conf.AFKTimer,
 
-		EntityFactory: srv.EntityFactory,
+		// EntityFactory must be per-session: each session has its own backend connection
+		// and BDS issues runtime IDs scoped to that connection. Sharing this map between
+		// sessions causes runtime-ID collisions where one session's lookup returns another
+		// session's entity, swapping Pokémon/item names on SetActorData (issue #53).
+		EntityFactory: entity.NewFactory(),
 		ClaimFactory:  srv.ClaimFactory,
 
 		Border: gb.conf.Border,
@@ -289,8 +294,3 @@ func (gb *GoBDS) CloseOnProgramEnd() {
 		_ = gb.Close()
 	}()
 }
-
-// noinspection ALL
-//
-//go:linkname world_finaliseBlockRegistry github.com/df-mc/dragonfly/server/world.finaliseBlockRegistry
-func world_finaliseBlockRegistry()

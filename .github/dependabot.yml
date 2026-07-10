@@ -8,9 +8,9 @@ updates:
   - package-ecosystem: 'gomod'
     # Look for go.mod and go.sum files in the root directory.
     directory: '/'
-    # Check for updates weekly.
+    # Check for updates daily.
     schedule:
-      interval: weekly
+      interval: daily
 
   # Enable version updates for GitHub Actions.
   - package-ecosystem: github-actions

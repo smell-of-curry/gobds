@@ -30,8 +30,6 @@ type UserConfig struct {
 
 		Servers []ServerConfig
 
-		PlayerManagerPath string
-
 		Whitelisted   bool
 		WhitelistPath string
 
@@ -40,21 +38,27 @@ type UserConfig struct {
 		FlushRate         int
 
 		SentryDSN string
-
-		HashedBlockIDS bool
 	}
 	Border struct {
 		Enabled    bool
 		MinX, MinZ int32
 		MaxX, MaxZ int32
 	}
-	PingIndicator struct {
-		Enabled    bool
-		Identifier string
-	}
 	AFKTimer struct {
 		Enabled         bool
 		TimeoutDuration string
+		// WarnApproaching is how long a player must be idle before receiving
+		// an "AFK in 1 minute" soft warning. Always sent regardless of fullness.
+		WarnApproaching string
+		// MarkAFK is how long a player must be idle before being told they
+		// are now AFK. Always sent regardless of fullness.
+		MarkAFK string
+		// FinalWarning is how long a player must be idle before receiving the
+		// near-capacity hard warning. Only sent when fullness >= FullnessThreshold.
+		FinalWarning string
+		// FullnessThreshold is the fraction (0..1) of MaxPlayers at or above
+		// which the proxy will start kicking AFK players, longest-AFK first.
+		FullnessThreshold float64
 	}
 	Resources struct {
 		PacksRequired bool
@@ -72,6 +76,10 @@ type UserConfig struct {
 		Enabled bool
 		URL     string
 		Key     string
+		// WhitelistedCIDRs are IP ranges (e.g. "45.230.64.0/22") never
+		// treated as VPN/proxy connections. Used for residential ISP
+		// blocks the detection API misclassifies.
+		WhitelistedCIDRs []string
 	}
 	Encryption struct {
 		Key string
@@ -153,20 +161,34 @@ func (c UserConfig) afkTimer() *infra.AFKTimer {
 	if !c.AFKTimer.Enabled {
 		return nil
 	}
-	d, err := time.ParseDuration(c.AFKTimer.TimeoutDuration)
-	if err != nil {
-		// Fallback to a sensible default to avoid crash on invalid config
-		d = 10 * time.Minute
+	parse := func(s string, fallback time.Duration) time.Duration {
+		if s == "" {
+			return fallback
+		}
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return fallback
+		}
+		return d
 	}
-	return &infra.AFKTimer{TimeoutDuration: d}
-}
 
-// pingIndicator returns new PingIndicator instance.
-func (c UserConfig) pingIndicator() *infra.PingIndicator {
-	if !c.PingIndicator.Enabled {
-		return nil
+	timeout := parse(c.AFKTimer.TimeoutDuration, 10*time.Minute)
+	warn := parse(c.AFKTimer.WarnApproaching, 4*time.Minute)
+	mark := parse(c.AFKTimer.MarkAFK, 5*time.Minute)
+	final := parse(c.AFKTimer.FinalWarning, 9*time.Minute)
+
+	threshold := c.AFKTimer.FullnessThreshold
+	if threshold <= 0 || threshold > 1 {
+		threshold = 0.9
 	}
-	return &infra.PingIndicator{Identifier: c.PingIndicator.Identifier}
+
+	return &infra.AFKTimer{
+		TimeoutDuration:   timeout,
+		WarnApproaching:   warn,
+		MarkAFK:           mark,
+		FinalWarning:      final,
+		FullnessThreshold: threshold,
+	}
 }
 
 // whiteList returns new Whitelist instance.
@@ -233,6 +255,8 @@ func DefaultConfig() UserConfig {
 			Name:          "Some server",
 			LocalAddress:  "127.0.0.1:19132",
 			RemoteAddress: "127.0.0.1:19133",
+			MOTD:          "Some server",
+			MaxPlayers:    85,
 			ClaimService: struct {
 				Enabled bool
 				URL     string
@@ -245,8 +269,6 @@ func DefaultConfig() UserConfig {
 		},
 	}
 
-	c.Network.PlayerManagerPath = "players/manager.json"
-
 	c.Network.Whitelisted = false
 	c.Network.WhitelistPath = "whitelist.json"
 
@@ -254,15 +276,14 @@ func DefaultConfig() UserConfig {
 	c.Network.MaxRenderDistance = 16
 	c.Network.FlushRate = 20
 
-	c.Network.HashedBlockIDS = true
-
 	c.Border.Enabled = false
-
-	c.PingIndicator.Enabled = true
-	c.PingIndicator.Identifier = "&_playerPing:"
 
 	c.AFKTimer.Enabled = true
 	c.AFKTimer.TimeoutDuration = "10m"
+	c.AFKTimer.WarnApproaching = "4m"
+	c.AFKTimer.MarkAFK = "5m"
+	c.AFKTimer.FinalWarning = "9m"
+	c.AFKTimer.FullnessThreshold = 0.9
 
 	c.Resources.PacksRequired = false
 	c.Resources.CommandPath = "resources/commands.json"
@@ -273,6 +294,8 @@ func DefaultConfig() UserConfig {
 
 	c.VPNService.Enabled = false
 	c.VPNService.URL = "http://ip-api.com/json"
+	// Megalink S.R.L. (Argentina) — residential ISP flagged as proxy by ip-api.
+	c.VPNService.WhitelistedCIDRs = []string{"45.230.64.0/22"}
 
 	c.Encryption.Key = defaultKey
 	return c

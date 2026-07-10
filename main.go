@@ -11,7 +11,11 @@ import (
 )
 
 func main() {
-	log := slog.Default()
+	// Throttle high-volume "backend unreachable" spam (per-packet "handle
+	// packet: ... connection refused" / "error dialing connection") that floods
+	// the log whenever a BDS server is down or restarting. All other logs pass
+	// through unchanged.
+	log := slog.New(newRateLimitHandler(slog.Default().Handler(), noiseLogWindow))
 	conf, err := gobds.ReadConfig()
 	if err != nil {
 		panic(err)

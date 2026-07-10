@@ -45,6 +45,9 @@ func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 		s.log.Error("failed to parse message", "error", err)
 		return err
 	}
+	if len(messageData.RawText) == 0 {
+		return nil
+	}
 	message := messageData.RawText[0].Text
 	if !strings.HasPrefix(message, "[PROXY_SYSTEM][COMMANDS]=") {
 		return nil

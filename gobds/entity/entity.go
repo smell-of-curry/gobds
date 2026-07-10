@@ -5,18 +5,25 @@ import "github.com/go-gl/mathgl/mgl32"
 
 // Entity ...
 type Entity struct {
-	runtimeID       uint64
-	actorType       string
-	initialPosition mgl32.Vec3
+	uniqueID  int64
+	runtimeID uint64
+	actorType string
+	position  mgl32.Vec3
 }
 
 // NewEntity ...
-func NewEntity(runtimeID uint64, actorType string, initialPosition mgl32.Vec3) Entity {
+func NewEntity(uniqueID int64, runtimeID uint64, actorType string, position mgl32.Vec3) Entity {
 	return Entity{
-		runtimeID:       runtimeID,
-		actorType:       actorType,
-		initialPosition: initialPosition,
+		uniqueID:  uniqueID,
+		runtimeID: runtimeID,
+		actorType: actorType,
+		position:  position,
 	}
+}
+
+// UniqueID ...
+func (e Entity) UniqueID() int64 {
+	return e.uniqueID
 }
 
 // RuntimeID ...
@@ -29,7 +36,7 @@ func (e Entity) ActorType() string {
 	return e.actorType
 }
 
-// InitialPosition ...
-func (e Entity) InitialPosition() mgl32.Vec3 {
-	return e.initialPosition
+// Position ...
+func (e Entity) Position() mgl32.Vec3 {
+	return e.position
 }

@@ -76,7 +76,6 @@ func (s *Service) FetchClaims() (map[string]PlayerClaim, error) {
 			_ = response.Body.Close()
 			cancel()
 			lastErr = fmt.Errorf("rate limited")
-			time.Sleep(time.Duration(attempt+1) * service.RetryDelay)
 			continue
 		default:
 			_ = response.Body.Close()

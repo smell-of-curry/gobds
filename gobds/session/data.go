@@ -3,13 +3,15 @@ package session
 import (
 	"sync/atomic"
 	"time"
+
+	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
 // Data ...
 type Data struct {
-	dimension atomic.Value
-	gamemode  atomic.Value
-	lastDrop  atomic.Value
+	dimension atomic.Int32
+	gamemode  atomic.Int32
+	lastDrop  atomic.Pointer[time.Time]
 	operator  atomic.Bool
 }
 
@@ -19,14 +21,14 @@ func NewData(conn Conn) *Data {
 	d := &Data{}
 	d.dimension.Store(gameData.Dimension)
 	d.gamemode.Store(gameData.PlayerGameMode)
-	d.lastDrop.Store(time.Time{})
-	d.operator.Store(false)
+	d.lastDrop.Store(&time.Time{})
+	d.operator.Store(gameData.PlayerPermissions == packet.PermissionLevelOperator)
 	return d
 }
 
 // Dimension ...
 func (d *Data) Dimension() int32 {
-	return d.dimension.Load().(int32)
+	return d.dimension.Load()
 }
 
 // SetDimension ...
@@ -36,7 +38,7 @@ func (d *Data) SetDimension(dimension int32) {
 
 // GameMode ...
 func (d *Data) GameMode() int32 {
-	return d.gamemode.Load().(int32)
+	return d.gamemode.Load()
 }
 
 // SetGameMode ...
@@ -46,13 +48,13 @@ func (d *Data) SetGameMode(mode int32) {
 
 // SetLastDrop ...
 func (d *Data) SetLastDrop() {
-	d.lastDrop.Store(time.Now())
+	now := time.Now()
+	d.lastDrop.Store(&now)
 }
 
 // InteractWithBlock ...
 func (d *Data) InteractWithBlock() bool {
-	lastDrop := d.lastDrop.Load().(time.Time)
-	return time.Since(lastDrop) > time.Millisecond*500
+	return time.Since(*d.lastDrop.Load()) > time.Millisecond*500
 }
 
 // Operator ...

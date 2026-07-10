@@ -3,6 +3,7 @@ package session
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/entity"
@@ -15,9 +16,8 @@ type Config struct {
 	Client Conn
 	Server Conn
 
-	PingIndicator *infra.PingIndicator
-	AFKTimer      *infra.AFKTimer
-	Border        *area.Area2D
+	AFKTimer *infra.AFKTimer
+	Border   *area.Area2D
 
 	EntityFactory *entity.Factory
 	ClaimFactory  *claim.Factory
@@ -31,18 +31,21 @@ func (c Config) New() *Session {
 		client: c.Client,
 		server: c.Server,
 
-		pingIndicator: c.PingIndicator,
-		afkTimer:      c.AFKTimer,
-		border:        c.Border,
+		afkTimer: c.AFKTimer,
+		border:   c.Border,
 
 		entityFactory: c.EntityFactory,
 		claimFactory:  c.ClaimFactory,
 
 		close: make(chan struct{}),
 
+		lastForwardedPing: -1,
+
 		data: NewData(c.Client),
 		log:  c.Log,
 	}
+	s.afk.lastMoveTime = time.Now()
+	s.afk.lastPosition = c.Client.GameData().PlayerPosition
 	s.registerHandlers()
 	return s
 }

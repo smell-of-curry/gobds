@@ -59,10 +59,10 @@ func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseM
 		switch response.StatusCode {
 		case http.StatusNotFound:
 			_ = response.Body.Close()
-			lastErr = ErrRecordNotFound
+			return nil, ErrRecordNotFound
 		case http.StatusGone:
 			_ = response.Body.Close()
-			lastErr = fmt.Errorf("expired authentication record for: %s", xuid)
+			return nil, fmt.Errorf("expired authentication record for: %s", xuid)
 		case http.StatusOK:
 			var responseModel ResponseModel
 			if err = json.NewDecoder(response.Body).Decode(&responseModel); err != nil {
@@ -74,7 +74,6 @@ func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseM
 		case http.StatusTooManyRequests:
 			_ = response.Body.Close()
 			lastErr = fmt.Errorf("rate limited")
-			time.Sleep(time.Duration(attempt+1) * service.RetryDelay)
 			continue
 		default:
 			_ = response.Body.Close()

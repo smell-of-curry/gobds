@@ -11,6 +11,9 @@ func (*UpdatePlayerGameTypeHandler) Handle(s *Session, pk packet.Packet, ctx *Co
 	if ctx.Val() != s.server {
 		return nil
 	}
+	if pkt.PlayerUniqueID != s.GameData().EntityUniqueID {
+		return nil
+	}
 	s.Data().SetGameMode(pkt.GameType)
 	return nil
 }

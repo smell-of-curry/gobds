@@ -20,8 +20,8 @@ type PlayerClaim struct {
 // Location ...
 type Location struct {
 	Dimension string  `json:"dimension"`
-	Pos1      Vector2 `json:"pos2"`
-	Pos2      Vector2 `json:"pos1"`
+	Pos1      Vector2 `json:"pos1"`
+	Pos2      Vector2 `json:"pos2"`
 }
 
 const (
@@ -29,23 +29,33 @@ const (
 	FeatureTypeMineable = "mineable"
 	// FeatureTypeBlockPlaceable ...
 	FeatureTypeBlockPlaceable = "blockPlaceable"
-	// FeatureTypeBlockIntractable ...
-	FeatureTypeBlockIntractable = "blockIntractable"
-	// FeatureTypeEntityIntractable ...
-	FeatureTypeEntityIntractable = "entityIntractable"
+	// FeatureTypeBlockInteractable preserves the API's historical "intractable" value.
+	FeatureTypeBlockInteractable = "blockIntractable"
+	// FeatureTypeEntityInteractable preserves the API's historical "intractable" value.
+	FeatureTypeEntityInteractable = "entityIntractable"
 	// FeatureTypeEntityHurt ...
 	FeatureTypeEntityHurt = "entityHurt"
 )
 
 // Feature ...
 type Feature struct {
-	Type         string  `json:"type"`
-	FromLocation Vector2 `json:"fromLocation"`
-	ToLocation   Vector2 `json:"toLocation"`
+	Type          string   `json:"type"`
+	FromLocation  *Vector3 `json:"fromLocation,omitempty"`
+	ToLocation    *Vector3 `json:"toLocation,omitempty"`
+	BlockTypeIDs  []string `json:"blockTypeIds,omitempty"`
+	EntityTypeIDs []string `json:"entityTypeIds,omitempty"`
+	ItemTypeIDs   []string `json:"itemTypeIds,omitempty"`
 }
 
 // Vector2 ...
 type Vector2 struct {
 	X float32 `json:"x"`
+	Z float32 `json:"z"`
+}
+
+// Vector3 ...
+type Vector3 struct {
+	X float32 `json:"x"`
+	Y float32 `json:"y"`
 	Z float32 `json:"z"`
 }

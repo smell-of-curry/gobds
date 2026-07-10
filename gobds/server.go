@@ -3,12 +3,12 @@ package gobds
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/smell-of-curry/gobds/gobds/claim"
-	"github.com/smell-of-curry/gobds/gobds/entity"
 	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
@@ -17,7 +17,11 @@ type ServerConfig struct {
 	Name          string
 	LocalAddress  string
 	RemoteAddress string
-	ClaimService  struct {
+	// MOTD is the name shown in the server list. Falls back to Name when empty.
+	MOTD string
+	// MaxPlayers is the player capacity advertised in the server list.
+	MaxPlayers   int
+	ClaimService struct {
 		Enabled bool
 		URL     string
 		Key     string
@@ -30,8 +34,9 @@ type Server struct {
 	LocalAddress  string
 	RemoteAddress string
 
-	EntityFactory *entity.Factory
-	ClaimFactory  *claim.Factory
+	// ClaimFactory is shared across all sessions on this server because claims are world-state
+	// fetched periodically from an external service.
+	ClaimFactory *claim.Factory
 
 	Listener       Listener
 	StatusProvider minecraft.ServerStatusProvider
@@ -40,7 +45,35 @@ type Server struct {
 	ListenerFunc       ListenerFunc
 	DialerFunc         DialerFunc
 
+	// sessions holds every live *session.Session on this server, keyed by
+	// pointer so late-registering sessions with duplicate XUIDs (e.g. a
+	// reconnect racing with an old connection) don't clobber one another.
+	sessions sync.Map
+
 	Log *slog.Logger
+}
+
+// AddSession registers a session with the server for later iteration by the
+// AFK evaluator and any other per-server walkers.
+func (s *Server) AddSession(sess *session.Session) {
+	s.sessions.Store(sess, struct{}{})
+}
+
+// RemoveSession deregisters a session from the server.
+func (s *Server) RemoveSession(sess *session.Session) {
+	s.sessions.Delete(sess)
+}
+
+// Sessions returns a snapshot of the server's live sessions.
+func (s *Server) Sessions() []*session.Session {
+	var out []*session.Session
+	s.sessions.Range(func(k, _ any) bool {
+		if sess, ok := k.(*session.Session); ok {
+			out = append(out, sess)
+		}
+		return true
+	})
+	return out
 }
 
 // ListenerFunc creates a Listener.

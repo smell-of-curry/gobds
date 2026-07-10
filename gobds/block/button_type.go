@@ -61,7 +61,8 @@ func (b ButtonType) String() string {
 
 // ButtonTypes ...
 func ButtonTypes() []ButtonType {
-	types := []ButtonType{StoneButton(), PolishedBlackstoneButton()}
+	types := make([]ButtonType, 0, 2+len(block.WoodTypes()))
+	types = append(types, StoneButton(), PolishedBlackstoneButton())
 	for _, w := range block.WoodTypes() {
 		types = append(types, WoodButton(w))
 	}

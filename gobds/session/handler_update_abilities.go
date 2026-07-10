@@ -1,6 +1,8 @@
 package session
 
 import (
+	"math"
+
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
@@ -26,9 +28,12 @@ func (*UpdateAbilitiesHandler) Handle(s *Session, pk packet.Packet, ctx *Context
 	}
 
 	s.Data().SetOperator(operator)
-	position := s.handlers[packet.IDPlayerAuthInput].(*PlayerAuthInputHandler).lastPosition
+	position := s.Position()
 	s.WriteToClient(&packet.LevelChunk{
-		Position:      protocol.ChunkPos{int32(position.X()) >> 4, int32(position.Z()) >> 4},
+		Position: protocol.ChunkPos{
+			int32(math.Floor(float64(position.X()))) >> 4,
+			int32(math.Floor(float64(position.Z()))) >> 4,
+		},
 		SubChunkCount: protocol.SubChunkRequestModeLimited,
 	})
 	return nil
