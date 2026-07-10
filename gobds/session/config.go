@@ -31,13 +31,15 @@ func (c Config) New() *Session {
 		client: c.Client,
 		server: c.Server,
 
-		afkTimer:      c.AFKTimer,
-		border:        c.Border,
+		afkTimer: c.AFKTimer,
+		border:   c.Border,
 
 		entityFactory: c.EntityFactory,
 		claimFactory:  c.ClaimFactory,
 
 		close: make(chan struct{}),
+
+		lastForwardedPing: -1,
 
 		data: NewData(c.Client),
 		log:  c.Log,

@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -28,12 +29,16 @@ type Session struct {
 	entityFactory *entity.Factory
 	claimFactory  *claim.Factory
 
-	afkTimer      *infra.AFKTimer
-	border        *area.Area2D
+	afkTimer *infra.AFKTimer
+	border   *area.Area2D
 
 	close chan struct{}
 
 	afk afkState
+
+	// lastForwardedPing is the last client latency (ms) sent to BDS via
+	// ForwardPing. -1 means nothing has been forwarded yet.
+	lastForwardedPing int64
 
 	data *Data
 	log  *slog.Logger
@@ -148,6 +153,29 @@ func (s *Session) SetWarnedFinal(v bool) {
 // Data ...
 func (s *Session) Data() *Data {
 	return s.data
+}
+
+// Ping returns the client's RakNet latency in milliseconds (half RTT).
+func (s *Session) Ping() int64 {
+	return s.client.Latency().Milliseconds()
+}
+
+// ForwardPing sends the real client↔proxy latency to BDS when it changes.
+// BDS getPing() only sees proxy↔BDS (~0 on same box), so the behaviour pack
+// must receive this via chat and drive the PHUD indicator itself.
+func (s *Session) ForwardPing() {
+	ping := s.Ping()
+	if ping == s.lastForwardedPing {
+		return
+	}
+	s.lastForwardedPing = ping
+	s.WriteToServer(&packet.Text{
+		TextType:         packet.TextTypeChat,
+		NeedsTranslation: false,
+		SourceName:       s.ClientData().ThirdPartyName,
+		Message:          fmt.Sprintf("[PROXY_PING] %d", ping),
+		XUID:             s.IdentityData().XUID,
+	})
 }
 
 // WriteToClient ...
