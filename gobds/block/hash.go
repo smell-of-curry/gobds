@@ -4,4 +4,5 @@ import "github.com/df-mc/dragonfly/server/block"
 
 var (
 	hashButton = block.NextHash()
+	hashDeny   = block.NextHash()
 )

@@ -14,13 +14,29 @@ type CommandRequestHandler struct{}
 // Handle ...
 func (*CommandRequestHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.CommandRequest)
-
-	cmd := strings.ToLower(strings.Split(pkt.CommandLine[1:], " ")[0])
-	if slices.Contains(disabledCommands, cmd) {
+	if ctx.Val() != s.client {
+		return nil
+	}
+	cmd, empty, err := commandName(pkt.CommandLine, s.traffic.config.MaxCommandBytes)
+	if err != nil {
+		s.traffic.malformed(trafficCommand)
+		return err
+	}
+	if empty {
+		s.traffic.malformed(trafficCommand)
 		ctx.Cancel()
 		return nil
 	}
-	if strings.ReplaceAll(cmd, " ", "") == "" {
+	if !s.traffic.allow(trafficCommand) {
+		ctx.Cancel()
+		return nil
+	}
+	if cmd == "" {
+		return nil
+	}
+
+	if slices.Contains(disabledCommands, cmd) {
+		ctx.Cancel()
 		return nil
 	}
 
@@ -38,4 +54,19 @@ func (*CommandRequestHandler) Handle(s *Session, pk packet.Packet, ctx *Context)
 	})
 	ctx.Cancel()
 	return nil
+}
+
+func commandName(line string, maxBytes int) (name string, empty bool, err error) {
+	if len(line) > maxBytes {
+		return "", false, malformedPacketError{reason: "command exceeds maximum length"}
+	}
+	line = strings.TrimSpace(line)
+	if line == "" || line == "/" {
+		return "", true, nil
+	}
+	if line[0] != '/' {
+		return "", false, nil
+	}
+	name, _, _ = strings.Cut(strings.ToLower(line[1:]), " ")
+	return name, false, nil
 }

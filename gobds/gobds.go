@@ -15,6 +15,7 @@ import (
 
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	_ "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/entity"
@@ -42,6 +43,7 @@ func (c *Config) New() (*GoBDS, error) {
 	c.Log.Info("creating a new instance of gobds")
 	ctx, cancel := context.WithCancel(context.Background())
 	world.DefaultBlockRegistry.Finalize()
+	session.SetupRuntimeIDs()
 
 	gobds := &GoBDS{
 		conf:   c,
@@ -64,7 +66,7 @@ func (gb *GoBDS) Listen() error {
 		return fmt.Errorf("start gobds: already started")
 	}
 
-	gb.conf.Log.Info("starting gobds")
+	gb.conf.Log.Info("starting gobds", "mc-version", protocol.CurrentVersion)
 
 	gb.wg.Add(len(gb.servers))
 	for _, srv := range gb.servers {
@@ -107,6 +109,14 @@ func (gb *GoBDS) listen(srv *Server) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			xuid := conn.IdentityData().XUID
+			if gb.conf.DuplicateXUIDEnabled {
+				if !srv.ReserveXUID(xuid) {
+					_ = srv.Listener.Disconnect(conn, "This account is already connected.")
+					return
+				}
+				defer srv.ReleaseXUID(xuid)
+			}
 
 			s, err := gb.accept(conn, srv, ctx)
 			if err != nil {
@@ -123,6 +133,8 @@ func (gb *GoBDS) listen(srv *Server) {
 	}
 }
 
+var errInvalidJoinPath = errors.New("you must join through the server hub to play")
+
 // accept accepts new connection.
 func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*session.Session, error) {
 	identityData := conn.IdentityData()
@@ -136,12 +148,12 @@ func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*s
 		if err != nil {
 			disconnectionMessage := err.Error()
 			if errors.Is(err, authentication.ErrRecordNotFound) {
-				disconnectionMessage = text.Colourf("<red>you must join through the server hub.</red>")
+				disconnectionMessage = text.Colourf("<red>%s.</red>", errInvalidJoinPath.Error())
 			}
 			return nil, errors.New(disconnectionMessage)
 		}
 		if !response.Allowed {
-			return nil, fmt.Errorf("you must join through the server hub to play")
+			return nil, errInvalidJoinPath
 		}
 	}
 
@@ -258,7 +270,7 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 		Client: conn,
 		Server: serverConn,
 
-		AFKTimer:      gb.conf.AFKTimer,
+		AFKTimer: gb.conf.AFKTimer,
 
 		// EntityFactory must be per-session: each session has its own backend connection
 		// and BDS issues runtime IDs scoped to that connection. Sharing this map between
@@ -267,8 +279,12 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 		EntityFactory: entity.NewFactory(),
 		ClaimFactory:  srv.ClaimFactory,
 
-		Border: gb.conf.Border,
-		Log:    gb.conf.Log,
+		Border:             gb.conf.Border,
+		ClaimPrefilter:     gb.conf.ClaimPrefilter,
+		ClaimDenyRendering: gb.conf.ClaimDenyRendering,
+		Traffic:            gb.conf.TrafficProtection,
+		TrafficMetrics:     srv.TrafficMetrics,
+		Log:                gb.conf.Log,
 	}.New()
 
 	s.ForwardXUID(gb.conf.EncryptionKey)

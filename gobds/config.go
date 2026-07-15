@@ -4,6 +4,7 @@ package gobds
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/smell-of-curry/gobds/gobds/claim"
@@ -26,6 +27,12 @@ type Config struct {
 	AFKTimer              *infra.AFKTimer
 	Whitelist             *whitelist.Whitelist
 	Border                *area.Area2D
+	ClaimPrefilter        bool
+	ClaimDenyRendering    bool
+	ClaimPollInterval     time.Duration
+	ClaimMaxSnapshotAge   time.Duration
+	TrafficProtection     session.TrafficConfig
+	DuplicateXUIDEnabled  bool
 	Log                   *slog.Logger
 }
 
@@ -33,6 +40,18 @@ type Config struct {
 func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 	if len(c.Network.Servers) == 0 {
 		return Config{}, fmt.Errorf("no servers configured")
+	}
+
+	pollInterval, err := claimDuration(c.Claims.PollInterval, claim.DefaultPollInterval)
+	if err != nil {
+		return Config{}, fmt.Errorf("claims poll interval: %w", err)
+	}
+	maxSnapshotAge, err := claimDuration(c.Claims.MaxSnapshotAge, claim.DefaultMaxSnapshotAge)
+	if err != nil {
+		return Config{}, fmt.Errorf("claims max snapshot age: %w", err)
+	}
+	if maxSnapshotAge < pollInterval {
+		return Config{}, fmt.Errorf("claims max snapshot age must be at least poll interval")
 	}
 
 	conf := Config{
@@ -44,14 +63,20 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 			URL:     c.VPNService.URL,
 			Key:     c.VPNService.Key,
 		}, c.VPNService.WhitelistedCIDRs),
-		AFKTimer:  c.afkTimer(),
-		Whitelist: c.whiteList(log),
-		Border:    c.makeBorder(),
-		Log:       log,
+		AFKTimer:             c.afkTimer(),
+		Whitelist:            c.whiteList(log),
+		Border:               c.makeBorder(),
+		ClaimPrefilter:       c.Claims.PrefilterEnabled,
+		ClaimDenyRendering:   c.Claims.DenyRenderingEnabled,
+		ClaimPollInterval:    pollInterval,
+		ClaimMaxSnapshotAge:  maxSnapshotAge,
+		TrafficProtection:    c.TrafficProtection.WithDefaults(),
+		DuplicateXUIDEnabled: c.DuplicateXUID.Enabled,
+		Log:                  log,
 	}
 	session.SetCommandPath(c.Resources.CommandPath)
 
-	err := c.loadCommands(log)
+	err = c.loadCommands(log)
 	if err != nil {
 		return conf, fmt.Errorf("error loading commands: %w", err)
 	}
@@ -62,7 +87,14 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 			LocalAddress:  server.LocalAddress,
 			RemoteAddress: server.RemoteAddress,
 
-			ClaimFactory: claim.NewFactory(server.ClaimService, log),
+			ClaimFactory: claim.NewFactory(
+				server.ClaimService,
+				server.Name,
+				pollInterval,
+				maxSnapshotAge,
+				log.With(slog.String("srv", server.Name)),
+			),
+			TrafficMetrics: &session.TrafficMetrics{},
 
 			DialerFunc: c.dialerFunc(server.RemoteAddress, log),
 
@@ -85,4 +117,15 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		conf.Servers = append(conf.Servers, srv)
 	}
 	return conf, nil
+}
+
+func claimDuration(value string, fallback time.Duration) (time.Duration, error) {
+	if value == "" {
+		return fallback, nil
+	}
+	duration, err := time.ParseDuration(value)
+	if err != nil || duration <= 0 {
+		return 0, fmt.Errorf("must be a positive duration")
+	}
+	return duration, nil
 }

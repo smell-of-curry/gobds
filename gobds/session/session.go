@@ -2,8 +2,11 @@ package session
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"math"
 	"sync"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/df-mc/dragonfly/server/session"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/claim"
@@ -32,9 +36,15 @@ type Session struct {
 	afkTimer *infra.AFKTimer
 	border   *area.Area2D
 
+	claimPrefilter     bool
+	claimDenyRendering bool
+
 	close chan struct{}
 
 	afk afkState
+
+	corrective correctiveState
+	traffic    trafficState
 
 	// lastForwardedPing is the last client latency (ms) sent to BDS via
 	// ForwardPing. -1 means nothing has been forwarded yet.
@@ -60,6 +70,24 @@ type afkState struct {
 	warnedApproaching bool
 	markedAFK         bool
 	warnedFinal       bool
+}
+
+type correctiveState struct {
+	mu   sync.Mutex
+	last map[correctiveKey]time.Time
+}
+
+type correctiveKey struct {
+	dimension int32
+	x, z      int32
+}
+
+type malformedPacketError struct {
+	reason string
+}
+
+func (e malformedPacketError) Error() string {
+	return "malformed packet: " + e.reason
 }
 
 // AFKTimer returns the session's AFK configuration, or nil if disabled.
@@ -90,6 +118,44 @@ func (s *Session) TouchMovement(pos mgl32.Vec3, yaw, pitch float32) bool {
 	s.afk.markedAFK = false
 	s.afk.warnedFinal = false
 	return true
+}
+
+// Position returns the latest sampled player position.
+func (s *Session) Position() mgl32.Vec3 {
+	s.afk.mu.RLock()
+	defer s.afk.mu.RUnlock()
+	return s.afk.lastPosition
+}
+
+func (s *Session) allowCorrective(chunkPos protocol.ChunkPos, interval time.Duration) bool {
+	key := correctiveKey{
+		dimension: s.Data().Dimension(),
+		x:         chunkPos.X(),
+		z:         chunkPos.Z(),
+	}
+	now := time.Now()
+	s.corrective.mu.Lock()
+	defer s.corrective.mu.Unlock()
+	if now.Sub(s.corrective.last[key]) < interval {
+		return false
+	}
+	s.corrective.last[key] = now
+	return true
+}
+
+func (s *Session) claimMessage(position mgl32.Vec3, message string) {
+	chunkPos := protocol.ChunkPos{
+		int32(math.Floor(float64(position.X()))) >> 4,
+		int32(math.Floor(float64(position.Z()))) >> 4,
+	}
+	if s.allowCorrective(chunkPos, time.Second) {
+		s.Message(message)
+		if s.claimFactory != nil {
+			s.claimFactory.Metrics().Correction(true)
+		}
+	} else if s.claimFactory != nil {
+		s.claimFactory.Metrics().Correction(false)
+	}
 }
 
 // AFKDuration returns how long the session has been idle. Before the first
@@ -318,18 +384,34 @@ func (s *Session) Server() session.Conn {
 }
 
 // handlePacket passes packet into corresponding handler.
-func (s *Session) handlePacket(p packet.Packet, conn Conn) (bool, error) {
+func (s *Session) handlePacket(p packet.Packet, conn Conn) (send bool, err error) {
 	handler, ok := s.handlers[p.ID()]
-	if ok {
-		ctx := event.C(conn)
-		err := handler.Handle(s, p, ctx)
-		if err != nil {
-			s.log.Error("error handling packet", "packet", p, "error", err)
-			s.Disconnect(err.Error())
-		}
-		return !ctx.Cancelled(), err
+	if !ok {
+		return true, nil
 	}
-	return true, nil
+	ctx := event.C(conn)
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			s.traffic.malformed(trafficHandler)
+			s.log.Error("panic handling packet", "packet_id", p.ID(), "error", recovered)
+			s.Disconnect("Malformed client packet.")
+			send = false
+			err = fmt.Errorf("panic handling packet %d: %v", p.ID(), recovered)
+		}
+	}()
+	err = handler.Handle(s, p, ctx)
+	if err == nil {
+		return !ctx.Cancelled(), nil
+	}
+	s.log.Error("error handling packet", "packet_id", p.ID(), "error", err)
+	var malformed malformedPacketError
+	if errors.As(err, &malformed) {
+		s.Disconnect("Malformed client packet.")
+		return false, err
+	}
+	// Handler failures drop only this packet. Claim and subchunk handlers are
+	// fail-open internally; unrelated backend failures must not disconnect sessions.
+	return false, nil
 }
 
 // registerHandlers registers all packet handlers.
@@ -338,16 +420,28 @@ func (s *Session) registerHandlers() {
 		packet.IDAddActor:             &AddActorHandler{},
 		packet.IDAddPainting:          &AddPaintingHandler{},
 		packet.IDAvailableCommands:    &AvailableCommandsHandler{},
+		packet.IDChangeDimension:      &ChangeDimensionHandler{},
 		packet.IDCommandRequest:       &CommandRequestHandler{},
 		packet.IDInventoryTransaction: &InventoryTransactionHandler{},
 		packet.IDItemRegistry:         &ItemRegistryHandler{},
 		packet.IDItemStackRequest:     &ItemStackRequestHandler{},
 		packet.IDLevelChunk:           &LevelChunkHandler{},
 		packet.IDModalFormRequest:     &ModalFormRequestHandler{},
+		packet.IDModalFormResponse:    &ModalFormResponseHandler{},
+		packet.IDMoveActorAbsolute:    &MoveActorHandler{},
+		packet.IDMoveActorDelta:       &MoveActorHandler{},
 		packet.IDPlayerAuthInput:      NewPlayerAuthInputHandler(),
 		packet.IDRemoveActor:          &RemoveActorHandler{},
 		packet.IDSetActorData:         &SetActorDataHandler{},
+		packet.IDSetPlayerGameType:    &SetPlayerGameTypeHandler{},
 		packet.IDSubChunk:             &SubChunkHandler{},
 		packet.IDText:                 &TextHandler{},
+		packet.IDUpdateAbilities:      &UpdateAbilitiesHandler{},
+		packet.IDUpdatePlayerGameType: &UpdatePlayerGameTypeHandler{},
 	}
+}
+
+// WriteTrafficMetrics emits and resets this session's traffic metric delta.
+func (s *Session) WriteTrafficMetrics(output io.Writer, server string, period time.Duration) {
+	s.traffic.session.WriteDelta(output, server, s.IdentityData().XUID, period)
 }

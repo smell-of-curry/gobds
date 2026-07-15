@@ -6,4 +6,5 @@ func init() {
 	for _, b := range Buttons() {
 		world.RegisterBlock(b)
 	}
+	world.RegisterBlock(Deny{})
 }
