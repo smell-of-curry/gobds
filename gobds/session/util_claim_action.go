@@ -59,15 +59,9 @@ func ClaimActionPermitted(cl claim.PlayerClaim, actor ClaimActor, action ClaimAc
 	case ClaimActionBlockPlace:
 		return handleClaimActionInFeature(cl, data, claim.FeatureTypeBlockPlaceable)
 	case ClaimActionBlockInteract:
-		if cl.OwnerXUID == "*" && adminClaimBlockInteractionAllowed(data) {
-			return true
-		}
-		return handleClaimActionInFeature(cl, data, claim.FeatureTypeBlockInteractable)
+		return claimActionBlockInteractPermitted(cl, data)
 	case ClaimActionEntityInteract:
-		if cl.OwnerXUID == "*" {
-			return true
-		}
-		return handleClaimActionInFeature(cl, data, claim.FeatureTypeEntityInteractable)
+		return claimActionEntityInteractPermitted(cl, data)
 	case ClaimActionEntityHurt:
 		return handleClaimActionInFeature(cl, data, claim.FeatureTypeEntityHurt)
 	case ClaimActionItemRelease, ClaimActionItemThrow:
@@ -75,12 +69,30 @@ func ClaimActionPermitted(cl claim.PlayerClaim, actor ClaimActor, action ClaimAc
 		// throwables are not item drops. BEH does not claim-filter either.
 		return true
 	case ClaimActionItemDrop:
-		if cl.OwnerXUID == "*" {
-			return true
-		}
-		return handleClaimActionInFeature(cl, data, claim.FeatureTypeDropItems)
+		return claimActionItemDropPermitted(cl, data)
 	}
 	return true
+}
+
+func claimActionBlockInteractPermitted(cl claim.PlayerClaim, data any) bool {
+	if cl.OwnerXUID == "*" && adminClaimBlockInteractionAllowed(data) {
+		return true
+	}
+	return handleClaimActionInFeature(cl, data, claim.FeatureTypeBlockInteractable)
+}
+
+func claimActionEntityInteractPermitted(cl claim.PlayerClaim, data any) bool {
+	if cl.OwnerXUID == "*" {
+		return true
+	}
+	return handleClaimActionInFeature(cl, data, claim.FeatureTypeEntityInteractable)
+}
+
+func claimActionItemDropPermitted(cl claim.PlayerClaim, data any) bool {
+	if cl.OwnerXUID == "*" {
+		return true
+	}
+	return handleClaimActionInFeature(cl, data, claim.FeatureTypeDropItems)
 }
 
 func adminClaimBlockInteractionAllowed(data any) bool {
@@ -97,15 +109,6 @@ func adminClaimBlockInteractionAllowed(data any) bool {
 	default:
 		return false
 	}
-}
-
-func claimActionsPermitted(claims []claim.PlayerClaim, actor ClaimActor, action ClaimAction, data any) bool {
-	for _, cl := range claims {
-		if !ClaimActionPermitted(cl, actor, action, data) {
-			return false
-		}
-	}
-	return true
 }
 
 func (s *Session) claimActionPermitted(action ClaimAction, data any) bool {

@@ -160,9 +160,9 @@ func droppedItemNetworkID(action protocol.InventoryAction) (int32, bool) {
 	if action.SourceType != protocol.InventoryActionSourceWorld {
 		return 0, false
 	}
-	networkID := action.NewItem.Stack.ItemType.NetworkID
+	networkID := action.NewItem.Stack.NetworkID
 	if networkID == 0 {
-		networkID = action.OldItem.Stack.ItemType.NetworkID
+		networkID = action.OldItem.Stack.NetworkID
 	}
 	return networkID, networkID != 0
 }

@@ -51,10 +51,17 @@ func NewMetrics(server string) *Metrics {
 	return &Metrics{server: server}
 }
 
+// RefreshAttempt records one claim-refresh attempt.
 func (m *Metrics) RefreshAttempt() { m.refreshAttempts.Add(1) }
+
+// RefreshSuccess records one successful claim refresh.
 func (m *Metrics) RefreshSuccess() { m.refreshSuccess.Add(1) }
+
+// RefreshFailure records one failed claim refresh.
 func (m *Metrics) RefreshFailure() { m.refreshFailure.Add(1) }
-func (m *Metrics) Packet()         { m.packets.Add(1) }
+
+// Packet records one processed claim-related packet.
+func (m *Metrics) Packet() { m.packets.Add(1) }
 
 // Action records one policy decision by fixed action index.
 func (m *Metrics) Action(action uint8, forwarded bool) {
@@ -103,6 +110,7 @@ func (m *Metrics) Latency(elapsed time.Duration) {
 	m.latency[index].Add(1)
 }
 
+// Correction records whether a corrective packet was sent or skipped.
 func (m *Metrics) Correction(sent bool) {
 	if sent {
 		m.correctionsSent.Add(1)
@@ -111,9 +119,14 @@ func (m *Metrics) Correction(sent bool) {
 	m.correctionsSkip.Add(1)
 }
 
-func (m *Metrics) SubchunkDecoded()  { m.subchunkDecode.Add(1) }
+// SubchunkDecoded records one successfully decoded subchunk payload.
+func (m *Metrics) SubchunkDecoded() { m.subchunkDecode.Add(1) }
+
+// SubchunkModified records one subchunk rewritten with deny blocks.
 func (m *Metrics) SubchunkModified() { m.subchunkModify.Add(1) }
-func (m *Metrics) SubchunkError()    { m.subchunkError.Add(1) }
+
+// SubchunkError records one subchunk decode or index failure.
+func (m *Metrics) SubchunkError() { m.subchunkError.Add(1) }
 
 type metricRecord struct {
 	Type        string                 `json:"type"`

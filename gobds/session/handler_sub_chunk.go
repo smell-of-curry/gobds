@@ -37,65 +37,87 @@ func (*SubChunkHandler) Handle(s *Session, pk packet.Packet, ctx *Context) (err 
 	s.Data().SetDimension(pkt.Dimension)
 
 	dimensions := s.GameData().Dimensions
-	var snapshot *claim.Snapshot
-	var snapshotStatus claim.QueryStatus
-	var dimension string
-	var dimensionFound bool
-	if s.claimDenyRendering && s.claimFactory != nil {
-		snapshot, snapshotStatus = s.claimFactory.Snapshot(time.Now())
-		dimension, dimensionFound = claimDimensionFromInt(pkt.Dimension, dimensions)
-		if snapshotStatus != claim.QueryReady {
-			s.claimFactory.Metrics().Reason(snapshotStatus)
-		}
-		if !dimensionFound {
-			s.claimFactory.Metrics().Reason(claim.QueryUnknownDimension)
-		}
-	}
+	snapshot, snapshotStatus, dimension, dimensionFound := resolveClaimSubChunkContext(s, pkt.Dimension, dimensions)
+	dimensionRange, rangeFound := dimensionRangeByID(pkt.Dimension, dimensions)
 
 	entries := make([]protocol.SubChunkEntry, 0, len(pkt.SubChunkEntries))
 	for _, entry := range pkt.SubChunkEntries {
-		chunkPos := protocol.ChunkPos{
-			pkt.Position.X() + int32(entry.Offset[0]),
-			pkt.Position.Z() + int32(entry.Offset[2]),
-		}
-
-		if s.border != nil && !s.border.ChunkInside(chunkPos) {
-			continue
-		}
-
-		if !s.claimDenyRendering || s.claimFactory == nil {
-			entries = append(entries, entry)
-			continue
-		}
-
-		dimensionRange, rangeFound := dimensionRangeByID(pkt.Dimension, dimensions)
-		// GoBDS disables the backend blob cache, so successful entries normally
-		// contain the sub-chunk bytes inline. Leave cached entries untouched if
-		// that invariant changes.
-		if entry.Result != protocol.SubChunkResultSuccess || !rangeFound || !dimensionFound ||
-			snapshotStatus != claim.QueryReady || pkt.CacheEnabled {
-			entries = append(entries, entry)
-			continue
-		}
-		chunkX := float32(chunkPos.X() << 4)
-		chunkZ := float32(chunkPos.Z() << 4)
-		candidates := snapshot.Candidates(dimension, chunkX, chunkZ)
-		s.claimFactory.Metrics().Candidates(len(candidates))
-
-		entries = append(entries, applyClaimDenyBlocks(
-			s,
-			pkt,
-			entry,
-			chunkPos,
-			dimensionRange,
-			candidates,
-			denyBlockRuntimeID(s.GameData().UseBlockNetworkIDHashes),
-			ClaimActor{XUID: s.IdentityData().XUID, Operator: s.Data().Operator()},
-		))
+		entries = append(entries, filterSubChunkEntry(
+			s, pkt, entry, snapshot, snapshotStatus,
+			dimension, dimensionFound, dimensionRange, rangeFound,
+		)...)
 	}
 
 	pkt.SubChunkEntries = entries
 	return nil
+}
+
+func resolveClaimSubChunkContext(
+	s *Session,
+	dimensionID int32,
+	dimensions []protocol.DimensionDefinition,
+) (*claim.Snapshot, claim.QueryStatus, string, bool) {
+	if !s.claimDenyRendering || s.claimFactory == nil {
+		return nil, 0, "", false
+	}
+	snapshot, snapshotStatus := s.claimFactory.Snapshot(time.Now())
+	dimension, dimensionFound := claimDimensionFromInt(dimensionID, dimensions)
+	if snapshotStatus != claim.QueryReady {
+		s.claimFactory.Metrics().Reason(snapshotStatus)
+	}
+	if !dimensionFound {
+		s.claimFactory.Metrics().Reason(claim.QueryUnknownDimension)
+	}
+	return snapshot, snapshotStatus, dimension, dimensionFound
+}
+
+// filterSubChunkEntry returns zero or one entries for the packet rewrite.
+func filterSubChunkEntry(
+	s *Session,
+	pkt *packet.SubChunk,
+	entry protocol.SubChunkEntry,
+	snapshot *claim.Snapshot,
+	snapshotStatus claim.QueryStatus,
+	dimension string,
+	dimensionFound bool,
+	dimensionRange cube.Range,
+	rangeFound bool,
+) []protocol.SubChunkEntry {
+	chunkPos := protocol.ChunkPos{
+		pkt.Position.X() + int32(entry.Offset[0]),
+		pkt.Position.Z() + int32(entry.Offset[2]),
+	}
+
+	if s.border != nil && !s.border.ChunkInside(chunkPos) {
+		return nil
+	}
+
+	if !s.claimDenyRendering || s.claimFactory == nil {
+		return []protocol.SubChunkEntry{entry}
+	}
+
+	// GoBDS disables the backend blob cache, so successful entries normally
+	// contain the sub-chunk bytes inline. Leave cached entries untouched if
+	// that invariant changes.
+	if entry.Result != protocol.SubChunkResultSuccess || !rangeFound || !dimensionFound ||
+		snapshotStatus != claim.QueryReady || pkt.CacheEnabled {
+		return []protocol.SubChunkEntry{entry}
+	}
+	chunkX := float32(chunkPos.X() << 4)
+	chunkZ := float32(chunkPos.Z() << 4)
+	candidates := snapshot.Candidates(dimension, chunkX, chunkZ)
+	s.claimFactory.Metrics().Candidates(len(candidates))
+
+	return []protocol.SubChunkEntry{applyClaimDenyBlocks(
+		s,
+		pkt,
+		entry,
+		chunkPos,
+		dimensionRange,
+		candidates,
+		denyBlockRuntimeID(s.GameData().UseBlockNetworkIDHashes),
+		ClaimActor{XUID: s.IdentityData().XUID, Operator: s.Data().Operator()},
+	)}
 }
 
 func applyClaimDenyBlocks(

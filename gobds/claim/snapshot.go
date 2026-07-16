@@ -40,13 +40,21 @@ type cellKey struct {
 type QueryStatus uint8
 
 const (
+	// QueryReady means the snapshot can be used for policy decisions.
 	QueryReady QueryStatus = iota
+	// QueryMissing means no snapshot has been published yet.
 	QueryMissing
+	// QueryStale means the snapshot exceeded the configured max age.
 	QueryStale
+	// QueryUnsupported means policy/schema versions are not understood.
 	QueryUnsupported
+	// QueryUnknownDimension means the packet dimension could not be mapped.
 	QueryUnknownDimension
+	// QueryInvalid means the query inputs were malformed.
 	QueryInvalid
+	// QueryOverlap means multiple claims matched the same position.
 	QueryOverlap
+	// QueryRefreshFailed means the last refresh attempt failed.
 	QueryRefreshFailed
 )
 

@@ -36,26 +36,7 @@ func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.Text)
 
 	if ctx.Val() == s.client {
-		if len(pkt.Message) > s.traffic.config.MaxTextBytes || len(pkt.SourceName) > 256 ||
-			len(pkt.Parameters) > 64 {
-			s.traffic.malformed(trafficChat)
-			return malformedPacketError{reason: "text payload exceeds maximum length"}
-		}
-		for _, parameter := range pkt.Parameters {
-			if len(parameter) > s.traffic.config.MaxTextBytes {
-				s.traffic.malformed(trafficChat)
-				return malformedPacketError{reason: "text parameter exceeds maximum length"}
-			}
-		}
-		if strings.TrimSpace(pkt.Message) == "" {
-			s.traffic.malformed(trafficChat)
-			ctx.Cancel()
-			return nil
-		}
-		if !s.traffic.allow(trafficChat) {
-			ctx.Cancel()
-		}
-		return nil
+		return handleClientText(s, pkt, ctx)
 	}
 
 	if pkt.TextType != packet.TextTypeObject {
@@ -113,5 +94,28 @@ func (*TextHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	// Reload commands immediately
 	cmd.LoadFrom(commands)
 	s.log.Info("reloaded commands from server", "count", len(commands))
+	return nil
+}
+
+func handleClientText(s *Session, pkt *packet.Text, ctx *Context) error {
+	if len(pkt.Message) > s.traffic.config.MaxTextBytes || len(pkt.SourceName) > 256 ||
+		len(pkt.Parameters) > 64 {
+		s.traffic.malformed(trafficChat)
+		return malformedPacketError{reason: "text payload exceeds maximum length"}
+	}
+	for _, parameter := range pkt.Parameters {
+		if len(parameter) > s.traffic.config.MaxTextBytes {
+			s.traffic.malformed(trafficChat)
+			return malformedPacketError{reason: "text parameter exceeds maximum length"}
+		}
+	}
+	if strings.TrimSpace(pkt.Message) == "" {
+		s.traffic.malformed(trafficChat)
+		ctx.Cancel()
+		return nil
+	}
+	if !s.traffic.allow(trafficChat) {
+		ctx.Cancel()
+	}
 	return nil
 }

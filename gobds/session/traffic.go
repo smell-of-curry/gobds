@@ -69,63 +69,39 @@ func DefaultTrafficConfig() TrafficConfig {
 	}
 }
 
+func setDefaultRate(v *float64, def float64) {
+	if *v <= 0 {
+		*v = def
+	}
+}
+
+func setDefaultBurst(v *int, def int) {
+	if *v <= 0 {
+		*v = def
+	}
+}
+
 // WithDefaults fills zero values, including when the config section is missing.
 func (c TrafficConfig) WithDefaults() TrafficConfig {
 	defaults := DefaultTrafficConfig()
-	if c.Chat.Rate <= 0 {
-		c.Chat.Rate = defaults.Chat.Rate
-	}
-	if c.Chat.Burst <= 0 {
-		c.Chat.Burst = defaults.Chat.Burst
-	}
-	if c.Commands.Rate <= 0 {
-		c.Commands.Rate = defaults.Commands.Rate
-	}
-	if c.Commands.Burst <= 0 {
-		c.Commands.Burst = defaults.Commands.Burst
-	}
-	if c.ModalFormResponses.Rate <= 0 {
-		c.ModalFormResponses.Rate = defaults.ModalFormResponses.Rate
-	}
-	if c.ModalFormResponses.Burst <= 0 {
-		c.ModalFormResponses.Burst = defaults.ModalFormResponses.Burst
-	}
-	if c.InventoryTransactions.Rate <= 0 {
-		c.InventoryTransactions.Rate = defaults.InventoryTransactions.Rate
-	}
-	if c.InventoryTransactions.Burst <= 0 {
-		c.InventoryTransactions.Burst = defaults.InventoryTransactions.Burst
-	}
-	if c.ItemStackRequests.Rate <= 0 {
-		c.ItemStackRequests.Rate = defaults.ItemStackRequests.Rate
-	}
-	if c.ItemStackRequests.Burst <= 0 {
-		c.ItemStackRequests.Burst = defaults.ItemStackRequests.Burst
-	}
-	if c.MaxTextBytes <= 0 {
-		c.MaxTextBytes = defaults.MaxTextBytes
-	}
-	if c.MaxCommandBytes <= 0 {
-		c.MaxCommandBytes = defaults.MaxCommandBytes
-	}
-	if c.MaxFormResponseBytes <= 0 {
-		c.MaxFormResponseBytes = defaults.MaxFormResponseBytes
-	}
-	if c.MaxFormResponseValues <= 0 {
-		c.MaxFormResponseValues = defaults.MaxFormResponseValues
-	}
-	if c.MaxInventoryActions <= 0 {
-		c.MaxInventoryActions = defaults.MaxInventoryActions
-	}
-	if c.MaxStackRequests <= 0 {
-		c.MaxStackRequests = defaults.MaxStackRequests
-	}
-	if c.MaxStackActions <= 0 {
-		c.MaxStackActions = defaults.MaxStackActions
-	}
-	if c.MaxTotalStackActions <= 0 {
-		c.MaxTotalStackActions = defaults.MaxTotalStackActions
-	}
+	setDefaultRate(&c.Chat.Rate, defaults.Chat.Rate)
+	setDefaultBurst(&c.Chat.Burst, defaults.Chat.Burst)
+	setDefaultRate(&c.Commands.Rate, defaults.Commands.Rate)
+	setDefaultBurst(&c.Commands.Burst, defaults.Commands.Burst)
+	setDefaultRate(&c.ModalFormResponses.Rate, defaults.ModalFormResponses.Rate)
+	setDefaultBurst(&c.ModalFormResponses.Burst, defaults.ModalFormResponses.Burst)
+	setDefaultRate(&c.InventoryTransactions.Rate, defaults.InventoryTransactions.Rate)
+	setDefaultBurst(&c.InventoryTransactions.Burst, defaults.InventoryTransactions.Burst)
+	setDefaultRate(&c.ItemStackRequests.Rate, defaults.ItemStackRequests.Rate)
+	setDefaultBurst(&c.ItemStackRequests.Burst, defaults.ItemStackRequests.Burst)
+	setDefaultBurst(&c.MaxTextBytes, defaults.MaxTextBytes)
+	setDefaultBurst(&c.MaxCommandBytes, defaults.MaxCommandBytes)
+	setDefaultBurst(&c.MaxFormResponseBytes, defaults.MaxFormResponseBytes)
+	setDefaultBurst(&c.MaxFormResponseValues, defaults.MaxFormResponseValues)
+	setDefaultBurst(&c.MaxInventoryActions, defaults.MaxInventoryActions)
+	setDefaultBurst(&c.MaxStackRequests, defaults.MaxStackRequests)
+	setDefaultBurst(&c.MaxStackActions, defaults.MaxStackActions)
+	setDefaultBurst(&c.MaxTotalStackActions, defaults.MaxTotalStackActions)
 	return c
 }
 

@@ -64,50 +64,56 @@ func (s *Service) FetchClaims() (FetchResult, error) {
 			return FetchResult{}, lastErr
 		}
 
-		switch response.StatusCode {
-		case http.StatusOK:
-			var claimResponse []ResponseModel
-			if err = json.NewDecoder(response.Body).Decode(&claimResponse); err != nil {
-				_ = response.Body.Close()
-				cancel()
-				lastErr = fmt.Errorf("failed to decode response: %w", err)
-				continue
-			}
-			_ = response.Body.Close()
-			cancel()
-
-			obj := make(map[string]PlayerClaim, len(claimResponse))
-			for _, v := range claimResponse {
-				if _, exists := obj[v.Key]; exists {
-					return FetchResult{}, fmt.Errorf("duplicate claim response key %q", v.Key)
-				}
-				obj[v.Key] = v.Data
-			}
-			s.lastModified = response.Header.Get("last-modified")
-			return FetchResult{
-				Claims:       obj,
-				LastModified: s.lastModified,
-			}, nil
-		case http.StatusNotModified:
-			if modified := response.Header.Get("last-modified"); modified != "" {
-				s.lastModified = modified
-			}
-			_ = response.Body.Close()
-			cancel()
-			return FetchResult{NotModified: true, LastModified: s.lastModified}, nil
-		case http.StatusTooManyRequests:
-			_ = response.Body.Close()
-			cancel()
-			lastErr = fmt.Errorf("rate limited")
+		result, err, retry := s.handleFetchResponse(response, cancel)
+		if retry {
+			lastErr = err
 			continue
-		default:
-			_ = response.Body.Close()
-			cancel()
-			lastErr = fmt.Errorf("unexpected status code: %d", response.StatusCode)
 		}
+		if err != nil {
+			return FetchResult{}, err
+		}
+		return result, nil
 	}
 	if lastErr == nil {
 		lastErr = fmt.Errorf("claims service unavailable")
 	}
 	return FetchResult{}, lastErr
+}
+
+// handleFetchResponse closes the body, cancels the request context, and returns
+// (result, err, retry). retry=true means the caller should continue the loop.
+func (s *Service) handleFetchResponse(response *http.Response, cancel context.CancelFunc) (FetchResult, error, bool) {
+	defer cancel()
+	defer func() { _ = response.Body.Close() }()
+
+	switch response.StatusCode {
+	case http.StatusOK:
+		var claimResponse []ResponseModel
+		if err := json.NewDecoder(response.Body).Decode(&claimResponse); err != nil {
+			return FetchResult{}, fmt.Errorf("failed to decode response: %w", err), true
+		}
+		obj := make(map[string]PlayerClaim, len(claimResponse))
+		for _, v := range claimResponse {
+			if _, exists := obj[v.Key]; exists {
+				return FetchResult{}, fmt.Errorf("duplicate claim response key %q", v.Key), false
+			}
+			obj[v.Key] = v.Data
+		}
+		if modified := response.Header.Get("last-modified"); modified != "" {
+			s.lastModified = modified
+		}
+		return FetchResult{
+			Claims:       obj,
+			LastModified: s.lastModified,
+		}, nil, false
+	case http.StatusNotModified:
+		if modified := response.Header.Get("last-modified"); modified != "" {
+			s.lastModified = modified
+		}
+		return FetchResult{NotModified: true, LastModified: s.lastModified}, nil, false
+	case http.StatusTooManyRequests:
+		return FetchResult{}, fmt.Errorf("rate limited"), true
+	default:
+		return FetchResult{}, fmt.Errorf("unexpected status code: %d", response.StatusCode), true
+	}
 }

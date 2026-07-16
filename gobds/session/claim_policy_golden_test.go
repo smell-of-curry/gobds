@@ -42,7 +42,7 @@ func TestClaimPolicyGoldenFixture(t *testing.T) {
 	}
 	for _, test := range golden.Cases {
 		t.Run(test.Name, func(t *testing.T) {
-			action := claimActionFromGolden(test.Action)
+			action := claimActionFromGolden(t, test.Action)
 			got := ClaimActionPermitted(
 				test.Claim,
 				ClaimActor{XUID: test.Actor.XUID, Operator: test.Actor.Operator},
@@ -59,7 +59,8 @@ func TestClaimPolicyGoldenFixture(t *testing.T) {
 	}
 }
 
-func claimActionFromGolden(value string) ClaimAction {
+func claimActionFromGolden(t *testing.T, value string) ClaimAction {
+	t.Helper()
 	switch value {
 	case "render":
 		return ClaimActionRender
@@ -80,6 +81,7 @@ func claimActionFromGolden(value string) ClaimAction {
 	case "itemDrop":
 		return ClaimActionItemDrop
 	default:
-		return ClaimAction(255)
+		t.Fatalf("unknown golden action: %q", value)
+		return 0
 	}
 }

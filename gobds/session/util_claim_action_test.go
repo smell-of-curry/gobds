@@ -324,6 +324,15 @@ func TestClaimsAtHandlesReversedAndOverlappingClaims(t *testing.T) {
 	}
 }
 
+func claimActionsPermitted(claims []claim.PlayerClaim, actor ClaimActor, action ClaimAction, data any) bool {
+	for _, cl := range claims {
+		if !ClaimActionPermitted(cl, actor, action, data) {
+			return false
+		}
+	}
+	return true
+}
+
 func testClaim() claim.PlayerClaim {
 	return claim.PlayerClaim{
 		ID:           "claim",

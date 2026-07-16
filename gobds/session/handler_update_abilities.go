@@ -29,12 +29,14 @@ func (*UpdateAbilitiesHandler) Handle(s *Session, pk packet.Packet, ctx *Context
 
 	s.Data().SetOperator(operator)
 	position := s.Position()
-	s.WriteToClient(&packet.LevelChunk{
-		Position: protocol.ChunkPos{
-			int32(math.Floor(float64(position.X()))) >> 4,
-			int32(math.Floor(float64(position.Z()))) >> 4,
-		},
-		SubChunkCount: protocol.SubChunkRequestModeLimited,
-	})
+	chunkPos := protocol.ChunkPos{
+		int32(math.Floor(float64(position.X()))) >> 4,
+		int32(math.Floor(float64(position.Z()))) >> 4,
+	}
+	correction, ok := correctiveLevelChunk(chunkPos, s.Data().Dimension(), s.GameData().Dimensions)
+	if !ok {
+		return nil
+	}
+	s.WriteToClient(correction)
 	return nil
 }
