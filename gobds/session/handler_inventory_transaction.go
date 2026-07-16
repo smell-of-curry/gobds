@@ -1,16 +1,14 @@
 package session
 
 import (
-	"slices"
+	"time"
 
 	"github.com/df-mc/dragonfly/server/block"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/go-gl/mathgl/mgl32"
+	"github.com/df-mc/dragonfly/server/event"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
-	"github.com/smell-of-curry/gobds/gobds/claim"
 )
 
 // InventoryTransactionHandler ...
@@ -19,6 +17,21 @@ type InventoryTransactionHandler struct{}
 // Handle ...
 func (h *InventoryTransactionHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	pkt := pk.(*packet.InventoryTransaction)
+	if ctx.Val() == s.client {
+		if len(pkt.Actions) > s.traffic.config.MaxInventoryActions {
+			s.traffic.malformed(trafficInventory)
+			return malformedPacketError{reason: "inventory transaction has too many actions"}
+		}
+		if !s.traffic.allow(trafficInventory) {
+			ctx.Cancel()
+			return nil
+		}
+	}
+	if s.claimFactory != nil {
+		s.claimFactory.Metrics().Packet()
+		start := time.Now()
+		defer func() { s.claimFactory.Metrics().Latency(time.Since(start)) }()
+	}
 
 	h.handleInteraction(s, pkt, ctx)
 	if ctx.Cancelled() {
@@ -30,8 +43,26 @@ func (h *InventoryTransactionHandler) Handle(s *Session, pk packet.Packet, ctx *
 		return nil
 	}
 
-	h.handleClaims(s, pkt, ctx)
+	if h.handleClaimsFailOpen(s, pkt, ctx.Val()) {
+		ctx.Cancel()
+	}
 	return nil
+}
+
+func (h *InventoryTransactionHandler) handleClaimsFailOpen(
+	s *Session,
+	pkt *packet.InventoryTransaction,
+	conn Conn,
+) (cancel bool) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			cancel = false
+			s.log.Error("claim inventory transaction failed open", "error", recovered)
+		}
+	}()
+	ctx := event.C(conn)
+	h.handleClaims(s, pkt, ctx)
+	return ctx.Cancelled()
 }
 
 // handleInteraction ...
@@ -48,11 +79,11 @@ func (h *InventoryTransactionHandler) handleInteraction(s *Session, pkt *packet.
 	if !ok {
 		return
 	}
-	if transactionData.ActionType != protocol.UseItemActionClickBlock &&
-		transactionData.TriggerType != protocol.UseItemActionClickAir {
+	if transactionData.ActionType != protocol.UseItemActionClickBlock ||
+		transactionData.TriggerType != protocol.TriggerTypePlayerInput {
 		return
 	}
-	b, ok := world.BlockByRuntimeID(transactionData.BlockRuntimeID)
+	b, ok := blockByRuntimeID(transactionData.BlockRuntimeID, s.GameData().UseBlockNetworkIDHashes)
 	if !ok {
 		return
 	}
@@ -75,9 +106,9 @@ func (h *InventoryTransactionHandler) handleWorldBorder(s *Session, pkt *packet.
 		return
 	}
 
-	if td, ok := pkt.TransactionData.(*protocol.UseItemTransactionData); ok {
-		if td.ActionType == protocol.UseItemActionClickBlock {
-			if !s.border.PositionInside(td.BlockPosition.X(), td.BlockPosition.Z()) {
+	if transaction, ok := pkt.TransactionData.(*protocol.UseItemTransactionData); ok {
+		if transaction.ActionType == protocol.UseItemActionClickBlock {
+			if !s.border.PositionInside(transaction.BlockPosition.X(), transaction.BlockPosition.Z()) {
 				ctx.Cancel()
 			}
 		}
@@ -86,15 +117,54 @@ func (h *InventoryTransactionHandler) handleWorldBorder(s *Session, pkt *packet.
 
 // handleClaims ...
 func (h *InventoryTransactionHandler) handleClaims(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
+	h.handleClaimDropItems(s, pkt, ctx)
+	if ctx.Cancelled() {
+		return
+	}
 	h.handleClaimUseItem(s, pkt, ctx)
 	if ctx.Cancelled() {
 		return
 	}
 	h.handleClaimUseItemOnEntity(s, pkt, ctx)
-	if ctx.Cancelled() {
+}
+
+func (*InventoryTransactionHandler) handleClaimDropItems(
+	s *Session,
+	pkt *packet.InventoryTransaction,
+	ctx *Context,
+) {
+	position := s.Position()
+	registry := s.handlers[packet.IDItemRegistry].(*ItemRegistryHandler)
+	for _, action := range pkt.Actions {
+		networkID, ok := droppedItemNetworkID(action)
+		if !ok {
+			continue
+		}
+		entry, ok := registry.Item(int16(networkID))
+		if !ok {
+			continue
+		}
+		if s.claimActionPermitted(
+			ClaimActionItemDrop,
+			claimActionData{position: position, typeID: entry.Name},
+		) {
+			continue
+		}
+		s.claimMessage(position, text.Colourf("<red>You cannot drop items inside this claim.</red>"))
+		ctx.Cancel()
 		return
 	}
-	h.handleClaimReleaseItem(s, pkt, ctx)
+}
+
+func droppedItemNetworkID(action protocol.InventoryAction) (int32, bool) {
+	if action.SourceType != protocol.InventoryActionSourceWorld {
+		return 0, false
+	}
+	networkID := action.NewItem.Stack.NetworkID
+	if networkID == 0 {
+		networkID = action.OldItem.Stack.NetworkID
+	}
+	return networkID, networkID != 0
 }
 
 // handleClaimUseItem ...
@@ -104,67 +174,78 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 		return
 	}
 
-	clientXUID := s.IdentityData().XUID
-
-	dat := s.Data()
-	pos := transactionData.Position
-	cl, ok := ClaimAt(s.claimFactory.All(), dat.Dimension(), pos.X(), pos.Z())
-	if !ok {
-		return
+	if transactionData.ActionType == protocol.UseItemActionClickBlock {
+		h.handleClaimClickBlock(s, transactionData, ctx)
 	}
-
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
-		return
-	}
-
-	if h.checkClaimBlockInteraction(s, ctx, transactionData) {
-		return
-	}
-
-	h.checkClaimItemThrow(s, ctx, transactionData)
 }
 
-func (h *InventoryTransactionHandler) checkClaimBlockInteraction(s *Session, ctx *Context, td *protocol.UseItemTransactionData) bool {
-	if td.ActionType == protocol.UseItemActionClickBlock &&
-		td.TriggerType == protocol.UseItemActionClickAir {
-		if b, exists := world.BlockByRuntimeID(td.BlockRuntimeID); exists {
-			switch b.(type) {
-			case block.ItemFrame, block.Lectern, block.DecoratedPot:
-				s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
-				ctx.Cancel()
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (h *InventoryTransactionHandler) checkClaimItemThrow(s *Session, ctx *Context, td *protocol.UseItemTransactionData) {
-	heldItem := td.HeldItem.Stack.ItemType
-	if heldItem.NetworkID == 0 {
+func (*InventoryTransactionHandler) handleClaimClickBlock(
+	s *Session,
+	transactionData *protocol.UseItemTransactionData,
+	ctx *Context,
+) {
+	pos := blockPosToVec3(transactionData.BlockPosition)
+	b, found := blockByRuntimeID(transactionData.BlockRuntimeID, s.GameData().UseBlockNetworkIDHashes)
+	if !found {
 		return
 	}
+	typeID, _ := b.EncodeBlock()
 
 	registry := s.handlers[packet.IDItemRegistry].(*ItemRegistryHandler)
-	if registry.items == nil {
+	heldItem, heldItemFound := registry.Item(int16(transactionData.HeldItem.Stack.NetworkID))
+	if heldItemFound && (heldItem.Name == "minecraft:stick" || heldItem.Name == "minecraft:golden_shovel") {
 		return
 	}
 
-	entry, ok := registry.items[int16(heldItem.NetworkID)]
-	if !ok {
+	if transactionData.HeldItem.Stack.BlockRuntimeID != 0 {
+		placePos, validFace := offsetBlockPos(transactionData.BlockPosition, transactionData.BlockFace)
+		placedBlock, placedBlockFound := blockByRuntimeID(
+			uint32(transactionData.HeldItem.Stack.BlockRuntimeID),
+			s.GameData().UseBlockNetworkIDHashes,
+		)
+		if !validFace || !placedBlockFound {
+			return
+		}
+		placedTypeID, _ := placedBlock.EncodeBlock()
+		if s.claimActionPermitted(
+			ClaimActionBlockPlace,
+			claimActionData{position: blockPosToVec3(placePos), typeID: placedTypeID},
+		) {
+			return
+		}
+		s.claimMessage(pos, text.Colourf("<red>You cannot place blocks inside this claim.</red>"))
+		ctx.Cancel()
 		return
 	}
 
-	components, ok := entry.Data["components"].(map[string]any)
-	if !ok || components["minecraft:throwable"] == nil {
+	if s.claimActionPermitted(
+		ClaimActionBlockInteract,
+		claimActionData{position: pos, typeID: typeID},
+	) {
 		return
 	}
-
-	s.Message(text.Colourf("<red>You cannot throw items inside this claim.</red>"))
+	s.claimMessage(pos, text.Colourf("<red>You cannot interact with blocks inside this claim.</red>"))
 	ctx.Cancel()
+}
+
+func offsetBlockPos(pos protocol.BlockPos, face int32) (protocol.BlockPos, bool) {
+	switch face {
+	case 0:
+		pos[1]--
+	case 1:
+		pos[1]++
+	case 2:
+		pos[2]--
+	case 3:
+		pos[2]++
+	case 4:
+		pos[0]--
+	case 5:
+		pos[0]++
+	default:
+		return pos, false
+	}
+	return pos, true
 }
 
 // handleClaimUseItemEntity ...
@@ -174,86 +255,38 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		return
 	}
 
-	clientXUID := s.IdentityData().XUID
-
-	dat := s.Data()
-	pos := transactionData.Position
-	cl, ok := ClaimAt(s.claimFactory.All(), dat.Dimension(), pos.X(), pos.Z())
-	if !ok {
+	entity, exists := s.entityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
+	if !exists {
 		return
 	}
 
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
-		return
-	}
-	ent, ok := s.entityFactory.ByRuntimeID(transactionData.TargetEntityRuntimeID)
-	if !ok {
-		return
-	}
-
-	switch ent.ActorType() {
+	switch entity.ActorType() {
 	case "minecraft:armor_stand", "minecraft:painting":
-		s.Message(text.Colourf("<red>You cannot interact with block entities inside this claim.</red>"))
-		ctx.Cancel()
-	}
-}
-
-// handleClaimReleaseItem ...
-func (h *InventoryTransactionHandler) handleClaimReleaseItem(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
-	transactionData, ok := pkt.TransactionData.(*protocol.ReleaseItemTransactionData)
-	if !ok {
-		return
-	}
-
-	clientXUID := s.IdentityData().XUID
-
-	dat := s.Data()
-	pos := transactionData.HeadPosition.Sub(mgl32.Vec3{0, 1.62})
-	cl, ok := ClaimAt(s.claimFactory.All(), dat.Dimension(), pos.X(), pos.Z())
-	if !ok {
-		return
-	}
-
-	if cl.ID == "" || // Invalid claim?
-		cl.OwnerXUID == "*" || // Admin claim.
-		cl.OwnerXUID == clientXUID ||
-		slices.Contains(cl.TrustedXUIDS, clientXUID) {
-		return
-	}
-
-	s.Message(text.Colourf("<red>You cannot release items inside this claim.</red>"))
-	ctx.Cancel()
-}
-
-// claimDimensionToInt ...
-func claimDimensionToInt(dimension string) int32 {
-	switch dimension {
-	case "minecraft:overworld":
-		return 0
-	case "minecraft:nether":
-		return 1
-	case "minecraft:end":
-		return 2
 	default:
-		return -1
+		return
 	}
-}
+	entityPosition := entity.Position()
 
-// ClaimAt ...
-func ClaimAt(claims map[string]claim.PlayerClaim, dimension int32, x, z float32) (claim.PlayerClaim, bool) {
-	for _, c := range claims {
-		if claimDimensionToInt(c.Location.Dimension) == dimension {
-			minX := min(c.Location.Pos1.X, c.Location.Pos2.X)
-			maxX := max(c.Location.Pos1.X, c.Location.Pos2.X)
-			minZ := min(c.Location.Pos1.Z, c.Location.Pos2.Z)
-			maxZ := max(c.Location.Pos1.Z, c.Location.Pos2.Z)
-			if x >= minX && x <= maxX && z >= minZ && z <= maxZ {
-				return c, true
-			}
-		}
+	var action ClaimAction
+	var actionName string
+	switch transactionData.ActionType {
+	case protocol.UseItemOnEntityActionInteract:
+		action = ClaimActionEntityInteract
+		actionName = "interact with"
+	case protocol.UseItemOnEntityActionAttack:
+		action = ClaimActionEntityHurt
+		actionName = "hurt"
+	default:
+		return
 	}
-	return claim.PlayerClaim{}, false
+	permitted := s.claimActionPermitted(action, claimActionData{
+		position: entityPosition,
+		typeID:   entity.ActorType(),
+	})
+	if permitted {
+		return
+	}
+
+	s.claimMessage(entityPosition, text.Colourf("<red>You cannot %s entities inside this claim.</red>", actionName))
+	ctx.Cancel()
 }

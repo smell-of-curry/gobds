@@ -3,5 +3,6 @@
 
 *.toml
 *.json
+!policy/*.json
 *.lock
 *.exe

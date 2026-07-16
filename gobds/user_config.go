@@ -15,6 +15,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/resource"
+	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/cmd"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/session"
@@ -43,6 +44,12 @@ type UserConfig struct {
 		Enabled    bool
 		MinX, MinZ int32
 		MaxX, MaxZ int32
+	}
+	Claims struct {
+		PrefilterEnabled     bool
+		DenyRenderingEnabled bool
+		PollInterval         string
+		MaxSnapshotAge       string
 	}
 	AFKTimer struct {
 		Enabled         bool
@@ -80,6 +87,10 @@ type UserConfig struct {
 		// treated as VPN/proxy connections. Used for residential ISP
 		// blocks the detection API misclassifies.
 		WhitelistedCIDRs []string
+	}
+	TrafficProtection session.TrafficConfig
+	DuplicateXUID     struct {
+		Enabled bool
 	}
 	Encryption struct {
 		Key string
@@ -277,6 +288,10 @@ func DefaultConfig() UserConfig {
 	c.Network.FlushRate = 20
 
 	c.Border.Enabled = false
+	c.Claims.PrefilterEnabled = false
+	c.Claims.DenyRenderingEnabled = false
+	c.Claims.PollInterval = claim.DefaultPollInterval.String()
+	c.Claims.MaxSnapshotAge = claim.DefaultMaxSnapshotAge.String()
 
 	c.AFKTimer.Enabled = true
 	c.AFKTimer.TimeoutDuration = "10m"
@@ -296,6 +311,9 @@ func DefaultConfig() UserConfig {
 	c.VPNService.URL = "http://ip-api.com/json"
 	// Megalink S.R.L. (Argentina) — residential ISP flagged as proxy by ip-api.
 	c.VPNService.WhitelistedCIDRs = []string{"45.230.64.0/22"}
+
+	c.TrafficProtection = session.DefaultTrafficConfig()
+	c.DuplicateXUID.Enabled = false
 
 	c.Encryption.Key = defaultKey
 	return c

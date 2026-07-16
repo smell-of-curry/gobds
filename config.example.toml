@@ -36,6 +36,12 @@ MaxX = 12000 # The maximum X coordinate for the world border
 MinZ = -12000 # The minimum Z coordinate for the world border
 MaxZ = 12000 # The maximum Z coordinate for the world border
 
+[Claims]
+PrefilterEnabled = false # Whether to prefilter supported denied claim actions
+DenyRenderingEnabled = false # Whether to render deny blocks under protected claims
+PollInterval = '15s' # How often each server refreshes its immutable claim snapshot
+MaxSnapshotAge = '45s' # Older snapshots fail open and pass actions to BDS
+
 [PingIndicator]
 Enabled = true # Whether to enable the ping indicator
 Identifier = '&_playerPing:' # The identifier for the ping indicator
@@ -59,6 +65,40 @@ Key = 'secret-key' # The authentication key for the queues API
 Enabled = false # Whether this service is enabled
 URL = 'http://ip-api.com/json' # A service to validate users if they are using VPN's
 Key = '' # Authentication key if required
+
+[TrafficProtection]
+Enforce = false # Observe and count excess traffic by default; true drops rate excess.
+MaxTextBytes = 4096
+MaxCommandBytes = 4096
+MaxFormResponseBytes = 65536
+MaxFormResponseValues = 128
+MaxInventoryActions = 128
+MaxStackRequests = 64
+MaxStackActions = 128
+MaxTotalStackActions = 256
+
+[TrafficProtection.Chat]
+Rate = 8
+Burst = 16
+
+[TrafficProtection.Commands]
+Rate = 4
+Burst = 8
+
+[TrafficProtection.ModalFormResponses]
+Rate = 10
+Burst = 20
+
+[TrafficProtection.InventoryTransactions]
+Rate = 60
+Burst = 120
+
+[TrafficProtection.ItemStackRequests]
+Rate = 40
+Burst = 80
+
+[DuplicateXUID]
+Enabled = false # Reject simultaneous sessions for same non-empty XUID.
 
 [Encryption]
 Key = 'secret-key' # The Encryption key used for XUID messages to BDS

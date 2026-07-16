@@ -16,8 +16,13 @@ type Config struct {
 	Client Conn
 	Server Conn
 
-	AFKTimer      *infra.AFKTimer
-	Border        *area.Area2D
+	AFKTimer *infra.AFKTimer
+	Border   *area.Area2D
+
+	ClaimPrefilter     bool
+	ClaimDenyRendering bool
+	Traffic            TrafficConfig
+	TrafficMetrics     *TrafficMetrics
 
 	EntityFactory *entity.Factory
 	ClaimFactory  *claim.Factory
@@ -34,10 +39,17 @@ func (c Config) New() *Session {
 		afkTimer: c.AFKTimer,
 		border:   c.Border,
 
+		claimPrefilter:     c.ClaimPrefilter,
+		claimDenyRendering: c.ClaimDenyRendering,
+
 		entityFactory: c.EntityFactory,
 		claimFactory:  c.ClaimFactory,
 
 		close: make(chan struct{}),
+		corrective: correctiveState{
+			last: make(map[correctiveKey]time.Time),
+		},
+		traffic: newTrafficState(c.Traffic, c.TrafficMetrics),
 
 		lastForwardedPing: -1,
 
@@ -45,6 +57,7 @@ func (c Config) New() *Session {
 		log:  c.Log,
 	}
 	s.afk.lastMoveTime = time.Now()
+	s.afk.lastPosition = c.Client.GameData().PlayerPosition
 	s.registerHandlers()
 	return s
 }

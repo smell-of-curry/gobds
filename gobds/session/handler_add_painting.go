@@ -9,8 +9,16 @@ import (
 type AddPaintingHandler struct{}
 
 // Handle ...
-func (*AddPaintingHandler) Handle(s *Session, pk packet.Packet, _ *Context) error {
+func (*AddPaintingHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
+	if ctx.Val() != s.server {
+		return nil
+	}
 	pkt := pk.(*packet.AddPainting)
-	s.entityFactory.Add(entity.NewEntity(pkt.EntityRuntimeID, "minecraft:painting"))
+	s.entityFactory.Add(entity.NewEntity(
+		pkt.EntityUniqueID,
+		pkt.EntityRuntimeID,
+		"minecraft:painting",
+		pkt.Position,
+	))
 	return nil
 }

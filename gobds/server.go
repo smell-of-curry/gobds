@@ -3,6 +3,7 @@ package gobds
 import (
 	"context"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -37,6 +38,8 @@ type Server struct {
 	// ClaimFactory is shared across all sessions on this server because claims are world-state
 	// fetched periodically from an external service.
 	ClaimFactory *claim.Factory
+	// TrafficMetrics aggregates rate and malformed-packet counters for this server.
+	TrafficMetrics *session.TrafficMetrics
 
 	Listener       Listener
 	StatusProvider minecraft.ServerStatusProvider
@@ -49,8 +52,37 @@ type Server struct {
 	// pointer so late-registering sessions with duplicate XUIDs (e.g. a
 	// reconnect racing with an old connection) don't clobber one another.
 	sessions sync.Map
+	xuidMu   sync.Mutex
+	xuids    map[string]struct{}
 
 	Log *slog.Logger
+}
+
+// ReserveXUID atomically reserves a non-empty XUID until ReleaseXUID is called.
+func (s *Server) ReserveXUID(xuid string) bool {
+	if xuid == "" {
+		return true
+	}
+	s.xuidMu.Lock()
+	defer s.xuidMu.Unlock()
+	if s.xuids == nil {
+		s.xuids = make(map[string]struct{})
+	}
+	if _, exists := s.xuids[xuid]; exists {
+		return false
+	}
+	s.xuids[xuid] = struct{}{}
+	return true
+}
+
+// ReleaseXUID releases an admission reservation.
+func (s *Server) ReleaseXUID(xuid string) {
+	if xuid == "" {
+		return
+	}
+	s.xuidMu.Lock()
+	delete(s.xuids, xuid)
+	s.xuidMu.Unlock()
 }
 
 // AddSession registers a session with the server for later iteration by the
@@ -138,14 +170,28 @@ func (gb *GoBDS) claimFetching(srv *Server) {
 		}
 	}
 	fetch()
-	t := time.NewTicker(5 * time.Minute)
-	defer t.Stop()
+	refresh := time.NewTicker(srv.ClaimFactory.PollInterval())
+	defer refresh.Stop()
+	const metricPeriod = time.Minute
+	metrics := time.NewTicker(metricPeriod)
+	defer metrics.Stop()
 	for {
 		select {
 		case <-gb.ctx.Done():
 			return
-		case <-t.C:
+		case <-refresh.C:
 			fetch()
+		case <-metrics.C:
+			srv.ClaimFactory.Metrics().WriteDelta(os.Stdout, metricPeriod, snapshotOf(srv.ClaimFactory))
+			srv.TrafficMetrics.WriteDelta(os.Stdout, srv.Name, "", metricPeriod)
+			for _, sess := range srv.Sessions() {
+				sess.WriteTrafficMetrics(os.Stdout, srv.Name, metricPeriod)
+			}
 		}
 	}
+}
+
+func snapshotOf(factory *claim.Factory) *claim.Snapshot {
+	snapshot, _ := factory.Snapshot(time.Now())
+	return snapshot
 }

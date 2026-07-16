@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": 1,
+  "cases": [
+    {
+      "name": "stranger denied without feature",
+      "claim": {
+        "claimId": "spawn",
+        "playerXUID": "owner",
+        "location": {
+          "dimension": "minecraft:overworld",
+          "pos1": {"x": 0, "z": 0},
+          "pos2": {"x": 15, "z": 15}
+        },
+        "features": [],
+        "trusts": ["trusted"]
+      },
+      "actor": {"xuid": "stranger", "operator": false},
+      "action": "blockBreak",
+      "position": {"x": 4, "y": 64, "z": 4},
+      "typeId": "minecraft:stone",
+      "permitted": false
+    },
+    {
+      "name": "trusted allowed",
+      "claim": {
+        "claimId": "spawn",
+        "playerXUID": "owner",
+        "location": {
+          "dimension": "minecraft:overworld",
+          "pos1": {"x": 0, "z": 0},
+          "pos2": {"x": 15, "z": 15}
+        },
+        "features": [],
+        "trusts": ["trusted"]
+      },
+      "actor": {"xuid": "trusted", "operator": false},
+      "action": "blockBreak",
+      "position": {"x": 4, "y": 64, "z": 4},
+      "typeId": "minecraft:stone",
+      "permitted": true
+    },
+    {
+      "name": "mineable feature allows listed block",
+      "claim": {
+        "claimId": "spawn",
+        "playerXUID": "owner",
+        "location": {
+          "dimension": "minecraft:overworld",
+          "pos1": {"x": 0, "z": 0},
+          "pos2": {"x": 15, "z": 15}
+        },
+        "features": [
+          {
+            "type": "mineable",
+            "fromLocation": {"x": 2, "y": 60, "z": 2},
+            "toLocation": {"x": 8, "y": 70, "z": 8},
+            "blockTypeIds": ["minecraft:stone"]
+          }
+        ],
+        "trusts": []
+      },
+      "actor": {"xuid": "stranger", "operator": false},
+      "action": "blockBreak",
+      "position": {"x": 4, "y": 64, "z": 4},
+      "typeId": "minecraft:stone",
+      "permitted": true
+    }
+  ]
+}
