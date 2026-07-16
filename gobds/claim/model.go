@@ -37,6 +37,8 @@ const (
 	FeatureTypeEntityHurt = "entityHurt"
 	// FeatureTypeDropItems ...
 	FeatureTypeDropItems = "dropItems"
+	// FeatureTypePickupItems is stored/accepted for BEH parity; proxy does not enforce pickup yet.
+	FeatureTypePickupItems = "pickupItems"
 )
 
 // Feature ...

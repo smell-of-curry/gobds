@@ -41,6 +41,30 @@ func TestBuildSnapshotIndexesCanonicalCellsAndClones(t *testing.T) {
 	}
 }
 
+func TestBuildSnapshotAcceptsPickupItemsWithoutEnforcement(t *testing.T) {
+	snapshot, err := BuildSnapshot(map[string]PlayerClaim{
+		"one": {
+			ID:        "one",
+			OwnerXUID: "owner",
+			Location: Location{
+				Dimension: "minecraft:overworld",
+				Pos1:      Vector2{X: 0, Z: 0},
+				Pos2:      Vector2{X: 15, Z: 15},
+			},
+			Features: []Feature{{
+				Type:        FeatureTypePickupItems,
+				ItemTypeIDs: []string{"minecraft:apple"},
+			}},
+		},
+	}, 1, time.Now())
+	if err != nil {
+		t.Fatalf("pickupItems must be allowed for BEH parity: %v", err)
+	}
+	if len(snapshot.claims) != 1 || snapshot.claims[0].Features[0].Type != FeatureTypePickupItems {
+		t.Fatalf("unexpected snapshot: %+v", snapshot.claims)
+	}
+}
+
 func TestBuildSnapshotRejectsInvalidDataAtomically(t *testing.T) {
 	_, err := BuildSnapshot(map[string]PlayerClaim{
 		"bad": {

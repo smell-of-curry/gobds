@@ -173,7 +173,8 @@ func cloneAndValidateClaim(key string, source PlayerClaim) (PlayerClaim, error) 
 func validateFeature(claimID string, feature Feature) error {
 	switch feature.Type {
 	case FeatureTypeMineable, FeatureTypeBlockPlaceable, FeatureTypeBlockInteractable,
-		FeatureTypeEntityInteractable, FeatureTypeEntityHurt, FeatureTypeDropItems:
+		FeatureTypeEntityInteractable, FeatureTypeEntityHurt, FeatureTypeDropItems,
+		FeatureTypePickupItems:
 	default:
 		return fmt.Errorf("claim %q has unsupported feature %q", claimID, feature.Type)
 	}
