@@ -139,8 +139,17 @@ func (c UserConfig) packs(log *slog.Logger) []*resource.Pack {
 // versions: players got stuck on "Loading resource packs" or joined with a
 // half-applied pack. Serving over RakNet chunks (empty DownloadURL) matches
 // how the hub delivers packs and works for every client.
+//
+// Note the subfolder layout above is a requirement of the client-side CDN
+// download only; server-side compilation (resource.Read here, resource.ReadPath
+// on the hub) accepts manifest.json at the archive root, which is exactly the
+// layout our release assets use.
 func readURLPack(url string) (*resource.Pack, error) {
-	resp, err := http.Get(url)
+	// Bound the whole fetch (connect + body read inside resource.Read): this
+	// runs during listener setup, so an unbounded http.Get on a stalled URL
+	// would hang proxy startup forever.
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("download resource pack: %w", err)
 	}
