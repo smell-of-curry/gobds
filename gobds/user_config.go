@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -102,7 +103,7 @@ func (c UserConfig) packs(log *slog.Logger) []*resource.Pack {
 	packs := make([]*resource.Pack, 0, len(c.Resources.URLResources)+len(c.Resources.PathResources))
 
 	for _, url := range c.Resources.URLResources {
-		pack, err := resource.ReadURL(url)
+		pack, err := readURLPack(url)
 		if err != nil {
 			log.Error("failed to load url pack", "err", err)
 			continue
@@ -125,6 +126,40 @@ func (c UserConfig) packs(log *slog.Logger) []*resource.Pack {
 		}
 	}
 	return packs
+}
+
+// readURLPack downloads and compiles the resource pack at the given URL WITHOUT
+// recording the URL as the pack's CDN DownloadURL. resource.ReadURL sets
+// pack.DownloadURL to the source URL, which the listener then advertises in
+// TexturePackInfo.DownloadURL, making clients fetch the pack over HTTPS
+// themselves. That client-side CDN path is unreliable (it requires a direct,
+// redirect-free URL serving a zip whose manifest.json is NOT at the archive
+// root — GitHub release assets violate both), and only triggers on a cache
+// miss, i.e. exactly when the hub and this proxy serve different pack
+// versions: players got stuck on "Loading resource packs" or joined with a
+// half-applied pack. Serving over RakNet chunks (empty DownloadURL) matches
+// how the hub delivers packs and works for every client.
+//
+// Note the subfolder layout above is a requirement of the client-side CDN
+// download only; server-side compilation (resource.Read here, resource.ReadPath
+// on the hub) accepts manifest.json at the archive root, which is exactly the
+// layout our release assets use.
+func readURLPack(url string) (*resource.Pack, error) {
+	// Bound the whole fetch (connect + body read inside resource.Read): this
+	// runs during listener setup, so an unbounded http.Get on a stalled URL
+	// would hang proxy startup forever.
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("download resource pack: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("download resource pack: %v (%d)", resp.Status, resp.StatusCode)
+	}
+	return resource.Read(resp.Body)
 }
 
 // loadCommands loads commands from the file.
