@@ -10,7 +10,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.1.0
-	github.com/sandertv/gophertunnel v1.57.1
+	github.com/sandertv/gophertunnel v1.57.2-0.20260722164704-0a2ecd5633ea
 	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
 )
 
@@ -61,5 +61,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/sandertv/gophertunnel => github.com/smell-of-curry/gophertunnel v1.51.2-0.20260721232442-a6f0bb66d012
