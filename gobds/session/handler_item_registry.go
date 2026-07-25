@@ -19,14 +19,23 @@ func (h *ItemRegistryHandler) Handle(s *Session, pk packet.Packet, ctx *Context)
 		return nil
 	}
 	pkt := pk.(*packet.ItemRegistry)
-	items := make(map[int16]protocol.ItemEntry)
-	for _, item := range pkt.Items {
+	h.SetItems(pkt.Items)
+	return nil
+}
+
+// SetItems replaces the registry contents. Sessions must seed this from the
+// negotiated GameData: gophertunnel consumes the login-sequence ItemRegistry
+// packet inside DoSpawn (exposing it only as GameData().Items), so it never
+// reaches handlePacket — without seeding, held-item lookups always miss and
+// the claim stick/shovel exemptions and item-drop denials silently no-op.
+func (h *ItemRegistryHandler) SetItems(entries []protocol.ItemEntry) {
+	items := make(map[int16]protocol.ItemEntry, len(entries))
+	for _, item := range entries {
 		items[item.RuntimeID] = item
 	}
 	h.mu.Lock()
 	h.items = items
 	h.mu.Unlock()
-	return nil
 }
 
 // Item returns the item registry entry for a runtime ID.

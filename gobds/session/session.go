@@ -416,6 +416,10 @@ func (s *Session) handlePacket(p packet.Packet, conn Conn) (send bool, err error
 
 // registerHandlers registers all packet handlers.
 func (s *Session) registerHandlers() {
+	itemRegistry := &ItemRegistryHandler{}
+	// Seed from GameData — the ItemRegistry packet itself is consumed by
+	// gophertunnel during DoSpawn and never flows through handlePacket.
+	itemRegistry.SetItems(s.server.GameData().Items)
 	s.handlers = map[uint32]packetHandler{
 		packet.IDAddActor:             &AddActorHandler{},
 		packet.IDAddPainting:          &AddPaintingHandler{},
@@ -423,7 +427,7 @@ func (s *Session) registerHandlers() {
 		packet.IDChangeDimension:      &ChangeDimensionHandler{},
 		packet.IDCommandRequest:       &CommandRequestHandler{},
 		packet.IDInventoryTransaction: &InventoryTransactionHandler{},
-		packet.IDItemRegistry:         &ItemRegistryHandler{},
+		packet.IDItemRegistry:         itemRegistry,
 		packet.IDItemStackRequest:     &ItemStackRequestHandler{},
 		packet.IDLevelChunk:           &LevelChunkHandler{},
 		packet.IDModalFormRequest:     &ModalFormRequestHandler{},
