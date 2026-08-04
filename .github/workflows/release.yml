@@ -16,11 +16,15 @@ permissions:
   contents: write
   packages: write
 
-jobs:     
+jobs:
   build:
     if: (github.event_name == 'workflow_dispatch' && (inputs.release == true || inputs.release == 'true')) || contains(github.event.head_commit.message || '', '[Release]')
     name: Build GoBDS
-    runs-on: ubuntu-latest
+    # Publishes a container image and cuts releases the game servers consume, so
+    # it runs on the runner reserved for jobs holding credentials rather than the
+    # shared one that also executes pull-request code. See docs/forgejo.md in
+    # website-services.
+    runs-on: private
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -30,30 +34,67 @@ jobs:
         with:
           go-version: "1.26.0"
 
+      # Releases used to be tagged v${{ github.run_number }}. That counter is
+      # per-forge and restarts at 1 here, which would collide with the v1..v185
+      # tags carried over from GitHub and fail the release. Continuing from the
+      # highest existing numeric tag keeps one unbroken sequence and needs no
+      # stored state.
+      - name: Determine next version
+        id: version
+        run: |
+          set -euo pipefail
+          latest="$(curl -sSf "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/tags?limit=200" \
+            | jq '[.[].name | select(test("^v[0-9]+$")) | ltrimstr("v") | tonumber] | max // 0')"
+          next=$((latest + 1))
+          echo "Latest numeric tag: v${latest} -> releasing v${next}"
+          echo "version=${next}" >> $GITHUB_OUTPUT
+
       - name: Build Windows executable
         run: GOOS=windows GOARCH=amd64 go build -o gobds.exe .
 
       - name: Build Linux executable
         run: GOOS=linux GOARCH=amd64 go build -o gobds-linux .
 
+      # Replaces softprops/action-gh-release, which speaks the GitHub releases
+      # API. bds-manager downloads gobds-linux from this release to update the
+      # proxy, so the asset names must stay exactly as they are.
       - name: Create Release and Upload Assets
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: v${{ github.run_number }}
-          name: Release ${{ github.run_number }}
-          draft: false
-          prerelease: false
-          files: |
-            ./gobds.exe
-            ./gobds-linux
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          api="${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}"
+
+          payload="$(jq -n \
+            --arg tag "v${VERSION}" \
+            --arg sha "${GITHUB_SHA}" \
+            --arg name "Release ${VERSION}" \
+            '{tag_name: $tag, target_commitish: $sha, name: $name, draft: false, prerelease: false}')"
+
+          release_id="$(curl -sSf -X POST "${api}/releases" \
+            -H "Authorization: token ${FORGEJO_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d "${payload}" | jq -r '.id')"
+          echo "Created release ${release_id} (v${VERSION})"
+
+          for asset in gobds.exe gobds-linux; do
+            [ -f "${asset}" ] || { echo "missing build artifact: ${asset}"; exit 1; }
+            curl -sSf -X POST "${api}/releases/${release_id}/assets?name=${asset}" \
+              -H "Authorization: token ${FORGEJO_TOKEN}" \
+              -F "attachment=@${asset}" > /dev/null
+            echo "Uploaded ${asset}"
+          done
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Log in to GitHub Container Registry
+      # ghcr.io rejects a Forgejo token, so the image publishes to this
+      # instance's own registry instead.
+      - name: Log in to the Forgejo container registry
         uses: docker/login-action@v4
         with:
-          registry: ghcr.io
+          registry: git.pokebedrock.com
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -61,7 +102,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: git.pokebedrock.com/${{ github.repository }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
