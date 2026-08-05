@@ -65,7 +65,7 @@ func TestCorrectiveLevelChunkUsesCustomDimensionFields(t *testing.T) {
 	if correction.Position != chunkPos ||
 		correction.Dimension != 1000 ||
 		!hasSubChunkLimit || subChunkLimit != 24 ||
-		correction.SubChunkCount != protocol.SubChunkRequestModeLimited {
+		correction.SubChunkCount != 0 {
 		t.Fatalf("unexpected custom dimension correction: %+v", correction)
 	}
 }

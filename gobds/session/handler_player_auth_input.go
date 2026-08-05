@@ -87,11 +87,14 @@ func correctiveLevelChunk(
 	if subChunkCount > int(^uint16(0)) {
 		return nil, false
 	}
+	// Protocol 2168 dropped the MaxUint32 request-mode sentinels for
+	// SubChunkCount (clients treat the field as a 0..64 count). Request mode
+	// with a height limit is now SubChunkCount=0 plus SubChunkLimit set.
 	return &packet.LevelChunk{
 		Position:      chunkPos,
 		Dimension:     dimension,
+		SubChunkCount: 0,
 		SubChunkLimit: protocol.Option(int32(subChunkCount)),
-		SubChunkCount: protocol.SubChunkRequestModeLimited,
 	}, true
 }
 

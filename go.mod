@@ -14,7 +14,7 @@ require (
 	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
 )
 
-replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0-20260805184646-9ebb55d9fe69
+replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0-20260805185102-b1070e1d3bef
 
 require (
 	github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 // indirect
@@ -62,4 +62,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/sandertv/gophertunnel => github.com/smell-of-curry/gophertunnel v1.51.2-0.20260805184547-e93471465684
+replace github.com/sandertv/gophertunnel => github.com/smell-of-curry/gophertunnel v1.51.2-0.20260805185104-7defb4c500e8
