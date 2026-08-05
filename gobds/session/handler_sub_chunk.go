@@ -138,9 +138,13 @@ func applyClaimDenyBlocks(
 		return entry
 	}
 
+	rawPayload, ok := entry.RawPayload.Value()
+	if !ok {
+		return entry
+	}
 	virtualChunk := chunk.New(world.DefaultBlockRegistry, dimensionRange)
 	var index byte
-	buf := bytes.NewBuffer(entry.RawPayload)
+	buf := bytes.NewBuffer(rawPayload)
 	decodedEntry, err := decodeSubChunk(buf, virtualChunk, &index, chunk.NetworkEncoding)
 	if err != nil {
 		s.claimFactory.Metrics().SubchunkError()
@@ -181,10 +185,10 @@ func applyClaimDenyBlocks(
 	}
 	s.claimFactory.Metrics().SubchunkModified()
 	virtualChunk.Sub()[index] = decodedEntry
-	entry.RawPayload = append(
+	entry.RawPayload = protocol.Option(append(
 		chunk.EncodeSubChunk(virtualChunk, chunk.NetworkEncoding, int(index)),
 		blockEntityPayload...,
-	)
+	))
 	return entry
 }
 

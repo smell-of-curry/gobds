@@ -1,6 +1,9 @@
 package session
 
-import "github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+import (
+	"github.com/go-gl/mathgl/mgl32"
+	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+)
 
 // MoveActorHandler keeps tracked entity positions current.
 type MoveActorHandler struct{}
@@ -14,12 +17,15 @@ func (*MoveActorHandler) Handle(s *Session, pk packet.Packet, ctx *Context) erro
 	case *packet.MoveActorAbsolute:
 		s.entityFactory.UpdatePosition(pkt.EntityRuntimeID, pkt.Position, true, true, true)
 	case *packet.MoveActorDelta:
+		x, hasX := pkt.PositionX.Value()
+		y, hasY := pkt.PositionY.Value()
+		z, hasZ := pkt.PositionZ.Value()
 		s.entityFactory.UpdatePosition(
 			pkt.EntityRuntimeID,
-			pkt.Position,
-			pkt.Flags&packet.MoveActorDeltaFlagHasX != 0,
-			pkt.Flags&packet.MoveActorDeltaFlagHasY != 0,
-			pkt.Flags&packet.MoveActorDeltaFlagHasZ != 0,
+			mgl32.Vec3{x, y, z},
+			hasX,
+			hasY,
+			hasZ,
 		)
 	}
 	return nil

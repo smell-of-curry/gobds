@@ -88,10 +88,10 @@ func correctiveLevelChunk(
 		return nil, false
 	}
 	return &packet.LevelChunk{
-		Position:        chunkPos,
-		Dimension:       dimension,
-		HighestSubChunk: uint16(subChunkCount),
-		SubChunkCount:   protocol.SubChunkRequestModeLimited,
+		Position:      chunkPos,
+		Dimension:     dimension,
+		SubChunkLimit: protocol.Option(int32(subChunkCount)),
+		SubChunkCount: protocol.SubChunkRequestModeLimited,
 	}, true
 }
 
@@ -99,16 +99,20 @@ func filterPlayerAuthInputPacket(
 	pkt *packet.PlayerAuthInput,
 	denied func(protocol.PlayerBlockAction) bool,
 ) []protocol.BlockPos {
-	filtered := make([]protocol.PlayerBlockAction, 0, len(pkt.BlockActions))
+	actions, ok := pkt.BlockActions.Value()
+	if !ok {
+		return nil
+	}
+	filtered := make([]protocol.PlayerBlockAction, 0, len(actions))
 	deniedPositions := make([]protocol.BlockPos, 0)
-	for _, action := range pkt.BlockActions {
+	for _, action := range actions {
 		if !isFilterableBlockAction(action.Action) || !denied(action) {
 			filtered = append(filtered, action)
 			continue
 		}
 		deniedPositions = append(deniedPositions, action.BlockPos)
 	}
-	pkt.BlockActions = filtered
+	pkt.BlockActions = protocol.Option(filtered)
 	return deniedPositions
 }
 
