@@ -69,7 +69,8 @@ func (h *InventoryTransactionHandler) handleClaimsFailOpen(
 func (h *InventoryTransactionHandler) handleInteraction(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
 	data := s.Data()
 	for _, action := range pkt.Actions {
-		if action.SourceType != protocol.InventoryActionSourceWorld || action.WindowID != protocol.WindowIDInventory {
+		windowID, hasWindowID := action.WindowID.Value()
+		if action.SourceType != protocol.InventoryActionSourceWorld || !hasWindowID || windowID != protocol.WindowIDInventory {
 			continue
 		}
 		data.SetLastDrop()

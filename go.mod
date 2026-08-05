@@ -10,11 +10,11 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.1.0
-	github.com/sandertv/gophertunnel v1.57.2-0.20260722164704-0a2ecd5633ea
+	github.com/sandertv/gophertunnel v0.0.0-20260805193201-58dd5f9f9fef
 	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
 )
 
-replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0-20260805185102-b1070e1d3bef
+replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0-20260805194839-227e3c12d349
 
 require (
 	github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 // indirect
@@ -25,12 +25,12 @@ require (
 	github.com/df-mc/go-xsapi v1.0.1 // indirect
 	github.com/df-mc/goleveldb v1.1.9 // indirect
 	github.com/df-mc/jsonc v1.0.5 // indirect
-	github.com/df-mc/worldupgrader v1.0.20 // indirect
+	github.com/df-mc/worldupgrader v1.0.21 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.18.6 // indirect
-	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/pion/datachannel v1.6.0 // indirect
 	github.com/pion/dtls/v3 v3.1.4 // indirect
@@ -61,5 +61,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/sandertv/gophertunnel => github.com/smell-of-curry/gophertunnel v1.51.2-0.20260805185104-7defb4c500e8
