@@ -112,8 +112,8 @@ github.com/segmentio/fasthash v1.0.3 h1:EI9+KE1EwvMLBWwjpRDc+fEM+prwxDYbslddQGtr
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/smell-of-curry/dragonfly v0.0.0-20260806192149-db14bf6b090c h1:mF0WGrMgRtn4puD/xDjmKOxOKUTO4+437fEd3XhnIE8=
 github.com/smell-of-curry/dragonfly v0.0.0-20260806192149-db14bf6b090c/go.mod h1:LUL/fPEuGq5zK99WeQZaBUP1WfpLW4W2kL36rH/ieaI=
-github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806191853-3688079583f9 h1:WJXQeEUPZGkKJnRgiZtLntBP3WzVoLpbylYQM6li1kg=
-github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806191853-3688079583f9/go.mod h1:Lc+biKFJEg2zX4yagHK04XnjH53nzS9nrjgQHsi+h+8=
+github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806193447-e05521cb1a8c h1:fInc9twqFbVkb0FGTcWazm8EYLMMNn5C/+mWERkiVek=
+github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806193447-e05521cb1a8c/go.mod h1:Lc+biKFJEg2zX4yagHK04XnjH53nzS9nrjgQHsi+h+8=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd h1:Rf9uhF1+VJ7ZHqxrG8pJ6YacmHvVCmByDmGbAWCc/gA=
