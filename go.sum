@@ -1,5 +1,3 @@
-github.com/THEBOSS9345/dragonfly-pr v0.0.0-20260806183916-dc9cd1779a76 h1:ndIKfQisJmcbAxpqft3gD9Vvq08+2dCY341MFGuknF4=
-github.com/THEBOSS9345/dragonfly-pr v0.0.0-20260806183916-dc9cd1779a76/go.mod h1:CY4J+eo+hvEAAnup7Bnd3/w6zniWc/BB6UFuds7xCBg=
 github.com/avast/retry-go/v4 v4.7.0 h1:yjDs35SlGvKwRNSykujfjdMxMhMQQM0TnIjJaHB+Zio=
 github.com/avast/retry-go/v4 v4.7.0/go.mod h1:ZMPDa3sY2bKgpLtap9JRUgk2yTAba7cgiFhqxY2Sg6Q=
 github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 h1:UZbbt19ACBOFO+CiDQFjaEoPJkBhj7GNGtIq59WR6Os=
@@ -110,10 +108,12 @@ github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0t
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/sandertv/go-raknet v1.15.2-0.20260705184311-0d1fd09e2cf6 h1:Oj7QsiwWTOLmCpOjjmW0Qwde4BE8F5+Kjz817qzICyk=
 github.com/sandertv/go-raknet v1.15.2-0.20260705184311-0d1fd09e2cf6/go.mod h1:/yysjwfCXm2+2OY8mBazLzcxJ3irnylKCyG3FLgUPVU=
-github.com/sandertv/gophertunnel v1.58.0 h1:j7Q+ujZShOSY0gNTFw6iHepD3yJF1cbTllnK/AtQuw8=
-github.com/sandertv/gophertunnel v1.58.0/go.mod h1:Lc+biKFJEg2zX4yagHK04XnjH53nzS9nrjgQHsi+h+8=
 github.com/segmentio/fasthash v1.0.3 h1:EI9+KE1EwvMLBWwjpRDc+fEM+prwxDYbslddQGtrmhM=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
+github.com/smell-of-curry/dragonfly v0.0.0-20260806174805-5c495c773fbd h1:30+q2UrgHsZE4LmgentBmi8t2CoxjT7nhaTBpg3mEA4=
+github.com/smell-of-curry/dragonfly v0.0.0-20260806174805-5c495c773fbd/go.mod h1:LUL/fPEuGq5zK99WeQZaBUP1WfpLW4W2kL36rH/ieaI=
+github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806180213-ae0956eaa76e h1:1DE164xSFYmHpheuFN0js8C3/wT99ANojQCnPFk/R6A=
+github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806180213-ae0956eaa76e/go.mod h1:Lc+biKFJEg2zX4yagHK04XnjH53nzS9nrjgQHsi+h+8=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd h1:Rf9uhF1+VJ7ZHqxrG8pJ6YacmHvVCmByDmGbAWCc/gA=

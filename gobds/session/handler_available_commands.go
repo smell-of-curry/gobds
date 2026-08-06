@@ -242,5 +242,6 @@ func valueToParamType(i cmd.ParamInfo) (t uint32, enum commandEnum) {
 			Dynamic: true,
 		}
 	}
-	return protocol.CommandArgTypeValue, enum
+	// CommandArgTypeValue was removed in newer gophertunnel; wire id 4 is RValue.
+	return protocol.CommandArgTypeRValue, enum
 }

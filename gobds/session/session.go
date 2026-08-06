@@ -423,6 +423,7 @@ func (s *Session) registerHandlers() {
 	s.handlers = map[uint32]packetHandler{
 		packet.IDAddActor:             &AddActorHandler{},
 		packet.IDAddPainting:          &AddPaintingHandler{},
+		packet.IDAddPlayer:            &AddPlayerHandler{},
 		packet.IDAvailableCommands:    &AvailableCommandsHandler{},
 		packet.IDChangeDimension:      &ChangeDimensionHandler{},
 		packet.IDCommandRequest:       &CommandRequestHandler{},
