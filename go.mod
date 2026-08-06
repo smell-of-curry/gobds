@@ -14,9 +14,9 @@ require (
 	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
 )
 
-// Match GT fork API (THEBOSS DF#1382 does not compile against this GT tip).
-// AddPlayer BuildPlatform=0 is fixed in-proxy via AddPlayerHandler instead.
-replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0-20260806174805-5c495c773fbd
+// Match GT fork API. Includes #1381 chunk deadlock + #1382 BuildPlatform.
+// AddPlayer BuildPlatform=0 also fixed in-proxy via AddPlayerHandler.
+replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0-20260806192149-db14bf6b090c
 
 // Proxy re-Marshals every BDS→client packet. sandertv v1.58.0 alone caused
 // "Block" kicks when another player joined; keep 2168 Optional SubChunk tip.

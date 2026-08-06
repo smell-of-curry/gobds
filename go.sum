@@ -110,8 +110,8 @@ github.com/sandertv/go-raknet v1.15.2-0.20260705184311-0d1fd09e2cf6 h1:Oj7QsiwWT
 github.com/sandertv/go-raknet v1.15.2-0.20260705184311-0d1fd09e2cf6/go.mod h1:/yysjwfCXm2+2OY8mBazLzcxJ3irnylKCyG3FLgUPVU=
 github.com/segmentio/fasthash v1.0.3 h1:EI9+KE1EwvMLBWwjpRDc+fEM+prwxDYbslddQGtrmhM=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
-github.com/smell-of-curry/dragonfly v0.0.0-20260806174805-5c495c773fbd h1:30+q2UrgHsZE4LmgentBmi8t2CoxjT7nhaTBpg3mEA4=
-github.com/smell-of-curry/dragonfly v0.0.0-20260806174805-5c495c773fbd/go.mod h1:LUL/fPEuGq5zK99WeQZaBUP1WfpLW4W2kL36rH/ieaI=
+github.com/smell-of-curry/dragonfly v0.0.0-20260806192149-db14bf6b090c h1:mF0WGrMgRtn4puD/xDjmKOxOKUTO4+437fEd3XhnIE8=
+github.com/smell-of-curry/dragonfly v0.0.0-20260806192149-db14bf6b090c/go.mod h1:LUL/fPEuGq5zK99WeQZaBUP1WfpLW4W2kL36rH/ieaI=
 github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806191853-3688079583f9 h1:WJXQeEUPZGkKJnRgiZtLntBP3WzVoLpbylYQM6li1kg=
 github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806191853-3688079583f9/go.mod h1:Lc+biKFJEg2zX4yagHK04XnjH53nzS9nrjgQHsi+h+8=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
