@@ -20,7 +20,7 @@ replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0
 
 // Proxy re-Marshals every BDS→client packet. sandertv v1.58.0 alone caused
 // "Block" kicks when another player joined; keep 2168 Optional SubChunk tip.
-replace github.com/sandertv/gophertunnel => github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806180213-ae0956eaa76e
+replace github.com/sandertv/gophertunnel => github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806191853-3688079583f9
 
 require (
 	github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 // indirect
