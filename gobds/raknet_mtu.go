@@ -9,44 +9,27 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 )
 
-// ponytail: send-path PMTUD start. Handshake still negotiates up to 1492.
-// 1200 is HashimTheArab's T-Mobile size. Hub may override per-IP via hint.
-const initialSendMTU uint16 = 1200
+// ponytail: gold is a different hop than the hub. WARP/hotspot often uses
+// another egress IP, and a hub-proven 1400/1492 send MTU dies on this path.
+// Cap handshake at 1200 (Hashim / T-Mobile / WARP). Do not apply hub hints.
+// Ceiling: ~25% more datagrams vs 1492. Climb later if a per-dest probe exists.
+const warpSafeMTU uint16 = 1200
 
-// pmtudRakNet is gophertunnel's RakNet Network with send-path PMTUD.
-// Dialer is left default — gobds↔BDS is same-DC; BDS already caps at 1400.
-type pmtudRakNet struct {
-	log         *slog.Logger
-	initialSend uint16
-	hint        func(net.Addr) uint16
+// cappedRakNet is gophertunnel's RakNet Network with a listener MTU cap.
+// Dialer stays default — gobds↔BDS is same-DC; BDS already caps at 1400.
+type cappedRakNet struct {
+	log *slog.Logger
+	mtu uint16
 }
 
-func (r pmtudRakNet) DialContext(ctx context.Context, address string) (net.Conn, error) {
+func (r cappedRakNet) DialContext(ctx context.Context, address string) (net.Conn, error) {
 	return raknet.Dialer{ErrorLog: r.log}.DialContext(ctx, address)
 }
 
-func (r pmtudRakNet) PingContext(ctx context.Context, address string) ([]byte, error) {
+func (r cappedRakNet) PingContext(ctx context.Context, address string) ([]byte, error) {
 	return raknet.Dialer{ErrorLog: r.log}.PingContext(ctx, address)
 }
 
-func (r pmtudRakNet) Listen(address string) (minecraft.NetworkListener, error) {
-	return raknet.ListenConfig{
-		ErrorLog:           r.log,
-		InitialSendMTU:     r.initialSend,
-		InitialSendMTUFunc: r.hint,
-	}.Listen(address)
-}
-
-func ipString(addr net.Addr) string {
-	if addr == nil {
-		return ""
-	}
-	if a, ok := addr.(*net.UDPAddr); ok {
-		return a.IP.String()
-	}
-	host, _, err := net.SplitHostPort(addr.String())
-	if err != nil {
-		return addr.String()
-	}
-	return host
+func (r cappedRakNet) Listen(address string) (minecraft.NetworkListener, error) {
+	return raknet.ListenConfig{ErrorLog: r.log, MaxMTU: r.mtu}.Listen(address)
 }

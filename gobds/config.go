@@ -4,7 +4,6 @@ package gobds
 import (
 	"fmt"
 	"log/slog"
-	"net"
 	"time"
 
 	"github.com/sandertv/gophertunnel/minecraft"
@@ -112,14 +111,8 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		srv.StatusProviderFunc = func() (minecraft.ServerStatusProvider, error) {
 			return newProxyStatusProvider(srv, motd, maxPlayers), nil
 		}
-		auth := conf.AuthenticationService
 		srv.ListenerFunc = func() (Listener, error) {
-			return c.listenerFunc(srv, func(addr net.Addr) uint16 {
-				if auth == nil {
-					return 0
-				}
-				return auth.SendMTUOfIP(ipString(addr))
-			})
+			return c.listenerFunc(srv)
 		}
 		conf.Servers = append(conf.Servers, srv)
 	}
