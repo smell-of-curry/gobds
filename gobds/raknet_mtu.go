@@ -9,17 +9,17 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 )
 
-// ponytail: gold is a different hop than the hub. WARP/hotspot often uses
-// another egress IP, and a hub-proven 1400/1492 send MTU dies on this path.
-// Cap handshake at 1200 (Hashim / T-Mobile / WARP). Do not apply hub hints.
-// Ceiling: ~25% more datagrams vs 1492. Climb later if a per-dest probe exists.
-const warpSafeMTU uint16 = 1200
+// ponytail: handshake still negotiates up to 1492; only the send path starts
+// small and climbs 1280 → 1400 → 1492 as probes are ACKed. Keeps low-MTU paths
+// (WARP, T-Mobile, hotspots) usable without pinning every client to 1200.
+// Ceiling: a few probe datagrams per connection.
+const initialSendMTU uint16 = 1200
 
-// cappedRakNet is gophertunnel's RakNet Network with a listener MTU cap.
+// cappedRakNet is gophertunnel's RakNet Network with send-path PMTUD.
 // Dialer stays default — gobds↔BDS is same-DC; BDS already caps at 1400.
 type cappedRakNet struct {
-	log *slog.Logger
-	mtu uint16
+	log         *slog.Logger
+	initialSend uint16
 }
 
 func (r cappedRakNet) DialContext(ctx context.Context, address string) (net.Conn, error) {
@@ -31,7 +31,5 @@ func (r cappedRakNet) PingContext(ctx context.Context, address string) ([]byte, 
 }
 
 func (r cappedRakNet) Listen(address string) (minecraft.NetworkListener, error) {
-	// ponytail: DisableCookies — OVH/WARP can rewrite the UDP 5-tuple
-	// between OCR1 and OCR2; cookie mismatch = NetherNet, no login.
-	return raknet.ListenConfig{ErrorLog: r.log, MaxMTU: r.mtu, DisableCookies: true}.Listen(address)
+	return raknet.ListenConfig{ErrorLog: r.log, InitialSendMTU: r.initialSend}.Listen(address)
 }

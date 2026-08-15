@@ -23,6 +23,9 @@ replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0
 // "Block" kicks when another player joined; keep 2168 Optional SubChunk tip.
 replace github.com/sandertv/gophertunnel => github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806193447-e05521cb1a8c
 
+// Temporary until send-path PMTUD lands upstream (Sandertv/go-raknet).
+replace github.com/sandertv/go-raknet => github.com/smell-of-curry/go-raknet v1.15.2-0.20260815152550-68c154769be6
+
 require (
 	github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

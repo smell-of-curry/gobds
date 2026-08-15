@@ -281,11 +281,11 @@ func (c UserConfig) listenerFunc(srv *Server) (Listener, error) {
 	if srv.Log.Enabled(context.Background(), slog.LevelDebug) {
 		cfg.ErrorLog = srv.Log.With("net origin", "gophertunnel")
 	}
-	l, err := cfg.ListenNetwork(cappedRakNet{log: cfg.ErrorLog, mtu: warpSafeMTU}, srv.LocalAddress)
+	l, err := cfg.ListenNetwork(cappedRakNet{log: cfg.ErrorLog, initialSend: initialSendMTU}, srv.LocalAddress)
 	if err != nil {
 		return nil, fmt.Errorf("create listener: %w", err)
 	}
-	srv.Log.Info("listener running.", "addr", l.Addr(), "max_mtu", warpSafeMTU)
+	srv.Log.Info("listener running.", "addr", l.Addr(), "initial_send_mtu", initialSendMTU)
 	return listener{l}, nil
 }
 
