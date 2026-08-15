@@ -31,5 +31,7 @@ func (r cappedRakNet) PingContext(ctx context.Context, address string) ([]byte, 
 }
 
 func (r cappedRakNet) Listen(address string) (minecraft.NetworkListener, error) {
-	return raknet.ListenConfig{ErrorLog: r.log, MaxMTU: r.mtu}.Listen(address)
+	// ponytail: DisableCookies — OVH/WARP can rewrite the UDP 5-tuple
+	// between OCR1 and OCR2; cookie mismatch = NetherNet, no login.
+	return raknet.ListenConfig{ErrorLog: r.log, MaxMTU: r.mtu, DisableCookies: true}.Listen(address)
 }
