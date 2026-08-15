@@ -10,6 +10,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.1.0
+	github.com/sandertv/go-raknet v1.15.2-0.20260705184311-0d1fd09e2cf6
 	github.com/sandertv/gophertunnel v1.58.1-0.20260806130340-1d9d0fc66c92
 	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
 )
@@ -21,6 +22,9 @@ replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0
 // Proxy re-Marshals every BDS→client packet. sandertv v1.58.0 alone caused
 // "Block" kicks when another player joined; keep 2168 Optional SubChunk tip.
 replace github.com/sandertv/gophertunnel => github.com/smell-of-curry/gophertunnel v1.51.2-0.20260806193447-e05521cb1a8c
+
+// Temporary until send-path PMTUD lands upstream (Sandertv/go-raknet).
+replace github.com/sandertv/go-raknet => ../../go-raknet
 
 require (
 	github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 // indirect
@@ -54,7 +58,6 @@ require (
 	github.com/pion/transport/v4 v4.0.2 // indirect
 	github.com/pion/turn/v4 v4.1.4 // indirect
 	github.com/pion/webrtc/v4 v4.2.10-0.20260224155637-aa3b95c72dd2 // indirect
-	github.com/sandertv/go-raknet v1.15.2-0.20260705184311-0d1fd09e2cf6 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
 	golang.org/x/crypto v0.51.0 // indirect

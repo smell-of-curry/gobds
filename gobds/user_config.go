@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -268,7 +269,7 @@ func (c UserConfig) dialerFunc(remoteAddress string, log *slog.Logger) DialerFun
 }
 
 // listenerFunc returns a listener func for a specific server.
-func (c UserConfig) listenerFunc(srv *Server) (Listener, error) {
+func (c UserConfig) listenerFunc(srv *Server, hint func(net.Addr) uint16) (Listener, error) {
 	cfg := minecraft.ListenConfig{
 		ErrorLog:       srv.Log,
 		StatusProvider: srv.StatusProvider,
@@ -281,11 +282,11 @@ func (c UserConfig) listenerFunc(srv *Server) (Listener, error) {
 	if srv.Log.Enabled(context.Background(), slog.LevelDebug) {
 		cfg.ErrorLog = srv.Log.With("net origin", "gophertunnel")
 	}
-	l, err := cfg.Listen("raknet", srv.LocalAddress)
+	l, err := cfg.ListenNetwork(pmtudRakNet{log: cfg.ErrorLog, initialSend: initialSendMTU, hint: hint}, srv.LocalAddress)
 	if err != nil {
 		return nil, fmt.Errorf("create listener: %w", err)
 	}
-	srv.Log.Info("listener running.", "addr", l.Addr())
+	srv.Log.Info("listener running.", "addr", l.Addr(), "initial_send_mtu", initialSendMTU)
 	return listener{l}, nil
 }
 

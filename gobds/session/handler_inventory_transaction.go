@@ -22,6 +22,15 @@ func (h *InventoryTransactionHandler) Handle(s *Session, pk packet.Packet, ctx *
 			s.traffic.malformed(trafficInventory)
 			return malformedPacketError{reason: "inventory transaction has too many actions"}
 		}
+		// Hold-to-interact re-fires every simulation tick. BEH's claimManager
+		// cancels non-first playerInteractWithBlock events after paying for the
+		// native isFirstEvent getter (~7% script self-time). Drop those packets
+		// here so they never reach BDS — and before traffic.allow, so hold-spam
+		// does not burn the inventory rate budget (RUBY exceeded=16k/session).
+		if dropHoldInteract(pkt) {
+			ctx.Cancel()
+			return nil
+		}
 		if !s.traffic.allow(trafficInventory) {
 			ctx.Cancel()
 			return nil
@@ -47,6 +56,18 @@ func (h *InventoryTransactionHandler) Handle(s *Session, pk packet.Packet, ctx *
 		ctx.Cancel()
 	}
 	return nil
+}
+
+// dropHoldInteract reports whether this is a ClickBlock hold-repeat that BEH
+// would cancel via isFirstEvent=false. TriggerTypeSimulationTick is the
+// protocol equivalent of that gate.
+func dropHoldInteract(pkt *packet.InventoryTransaction) bool {
+	transactionData, ok := pkt.TransactionData.(*protocol.UseItemTransactionData)
+	if !ok {
+		return false
+	}
+	return transactionData.ActionType == protocol.UseItemActionClickBlock &&
+		transactionData.TriggerType == protocol.TriggerTypeSimulationTick
 }
 
 func (h *InventoryTransactionHandler) handleClaimsFailOpen(
@@ -151,7 +172,9 @@ func (*InventoryTransactionHandler) handleClaimDropItems(
 		) {
 			continue
 		}
-		s.claimMessage(position, text.Colourf("<red>You cannot drop items inside this claim.</red>"))
+		if s.claimMessageAllowed(position) {
+			s.Message(text.Colourf("<red>You cannot drop items inside this claim.</red>"))
+		}
 		ctx.Cancel()
 		return
 	}
@@ -214,7 +237,9 @@ func (*InventoryTransactionHandler) handleClaimClickBlock(
 		) {
 			return
 		}
-		s.claimMessage(pos, text.Colourf("<red>You cannot place blocks inside this claim.</red>"))
+		if s.claimMessageAllowed(pos) {
+			s.Message(text.Colourf("<red>You cannot place blocks inside this claim.</red>"))
+		}
 		ctx.Cancel()
 		return
 	}
@@ -225,7 +250,9 @@ func (*InventoryTransactionHandler) handleClaimClickBlock(
 	) {
 		return
 	}
-	s.claimMessage(pos, text.Colourf("<red>You cannot interact with blocks inside this claim.</red>"))
+	if s.claimMessageAllowed(pos) {
+		s.Message(text.Colourf("<red>You cannot interact with blocks inside this claim.</red>"))
+	}
 	ctx.Cancel()
 }
 
@@ -261,7 +288,12 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		return
 	}
 
-	switch entity.ActorType() {
+	// Only decoration entities are claim-filtered here. Widening this to every
+	// non-player actor would deny interacting with pokémon, NPCs, boats and the
+	// like inside any claim, and the proxy sees ~25 of these actions per 4h
+	// session, so there is nothing to win by moving that decision here.
+	actorType := entity.ActorType()
+	switch actorType {
 	case "minecraft:armor_stand", "minecraft:painting":
 	default:
 		return
@@ -282,12 +314,14 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 	}
 	permitted := s.claimActionPermitted(action, claimActionData{
 		position: entityPosition,
-		typeID:   entity.ActorType(),
+		typeID:   actorType,
 	})
 	if permitted {
 		return
 	}
 
-	s.claimMessage(entityPosition, text.Colourf("<red>You cannot %s entities inside this claim.</red>", actionName))
+	if s.claimMessageAllowed(entityPosition) {
+		s.Message(text.Colourf("<red>You cannot %s entities inside this claim.</red>", actionName))
+	}
 	ctx.Cancel()
 }

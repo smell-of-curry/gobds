@@ -37,7 +37,9 @@ const (
 	FeatureTypeEntityHurt = "entityHurt"
 	// FeatureTypeDropItems ...
 	FeatureTypeDropItems = "dropItems"
-	// FeatureTypePickupItems is stored/accepted for BEH parity; proxy does not enforce pickup yet.
+	// FeatureTypePickupItems is stored/accepted for BEH parity. Proxy cannot
+	// enforce pickup: Bedrock pickup is server-authoritative (Script
+	// entityItemPickup); TakeItemActor is server→client after the fact.
 	FeatureTypePickupItems = "pickupItems"
 )
 

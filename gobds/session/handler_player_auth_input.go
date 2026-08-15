@@ -56,21 +56,28 @@ func (h *PlayerAuthInputHandler) handleWorldInteractions(s *Session, pkt *packet
 	}
 	for _, blockPosition := range denied {
 		chunkPos := protocol.ChunkPos{blockPosition.X() >> 4, blockPosition.Z() >> 4}
+		// Rate-limit before building/sending — suppression is ~90% of candidates.
+		if !s.allowCorrective(chunkPos, time.Second) {
+			if s.claimFactory != nil {
+				s.claimFactory.Metrics().Correction(false)
+			}
+			continue
+		}
 		correction, ok := correctiveLevelChunk(
 			chunkPos,
 			clientData.Dimension(),
 			s.GameData().Dimensions,
 		)
 		if !ok {
-			s.claimFactory.Metrics().Correction(false)
-			continue
-		}
-		if !s.allowCorrective(chunkPos, time.Second) {
-			s.claimFactory.Metrics().Correction(false)
+			if s.claimFactory != nil {
+				s.claimFactory.Metrics().Correction(false)
+			}
 			continue
 		}
 		s.WriteToClient(correction)
-		s.claimFactory.Metrics().Correction(true)
+		if s.claimFactory != nil {
+			s.claimFactory.Metrics().Correction(true)
+		}
 	}
 }
 

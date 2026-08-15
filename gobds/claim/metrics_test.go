@@ -14,6 +14,7 @@ func TestMetricsEmitPerServerDeltaJSON(t *testing.T) {
 	metrics.RefreshSuccess()
 	metrics.Packet()
 	metrics.Action(1, false)
+	metrics.ActionN(0, 10, 246)
 	metrics.Reason(QueryOverlap)
 	metrics.Candidates(2)
 	metrics.Latency(20 * time.Microsecond)
@@ -34,7 +35,9 @@ func TestMetricsEmitPerServerDeltaJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if record.Server != "GOLD" || record.Packets != 1 || record.Refresh != [3]uint64{1, 1, 0} ||
-		record.Seen[1] != 1 || record.Denied[1] != 1 || record.Reasons[QueryOverlap] != 1 ||
+		record.Seen[1] != 1 || record.Denied[1] != 1 ||
+		record.Seen[0] != 256 || record.Forwarded[0] != 10 || record.Denied[0] != 246 ||
+		record.Reasons[QueryOverlap] != 1 ||
 		record.Snapshot.Generation != 4 {
 		t.Fatalf("unexpected metric record: %+v", record)
 	}

@@ -140,22 +140,36 @@ func (s *Session) allowCorrective(chunkPos protocol.ChunkPos, interval time.Dura
 		return false
 	}
 	s.corrective.last[key] = now
+	// ponytail: prune stale keys when map grows; bound is per-session explored chunks.
+	if len(s.corrective.last) > 512 {
+		for stale, at := range s.corrective.last {
+			if now.Sub(at) >= interval {
+				delete(s.corrective.last, stale)
+			}
+		}
+	}
 	return true
 }
 
-func (s *Session) claimMessage(position mgl32.Vec3, message string) {
+// claimMessageAllowed rate-limits claim denial notices to once per chunk per
+// second and records correction metrics. Callers must not build the message
+// until this returns true — suppression is the common case (~87–90% of
+// correction candidates in production).
+func (s *Session) claimMessageAllowed(position mgl32.Vec3) bool {
 	chunkPos := protocol.ChunkPos{
 		int32(math.Floor(float64(position.X()))) >> 4,
 		int32(math.Floor(float64(position.Z()))) >> 4,
 	}
-	if s.allowCorrective(chunkPos, time.Second) {
-		s.Message(message)
+	if !s.allowCorrective(chunkPos, time.Second) {
 		if s.claimFactory != nil {
-			s.claimFactory.Metrics().Correction(true)
+			s.claimFactory.Metrics().Correction(false)
 		}
-	} else if s.claimFactory != nil {
-		s.claimFactory.Metrics().Correction(false)
+		return false
 	}
+	if s.claimFactory != nil {
+		s.claimFactory.Metrics().Correction(true)
+	}
+	return true
 }
 
 // AFKDuration returns how long the session has been idle. Before the first

@@ -244,7 +244,7 @@ func featureAllowsType(feature claim.Feature, featureType, typeID string) bool {
 
 // claimOwnerOrTrusted ...
 func claimOwnerOrTrusted(cl claim.PlayerClaim, actor ClaimActor) bool {
-	return cl.OwnerXUID == actor.XUID || slices.Contains(cl.TrustedXUIDS, actor.XUID) || actor.Operator
+	return claimOwnerOrTrustedPtr(&cl, actor)
 }
 
 func validClaim(cl claim.PlayerClaim) bool {

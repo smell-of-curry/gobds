@@ -65,15 +65,31 @@ func (m *Metrics) Packet() { m.packets.Add(1) }
 
 // Action records one policy decision by fixed action index.
 func (m *Metrics) Action(action uint8, forwarded bool) {
+	if forwarded {
+		m.ActionN(action, 1, 0)
+		return
+	}
+	m.ActionN(action, 0, 1)
+}
+
+// ActionN records many policy decisions for one action in a single atomic update
+// pair. Used by the floor-render path (256 cells/subchunk) to avoid 47M+/session
+// contended cache-line bumps.
+func (m *Metrics) ActionN(action uint8, forwarded, denied uint64) {
 	if m == nil || int(action) >= metricActions {
 		return
 	}
-	m.seen[action].Add(1)
-	if forwarded {
-		m.forwarded[action].Add(1)
+	total := forwarded + denied
+	if total == 0 {
 		return
 	}
-	m.denied[action].Add(1)
+	m.seen[action].Add(total)
+	if forwarded != 0 {
+		m.forwarded[action].Add(forwarded)
+	}
+	if denied != 0 {
+		m.denied[action].Add(denied)
+	}
 }
 
 // Reason records a fail-open reason by fixed reason index.

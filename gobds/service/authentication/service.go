@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-jose/go-jose/v4/json"
@@ -84,4 +85,40 @@ func (s *Service) AuthenticationOf(xuid string, ctx context.Context) (*ResponseM
 		lastErr = fmt.Errorf("authentication service unavailable")
 	}
 	return nil, lastErr
+}
+
+const mtuHintTimeout = 80 * time.Millisecond
+
+// SendMTUOfIP asks the hub for a send-path MTU proven on this IP during
+// the recent hub session. Returns 0 on miss/timeout so the caller keeps
+// the conservative InitialSendMTU. Handshake-path — no retries.
+func (s *Service) SendMTUOfIP(ip string) uint16 {
+	if !s.Enabled || s.Closed || ip == "" {
+		return 0
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), mtuHintTimeout)
+	defer cancel()
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/mtu?ip=%s", s.URL, url.QueryEscape(ip)), nil)
+	if err != nil {
+		return 0
+	}
+	request.Header.Set("authorization", s.Key)
+
+	response, err := s.Client.Do(request)
+	if err != nil {
+		return 0
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return 0
+	}
+	var hint mtuHintModel
+	if err = json.NewDecoder(response.Body).Decode(&hint); err != nil {
+		return 0
+	}
+	if hint.SendMTU != 0 {
+		s.Log.Info("applied hub send mtu hint", "ip", ip, "send_mtu", hint.SendMTU)
+	}
+	return hint.SendMTU
 }

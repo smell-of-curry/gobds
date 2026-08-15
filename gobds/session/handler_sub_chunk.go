@@ -2,6 +2,7 @@ package session
 
 import (
 	"bytes"
+	"sync"
 	"time"
 	_ "unsafe"
 
@@ -15,6 +16,11 @@ import (
 
 // SubChunkHandler ...
 type SubChunkHandler struct{}
+
+// pooled decode buffers — payload sizes vary; Grow retains capacity across uses.
+var subChunkPayloadPool = sync.Pool{
+	New: func() any { return new(bytes.Buffer) },
+}
 
 // Handle ...
 func (*SubChunkHandler) Handle(s *Session, pk packet.Packet, ctx *Context) (err error) {
@@ -40,14 +46,16 @@ func (*SubChunkHandler) Handle(s *Session, pk packet.Packet, ctx *Context) (err 
 	snapshot, snapshotStatus, dimension, dimensionFound := resolveClaimSubChunkContext(s, pkt.Dimension, dimensions)
 	dimensionRange, rangeFound := dimensionRangeByID(pkt.Dimension, dimensions)
 
-	entries := make([]protocol.SubChunkEntry, 0, len(pkt.SubChunkEntries))
-	for _, entry := range pkt.SubChunkEntries {
-		entries = append(entries, filterSubChunkEntry(
+	entries := make([]protocol.SubChunkEntry, 0, len(originalEntries))
+	for _, entry := range originalEntries {
+		kept, ok := filterSubChunkEntry(
 			s, pkt, entry, snapshot, snapshotStatus,
 			dimension, dimensionFound, dimensionRange, rangeFound,
-		)...)
+		)
+		if ok {
+			entries = append(entries, kept)
+		}
 	}
-
 	pkt.SubChunkEntries = entries
 	return nil
 }
@@ -71,7 +79,7 @@ func resolveClaimSubChunkContext(
 	return snapshot, snapshotStatus, dimension, dimensionFound
 }
 
-// filterSubChunkEntry returns zero or one entries for the packet rewrite.
+// filterSubChunkEntry returns the (possibly rewritten) entry and whether to keep it.
 func filterSubChunkEntry(
 	s *Session,
 	pkt *packet.SubChunk,
@@ -82,18 +90,18 @@ func filterSubChunkEntry(
 	dimensionFound bool,
 	dimensionRange cube.Range,
 	rangeFound bool,
-) []protocol.SubChunkEntry {
+) (protocol.SubChunkEntry, bool) {
 	chunkPos := protocol.ChunkPos{
 		pkt.Position.X() + int32(entry.Offset[0]),
 		pkt.Position.Z() + int32(entry.Offset[2]),
 	}
 
 	if s.border != nil && !s.border.ChunkInside(chunkPos) {
-		return nil
+		return protocol.SubChunkEntry{}, false
 	}
 
 	if !s.claimDenyRendering || s.claimFactory == nil {
-		return []protocol.SubChunkEntry{entry}
+		return entry, true
 	}
 
 	// GoBDS disables the backend blob cache, so successful entries normally
@@ -101,14 +109,14 @@ func filterSubChunkEntry(
 	// that invariant changes.
 	if entry.Result != protocol.SubChunkResultSuccess || !rangeFound || !dimensionFound ||
 		snapshotStatus != claim.QueryReady || pkt.CacheEnabled {
-		return []protocol.SubChunkEntry{entry}
+		return entry, true
 	}
 	chunkX := float32(chunkPos.X() << 4)
 	chunkZ := float32(chunkPos.Z() << 4)
 	candidates := snapshot.Candidates(dimension, chunkX, chunkZ)
 	s.claimFactory.Metrics().Candidates(len(candidates))
 
-	return []protocol.SubChunkEntry{applyClaimDenyBlocks(
+	return applyClaimDenyBlocks(
 		s,
 		pkt,
 		entry,
@@ -117,7 +125,7 @@ func filterSubChunkEntry(
 		candidates,
 		denyBlockRuntimeID(s.GameData().UseBlockNetworkIDHashes),
 		ClaimActor{XUID: s.IdentityData().XUID, Operator: s.Data().Operator()},
-	)}
+	), true
 }
 
 func applyClaimDenyBlocks(
@@ -138,13 +146,28 @@ func applyClaimDenyBlocks(
 		return entry
 	}
 
+	var mask [16]uint16
+	forwarded, denied := floorDenyMask(claims, actor, chunkPos.X()<<4, chunkPos.Z()<<4, &mask)
+	s.claimFactory.Metrics().ActionN(uint8(ClaimActionRender), uint64(forwarded), uint64(denied))
+	if denied == 0 {
+		return entry
+	}
+
 	rawPayload, ok := entry.RawPayload.Value()
 	if !ok {
 		return entry
 	}
+
+	buf := subChunkPayloadPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	buf.Write(rawPayload)
+	defer func() {
+		buf.Reset()
+		subChunkPayloadPool.Put(buf)
+	}()
+
 	virtualChunk := chunk.New(world.DefaultBlockRegistry, dimensionRange)
 	var index byte
-	buf := bytes.NewBuffer(rawPayload)
 	decodedEntry, err := decodeSubChunk(buf, virtualChunk, &index, chunk.NetworkEncoding)
 	if err != nil {
 		s.claimFactory.Metrics().SubchunkError()
@@ -157,31 +180,21 @@ func applyClaimDenyBlocks(
 		s.log.Error("decode subchunk entry", "error", "subchunk index outside dimension range", "index", index)
 		return entry
 	}
+	// Remaining bytes after the sub-chunk body are block-entity NBT; only clone
+	// once we know we will rewrite the entry.
 	blockEntityPayload := bytes.Clone(buf.Bytes())
 
-	var modified bool
 	for z := uint8(0); z < 16; z++ {
+		row := mask[z]
+		if row == 0 {
+			continue
+		}
 		for x := uint8(0); x < 16; x++ {
-			blockPos := protocol.BlockPos{
-				(chunkPos.X() << 4) + int32(x), 0, (chunkPos.Z() << 4) + int32(z),
-			}
-			position := blockPosToVec3(blockPos)
-			matched, ambiguous := singleClaimAt(claims, position.X(), position.Z())
-			if ambiguous {
-				s.claimFactory.Metrics().Reason(claim.QueryOverlap)
-			}
-			denied := !ambiguous && matched != nil &&
-				!ClaimActionPermitted(*matched, actor, ClaimActionRender, position)
-			s.claimFactory.Metrics().Action(uint8(ClaimActionRender), !denied)
-			if !denied {
+			if row&(1<<x) == 0 {
 				continue
 			}
 			decodedEntry.SetBlock(x, 0, z, 0, denyID)
-			modified = true
 		}
-	}
-	if !modified {
-		return entry
 	}
 	s.claimFactory.Metrics().SubchunkModified()
 	virtualChunk.Sub()[index] = decodedEntry
