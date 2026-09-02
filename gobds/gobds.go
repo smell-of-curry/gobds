@@ -155,9 +155,6 @@ func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*s
 		if !response.Allowed {
 			return nil, errInvalidJoinPath
 		}
-		if response.SendMTU != 0 {
-			srv.Log.Info("hub mtu hint", "name", identityData.DisplayName, "xuid", identityData.XUID, "send_mtu", response.SendMTU)
-		}
 	}
 
 	identityData = conn.IdentityData()
