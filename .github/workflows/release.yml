@@ -43,11 +43,20 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          latest="$(curl -sSf "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/tags?limit=200" \
-            | jq '[.[].name | select(test("^v[0-9]+$")) | ltrimstr("v") | tonumber] | max // 0')"
+          tags_json="$(curl -sSf "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/tags?limit=200")"
+          existing="$(jq -r --arg sha "${GITHUB_SHA}" '
+            [.[] | select(.commit.sha == $sha) | .name | select(test("^v[0-9]+$"))
+              | ltrimstr("v") | tonumber] | max // empty
+          ' <<<"${tags_json}")"
+          if [ -n "${existing}" ]; then
+            echo "This SHA already tagged v${existing}; reusing"
+            echo "version=${existing}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          latest="$(jq '[.[].name | select(test("^v[0-9]+$")) | ltrimstr("v") | tonumber] | max // 0' <<<"${tags_json}")"
           next=$((latest + 1))
           echo "Latest numeric tag: v${latest} -> releasing v${next}"
-          echo "version=${next}" >> $GITHUB_OUTPUT
+          echo "version=${next}" >> "$GITHUB_OUTPUT"
 
       - name: Build Windows executable
         run: GOOS=windows GOARCH=amd64 go build -o gobds.exe .
@@ -66,25 +75,47 @@ jobs:
           set -euo pipefail
           api="${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}"
 
-          payload="$(jq -n \
-            --arg tag "v${VERSION}" \
-            --arg sha "${GITHUB_SHA}" \
-            --arg name "Release ${VERSION}" \
-            '{tag_name: $tag, target_commitish: $sha, name: $name, draft: false, prerelease: false}')"
+          existing="$(curl -sS -H "Authorization: token ${FORGEJO_TOKEN}" \
+            "${api}/releases/tags/v${VERSION}")"
+          release_id="$(jq -r '.id // empty' <<<"${existing}")"
 
-          release_id="$(curl -sSf -X POST "${api}/releases" \
-            -H "Authorization: token ${FORGEJO_TOKEN}" \
-            -H 'Content-Type: application/json' \
-            -d "${payload}" | jq -r '.id')"
-          echo "Created release ${release_id} (v${VERSION})"
+          if [ -n "${release_id}" ]; then
+            echo "Release v${VERSION} already exists (${release_id})"
+          else
+            payload="$(jq -n \
+              --arg tag "v${VERSION}" \
+              --arg sha "${GITHUB_SHA}" \
+              --arg name "Release ${VERSION}" \
+              '{tag_name: $tag, target_commitish: $sha, name: $name, draft: false, prerelease: false}')"
 
+            release_id="$(curl -sSf -X POST "${api}/releases" \
+              -H "Authorization: token ${FORGEJO_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              -d "${payload}" | jq -r '.id')"
+            echo "Created release ${release_id} (v${VERSION})"
+          fi
+
+          existing_assets="$(jq -r '.assets[]?.name // empty' <<<"${existing}")"
           for asset in gobds.exe gobds-linux; do
             [ -f "${asset}" ] || { echo "missing build artifact: ${asset}"; exit 1; }
+            if grep -qx "${asset}" <<<"${existing_assets}"; then
+              echo "Asset ${asset} already on v${VERSION}"
+              continue
+            fi
             curl -sSf -X POST "${api}/releases/${release_id}/assets?name=${asset}" \
               -H "Authorization: token ${FORGEJO_TOKEN}" \
               -F "attachment=@${asset}" > /dev/null
             echo "Uploaded ${asset}"
           done
+
+      # Jobs are containers on a DinD daemon that mounts no socket into them.
+      # setup-buildx talks to unix:///var/run/docker.sock unless DOCKER_HOST
+      # points back across the bridge (see website-services/docs/forgejo.md).
+      - name: Point Docker at the runner daemon
+        run: |
+          host="$(bash scripts/ci-docker-host.sh)"
+          echo "DOCKER_HOST=${host}" >> "$GITHUB_ENV"
+          echo "using daemon at ${host}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
