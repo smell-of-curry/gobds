@@ -4,14 +4,14 @@ go 1.26.0
 
 require (
 	github.com/avast/retry-go/v4 v4.7.0
-	github.com/df-mc/dragonfly v0.11.4
+	github.com/df-mc/dragonfly v0.11.5-0.20260916221608-d42ce23a0d45
 	github.com/getsentry/sentry-go v0.49.0
 	github.com/go-gl/mathgl v1.2.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/uuid v1.6.0
 	github.com/restartfu/gophig v0.1.0
 	github.com/sandertv/go-raknet v1.15.2-0.20260819131831-ea813dc668b5
-	github.com/sandertv/gophertunnel v1.61.0
+	github.com/sandertv/gophertunnel v1.62.0
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 )
 
@@ -25,7 +25,7 @@ require (
 	github.com/df-mc/go-xsapi/v2 v2.0.3 // indirect
 	github.com/df-mc/goleveldb v1.1.9 // indirect
 	github.com/df-mc/jsonc v1.0.5 // indirect
-	github.com/df-mc/worldupgrader v1.0.21 // indirect
+	github.com/df-mc/worldupgrader v1.0.22 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/golang/snappy v1.0.0 // indirect

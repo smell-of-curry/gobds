@@ -69,7 +69,8 @@ func TestSetupRuntimeIDsSupportsBothNetworkModes(t *testing.T) {
 func TestClaimAtSupportsDataDrivenDimensions(t *testing.T) {
 	definitions := []protocol.DimensionDefinition{{
 		Name:          "pokeb:battle_arena",
-		Range:         [2]int32{-64, 320},
+		MinimumY:      -64,
+		HeightRange:   384,
 		DimensionType: 1000,
 	}}
 	claims := map[string]claim.PlayerClaim{

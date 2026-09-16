@@ -16,3 +16,4 @@
 - Known packets always decode then re-Marshal through gophertunnel (no raw-byte forward), so `AddPlayer`/`PlayerList` are re-encoded even with no gobds handlers; a bad GT pin causes multi-player error-code `Block` kicks when another player enters view.
 - On protocol 2168, sanitize forwarded `AddPlayer` with `BuildPlatform == 0` to `DeviceDedicated` (same as dragonfly#1382); BDS/other emitters can leave it zero and kick every viewer.
 - `PlayerUpdateEntityOverrides` must Marshal as a byte-only type (PMMP shape); an extra `Varuint32` variant desyncs decode to garbage types (e.g. `14`) and spams dialer errors without kicking.
+- Protocol 2193 / gophertunnel v1.62.0 (1.26.50): go.mod pins official `github.com/df-mc/dragonfly@d42ce23` (`feature/26.50`). `DimensionDefinition.Range` became `MinimumY` + `HeightRange`; gobds `dimensionRangeByID` maps max as `MinimumY + HeightRange`.

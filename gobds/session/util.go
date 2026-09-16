@@ -72,7 +72,7 @@ func claimDimensionFromInt(dimension int32, definitions []protocol.DimensionDefi
 func dimensionRangeByID(id int32, definitions []protocol.DimensionDefinition) (cube.Range, bool) {
 	for _, definition := range definitions {
 		if definition.DimensionType == id {
-			return cube.Range{int(definition.Range[0]), int(definition.Range[1])}, true
+			return cube.Range{int(definition.MinimumY), int(definition.MinimumY + definition.HeightRange)}, true
 		}
 	}
 	if dimension, ok := world.DimensionByID(int(id)); ok {
