@@ -34,23 +34,16 @@ func newProxyStatusProvider(srv *Server, name string, maxPlayers int) *proxyStat
 
 // ServerStatus reports the current status of the proxy.
 //
-// The Listener calls this with its own live connection count as playerCount;
-// internal callers (e.g. the AFK evaluator) pass a negative playerCount, in
-// which case the authoritative live session count of the server is used. The
-// caller's maxPlayers is ignored in favor of the configured capacity.
-//
-// playerCount is the listener's live connection count, or negative to request
-// the server's tracked session count.
-// The second parameter (the caller's max players) is intentionally ignored.
+// Both parameters (the calling listener's own player count and max players)
+// are intentionally ignored: the server's tracked session count and the
+// configured capacity are authoritative across all listeners.
 // It returns the status advertised in the server list.
-func (p *proxyStatusProvider) ServerStatus(playerCount, _ int) minecraft.ServerStatus {
-	count := playerCount
-	if count < 0 {
-		count = len(p.srv.Sessions())
-	}
-	if count < 0 {
-		count = 0
-	}
+func (p *proxyStatusProvider) ServerStatus(_, _ int) minecraft.ServerStatus {
+	// Always report the server's own session count: with RakNet and NetherNet
+	// listeners side by side, each listener only knows its own connections, so
+	// the RakNet pong (what the hub / Discord poll) showed 0 while everyone was
+	// on NetherNet.
+	count := len(p.srv.Sessions())
 	return minecraft.ServerStatus{
 		ServerName:  p.name,
 		PlayerCount: count,

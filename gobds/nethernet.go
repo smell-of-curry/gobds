@@ -101,7 +101,9 @@ func newNetherNetStack(opts netherNetListenOpts) (*netherNetEndpoint, nethernet.
 	}
 	udpIP := opts.udpIP
 	if udpIP == nil {
-		udpIP = net.IPv4zero
+		// Dual-stack: console clients lean on IPv6 candidates; a v4-only mux left
+		// them failing ICE after a successful (dual-stack) hub join.
+		udpIP = net.IPv6unspecified
 	}
 	udp, err := net.ListenUDP("udp", &net.UDPAddr{IP: udpIP, Port: opts.udpPort})
 	if err != nil {
