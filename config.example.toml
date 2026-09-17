@@ -11,8 +11,15 @@ SentryDSN = '' # The DSN link of the sentry connection
 Name = 'Some server'
 LocalAddress = '127.0.0.1:19132'
 RemoteAddress = '127.0.0.1:19133'
+Transport = 'raknet' # Upstream (BDS) transport: ''/'raknet' (default) or 'nethernet'. When nethernet, RemoteAddress is the BDS signaling HTTP host:port (usually server-port). Hosts 0.0.0.0 / '' / :: are rewritten to 127.0.0.1.
 MOTD = 'Some server' # The name shown in the server list. Falls back to Name when empty.
 MaxPlayers = 85 # Capacity advertised in the server list. The proxy reports its own live player count against this, so status stays correct even if the backend hides its pong (e.g. enable-lan-visibility=false).
+
+[Network.Servers.NetherNet] # Client-facing NetherNet (WebRTC, Bedrock 26.50) in addition to RakNet.
+Enabled = false # Serve GET/POST /v1/join on TCP LocalAddress so clients prefer NetherNet, falling back to RakNet.
+UDPPort = 19140 # ICE UDP mux port (required when Enabled). Game hosts only allow UDP 19132-19138 inbound — pick a port in that range or open this one.
+PublicIP = '' # Optional. Advertised as a host ICE candidate (NAT 1:1).
+# Firewall: open TCP on the LocalAddress port (signaling) AND UDP on UDPPort (ICE).
 
 [Network.Servers.ClaimService] # Claim Service configuration for Server A.
 Enabled = false # Whether this service is enabled

@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/df-mc/go-nethernet"
+	"github.com/df-mc/go-nethernet/endpoint"
 	"github.com/google/uuid"
 	"github.com/restartfu/gophig"
 	"github.com/sandertv/gophertunnel/minecraft"
@@ -251,7 +253,7 @@ func (c UserConfig) whiteList(log *slog.Logger) *whitelist.Whitelist {
 }
 
 // dialerFunc returns a dialer func for a specific server.
-func (c UserConfig) dialerFunc(remoteAddress string, log *slog.Logger) DialerFunc {
+func (c UserConfig) dialerFunc(remoteAddress, transport string, log *slog.Logger) DialerFunc {
 	return func(identityData login.IdentityData, clientData login.ClientData, ctx context.Context) (session.Conn, error) {
 		d := minecraft.Dialer{
 			ClientData:   clientData,
@@ -263,24 +265,42 @@ func (c UserConfig) dialerFunc(remoteAddress string, log *slog.Logger) DialerFun
 			ErrorLog:            log,
 			KeepXBLIdentityData: true,
 		}
+		if transport == "nethernet" {
+			url := netherNetDialAddress(remoteAddress)
+			return d.DialContextNetwork(ctx, minecraft.NetherNet{
+				Signaling: endpoint.NewClient(),
+				Dialer: nethernet.Dialer{
+					API:                     newNetherNetDialAPI(url),
+					DisableTrickleICE:       true,
+					AllowIdentitylessServer: true,
+					Log:                     log,
+				},
+				Log: log,
+			}, url)
+		}
 		return d.DialContext(ctx, "raknet", remoteAddress)
 	}
 }
 
-// listenerFunc returns a listener func for a specific server.
-func (c UserConfig) listenerFunc(srv *Server) (Listener, error) {
+// listenConfig returns the shared Minecraft listen config for a server.
+func (c UserConfig) listenConfig(srv *Server, packs []*resource.Pack) minecraft.ListenConfig {
 	cfg := minecraft.ListenConfig{
 		ErrorLog:       srv.Log,
 		StatusProvider: srv.StatusProvider,
 
 		FlushRate:            time.Millisecond * time.Duration(c.Network.FlushRate),
-		ResourcePacks:        c.packs(srv.Log),
+		ResourcePacks:        packs,
 		TexturePacksRequired: c.Resources.PacksRequired,
 	}
 
 	if srv.Log.Enabled(context.Background(), slog.LevelDebug) {
 		cfg.ErrorLog = srv.Log.With("net origin", "gophertunnel")
 	}
+	return cfg
+}
+
+// listenerFunc returns a RakNet listener for a specific server.
+func (c UserConfig) listenerFunc(srv *Server, cfg minecraft.ListenConfig) (Listener, error) {
 	l, err := cfg.ListenNetwork(loggedRakNet{log: cfg.ErrorLog}, srv.LocalAddress)
 	if err != nil {
 		return nil, fmt.Errorf("create listener: %w", err)

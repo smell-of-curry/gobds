@@ -95,14 +95,27 @@ func (gb *GoBDS) listen(srv *Server) {
 	go func() {
 		<-gb.ctx.Done()
 		cancel()
-		_ = srv.Listener.Close()
+		srv.closeListeners()
 		wg.Wait()
 	}()
 
+	var acceptWG sync.WaitGroup
+	acceptWG.Add(len(srv.Listeners))
+	for _, l := range srv.Listeners {
+		go func(l Listener) {
+			defer acceptWG.Done()
+			gb.serveListener(srv, l, wg, ctx)
+		}(l)
+	}
+	acceptWG.Wait()
+	gb.wg.Done()
+}
+
+// serveListener accepts connections on one listener until it is closed.
+func (gb *GoBDS) serveListener(srv *Server, l Listener, wg *sync.WaitGroup, ctx context.Context) {
 	for {
-		conn, err := srv.Listener.Accept()
+		conn, err := l.Accept()
 		if err != nil {
-			gb.wg.Done()
 			return
 		}
 
@@ -112,7 +125,7 @@ func (gb *GoBDS) listen(srv *Server) {
 			xuid := conn.IdentityData().XUID
 			if gb.conf.DuplicateXUIDEnabled {
 				if !srv.ReserveXUID(xuid) {
-					_ = srv.Listener.Disconnect(conn, "This account is already connected.")
+					_ = l.Disconnect(conn, "This account is already connected.")
 					return
 				}
 				defer srv.ReleaseXUID(xuid)
@@ -120,7 +133,7 @@ func (gb *GoBDS) listen(srv *Server) {
 
 			s, err := gb.accept(conn, srv, ctx)
 			if err != nil {
-				_ = srv.Listener.Disconnect(conn, err.Error())
+				_ = l.Disconnect(conn, err.Error())
 				return
 			}
 

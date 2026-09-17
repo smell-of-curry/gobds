@@ -82,6 +82,9 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 	}
 
 	for _, server := range c.Network.Servers {
+		if err := server.validate(); err != nil {
+			return Config{}, fmt.Errorf("server %q: %w", server.Name, err)
+		}
 		srv := &Server{
 			Name:          server.Name,
 			LocalAddress:  server.LocalAddress,
@@ -96,7 +99,7 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 			),
 			TrafficMetrics: &session.TrafficMetrics{},
 
-			DialerFunc: c.dialerFunc(server.RemoteAddress, log),
+			DialerFunc: c.dialerFunc(server.RemoteAddress, server.Transport, log),
 
 			Log: log.With(slog.String("srv", server.Name)),
 		}
@@ -111,8 +114,17 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		srv.StatusProviderFunc = func() (minecraft.ServerStatusProvider, error) {
 			return newProxyStatusProvider(srv, motd, maxPlayers), nil
 		}
-		srv.ListenerFunc = func() (Listener, error) {
-			return c.listenerFunc(srv)
+		packs := c.packs(srv.Log)
+		srv.ListenerFuncs = []ListenerFunc{
+			func() (Listener, error) {
+				return c.listenerFunc(srv, c.listenConfig(srv, packs))
+			},
+		}
+		if server.NetherNet.Enabled {
+			nn := server.NetherNet
+			srv.ListenerFuncs = append(srv.ListenerFuncs, func() (Listener, error) {
+				return c.netherNetListener(srv, c.listenConfig(srv, packs), nn, netherNetListenOpts{})
+			})
 		}
 		conf.Servers = append(conf.Servers, srv)
 	}

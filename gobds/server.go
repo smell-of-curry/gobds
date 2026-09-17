@@ -2,6 +2,7 @@ package gobds
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -18,6 +19,10 @@ type ServerConfig struct {
 	Name          string
 	LocalAddress  string
 	RemoteAddress string
+	// Transport is the upstream (BDS) transport: ""/"raknet" (default) or "nethernet".
+	Transport string
+	// NetherNet configures the client-facing NetherNet listener (in addition to RakNet).
+	NetherNet NetherNetConfig
 	// MOTD is the name shown in the server list. Falls back to Name when empty.
 	MOTD string
 	// MaxPlayers is the player capacity advertised in the server list.
@@ -27,6 +32,27 @@ type ServerConfig struct {
 		URL     string
 		Key     string
 	}
+}
+
+// NetherNetConfig is the client-facing NetherNet (WebRTC) listener.
+type NetherNetConfig struct {
+	Enabled bool
+	// UDPPort is the ICE UDP mux port. Required when Enabled.
+	UDPPort int
+	// PublicIP is an optional host ICE candidate (NAT 1:1).
+	PublicIP string
+}
+
+func (s ServerConfig) validate() error {
+	switch s.Transport {
+	case "", "raknet", "nethernet":
+	default:
+		return fmt.Errorf("unknown transport %q", s.Transport)
+	}
+	if s.NetherNet.Enabled && s.NetherNet.UDPPort <= 0 {
+		return fmt.Errorf("nethernet UDPPort required when enabled")
+	}
+	return nil
 }
 
 // Server represents a single server instance with its own Listener, DialerFunc, and minecraft.ServerStatusProvider.
@@ -41,11 +67,11 @@ type Server struct {
 	// TrafficMetrics aggregates rate and malformed-packet counters for this server.
 	TrafficMetrics *session.TrafficMetrics
 
-	Listener       Listener
+	Listeners      []Listener
 	StatusProvider minecraft.ServerStatusProvider
 
 	StatusProviderFunc StatusProviderFunc
-	ListenerFunc       ListenerFunc
+	ListenerFuncs      []ListenerFunc
 	DialerFunc         DialerFunc
 
 	// sessions holds every live *session.Session on this server, keyed by
@@ -108,6 +134,13 @@ func (s *Server) Sessions() []*session.Session {
 	return out
 }
 
+// closeListeners closes every listener on the server.
+func (s *Server) closeListeners() {
+	for _, l := range s.Listeners {
+		_ = l.Close()
+	}
+}
+
 // ListenerFunc creates a Listener.
 type ListenerFunc func() (Listener, error)
 
@@ -138,17 +171,34 @@ func (gb *GoBDS) initServer(srv *Server) bool {
 			srv.StatusProvider = prov
 		}
 
-		if srv.Listener == nil {
-			l, err := srv.ListenerFunc()
-			if err != nil {
-				srv.Log.Error("failed to create listener", "err", err)
+		if len(srv.Listeners) == 0 {
+			if len(srv.ListenerFuncs) == 0 {
+				srv.Log.Error("failed to create listener", "err", "no listener funcs")
 				gb.waitOrAbort(retryInterval)
 				continue
 			}
-			srv.Listener = l
+			ls := make([]Listener, 0, len(srv.ListenerFuncs))
+			failed := false
+			for _, f := range srv.ListenerFuncs {
+				l, err := f()
+				if err != nil {
+					for _, existing := range ls {
+						_ = existing.Close()
+					}
+					srv.Log.Error("failed to create listener", "err", err)
+					gb.waitOrAbort(retryInterval)
+					failed = true
+					break
+				}
+				ls = append(ls, l)
+			}
+			if failed {
+				continue
+			}
+			srv.Listeners = ls
 		}
 
-		if srv.Listener != nil && srv.StatusProvider != nil {
+		if len(srv.Listeners) > 0 && srv.StatusProvider != nil {
 			return true
 		}
 	}
