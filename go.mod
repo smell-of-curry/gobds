@@ -60,3 +60,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/df-mc/go-nethernet => github.com/smell-of-curry/go-nethernet v1.0.23-0.20260917173956-474fa49fdfae

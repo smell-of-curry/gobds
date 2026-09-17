@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/netip"
 	"os"
 	"os/signal"
 	"sync"
@@ -227,7 +226,11 @@ func (gb *GoBDS) handleSecureSlots(srv *Server, displayName string) bool {
 
 // handleVPN protects proxy from vpn/proxy users.
 func (gb *GoBDS) handleVPN(netAddr net.Addr, ctx context.Context) (reason string, allowed bool) {
-	addr, _ := netip.ParseAddrPort(netAddr.String())
+	addr, err := remoteAddrPort(netAddr)
+	if err != nil {
+		gb.conf.Log.Error("error resolving remote address", "address", netAddr.String(), "err", err)
+		return "Invalid address format.", false
+	}
 	addrString := addr.Addr().String()
 	if addrString == "127.0.0.1" || addrString == "0.0.0.0" || addrString == "localhost" {
 		return "", true

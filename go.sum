@@ -10,8 +10,6 @@ github.com/coreos/go-oidc/v3 v3.21.0 h1:wZo4Q9Pum8dYEj0eMUPrqR+kvuGkeUplbLpNCkBq
 github.com/coreos/go-oidc/v3 v3.21.0/go.mod h1:DYCf24+ncYi+XkIH97GY1+dqoRlbaSI26KVTCI9SrY4=
 github.com/df-mc/dragonfly v0.11.5-0.20260916221608-d42ce23a0d45 h1:cANCIK+/8ytsxcFBOVyd4ct2NxauM13Jv5sB5YKz3FA=
 github.com/df-mc/dragonfly v0.11.5-0.20260916221608-d42ce23a0d45/go.mod h1:edW4tJmnTBFEAsyq0i+jNANDQVdPHmdbqBQpkHVXhWw=
-github.com/df-mc/go-nethernet v1.0.20 h1:H0MO0GkVlAypu9IDQhzg5Pph3mCD7r40+ExiImsXT2M=
-github.com/df-mc/go-nethernet v1.0.20/go.mod h1:11MfQo5F7PDKfHg1H0zM5mMkrCv29jRE0lK5B4egW9w=
 github.com/df-mc/go-playfab/v2 v2.0.3 h1:7L46Zp1Ca17Mmw7Zd5m4kGDDr8XhzGbaEv9SN2GIYdk=
 github.com/df-mc/go-playfab/v2 v2.0.3/go.mod h1:CS3FV3tJlohvGQiX0IJiaYKOVNfy0p778B84oEVyxlw=
 github.com/df-mc/go-xsapi/v2 v2.0.3 h1:fQLw4k15OinFhagWjbSj0BwQXeDUmY8a1J8yquEod3w=
@@ -112,6 +110,8 @@ github.com/sandertv/gophertunnel v1.62.0 h1:n+CBO0ngnlURV3DMCe9uq9KtZbr8sK1/Z5mY
 github.com/sandertv/gophertunnel v1.62.0/go.mod h1:LZsch9elPoPzsJGDbx7ClWEHFjgHZ/lONvXF7m16Qn8=
 github.com/segmentio/fasthash v1.0.3 h1:EI9+KE1EwvMLBWwjpRDc+fEM+prwxDYbslddQGtrmhM=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
+github.com/smell-of-curry/go-nethernet v1.0.23-0.20260917173956-474fa49fdfae h1:JEwytqFBA2dDC7uw+ZbEuJh0FODFKsK7+lk2rPg62UA=
+github.com/smell-of-curry/go-nethernet v1.0.23-0.20260917173956-474fa49fdfae/go.mod h1:11MfQo5F7PDKfHg1H0zM5mMkrCv29jRE0lK5B4egW9w=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f h1:9hiVElpCmKzsBKQHkBqZ8LGzt82iLfM8egxr4sew+Ys=

@@ -1,6 +1,7 @@
 package gobds
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,6 +15,9 @@ import (
 	"github.com/pion/webrtc/v4"
 	"github.com/sandertv/gophertunnel/minecraft"
 )
+
+// netherNetConnTimeout bounds ICE + DTLS + SCTP setup for one NetherNet connection.
+const netherNetConnTimeout = 20 * time.Second
 
 // netherNetListenOpts is the unexported NetherNet listen stack.
 // allowAnonymous is test-only: production config never sets it.
@@ -118,9 +122,14 @@ func newNetherNetStack(opts netherNetListenOpts) (*netherNetEndpoint, nethernet.
 			api:        api,
 		}, nethernet.ListenConfig{
 			DisableTrickleICE: true,
-			AllowAnonymous:    opts.allowAnonymous,
-			API:               api,
-			Log:               opts.log,
+			// go-nethernet defaults to 5s for ICE+DTLS+SCTP; real players behind
+			// NAT hit "start ICE: context deadline exceeded" at that budget.
+			ConnContext: func(parent context.Context, _ *nethernet.Conn) (context.Context, context.CancelFunc) {
+				return context.WithTimeout(parent, netherNetConnTimeout)
+			},
+			AllowAnonymous: opts.allowAnonymous,
+			API:            api,
+			Log:            opts.log,
 		}, nil
 }
 
