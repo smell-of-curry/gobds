@@ -12,6 +12,7 @@ import (
 
 	"github.com/df-mc/go-nethernet"
 	"github.com/df-mc/go-nethernet/endpoint"
+	"github.com/pion/ice/v4"
 	"github.com/pion/webrtc/v4"
 	"github.com/sandertv/gophertunnel/minecraft"
 )
@@ -27,7 +28,9 @@ type netherNetListenOpts struct {
 	udpIP          net.IP
 	publicIP       string
 	allowAnonymous bool
-	log            *slog.Logger
+	// keyPath persists the server identity key across restarts (stable fingerprint, no repeated TOFU prompt).
+	keyPath string
+	log     *slog.Logger
 }
 
 type netherNetEndpoint struct {
@@ -73,6 +76,9 @@ func newNetherNetAPI(udp *net.UDPConn, publicIP string) *webrtc.API {
 	var se webrtc.SettingEngine
 	se.SetICEUDPMux(webrtc.NewICEUDPMux(nil, udp))
 	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4, webrtc.NetworkTypeUDP6})
+	// Public server: no LAN peers to resolve, and pion otherwise opens a
+	// multicast :5353 socket per connection.
+	se.SetICEMulticastDNSMode(ice.MulticastDNSModeDisabled)
 	// Only advertise 127.0.0.1 when the mux itself is bound to loopback (tests);
 	// production answers to remote players must not carry a loopback candidate.
 	if a, ok := udp.LocalAddr().(*net.UDPAddr); ok && a.IP.IsLoopback() {
@@ -103,6 +109,12 @@ func newNetherNetStack(opts netherNetListenOpts) (*netherNetEndpoint, nethernet.
 		return nil, nethernet.ListenConfig{}, fmt.Errorf("listen nethernet ice mux: %w", err)
 	}
 	api := newNetherNetAPI(udp, opts.publicIP)
+	serverKey, err := loadOrCreateServerKey(opts.keyPath)
+	if err != nil {
+		_ = tcp.Close()
+		_ = udp.Close()
+		return nil, nethernet.ListenConfig{}, fmt.Errorf("nethernet server key: %w", err)
+	}
 	httpServer := &http.Server{
 		Handler:           h,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -121,7 +133,8 @@ func newNetherNetStack(opts netherNetListenOpts) (*netherNetEndpoint, nethernet.
 			udp:        udp,
 			api:        api,
 		}, nethernet.ListenConfig{
-			DisableTrickleICE: true,
+			IssueServerIdentity: serverIdentityIssuer(serverKey),
+			DisableTrickleICE:   true,
 			// go-nethernet defaults to 5s for ICE+DTLS+SCTP; real players behind
 			// NAT hit "start ICE: context deadline exceeded" at that budget.
 			ConnContext: func(parent context.Context, _ *nethernet.Conn) (context.Context, context.CancelFunc) {
@@ -165,6 +178,9 @@ func (c UserConfig) netherNetListener(srv *Server, cfg minecraft.ListenConfig, n
 	opts.udpPort = nn.UDPPort
 	opts.publicIP = nn.PublicIP
 	opts.log = srv.Log
+	if opts.keyPath == "" {
+		opts.keyPath = fmt.Sprintf("nethernet_key_%s.pem", strings.ToLower(srv.Name))
+	}
 	ep, listenCfg, err := newNetherNetStack(opts)
 	if err != nil {
 		return nil, fmt.Errorf("create nethernet listener: %w", err)

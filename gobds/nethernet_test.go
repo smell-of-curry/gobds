@@ -21,6 +21,7 @@ func TestNetherNetListenerSmoke(t *testing.T) {
 		udpIP:          net.ParseIP("127.0.0.1"),
 		publicIP:       "127.0.0.1",
 		allowAnonymous: true,
+		keyPath:        t.TempDir() + "/key.pem",
 		log:            log,
 	})
 	if err != nil {

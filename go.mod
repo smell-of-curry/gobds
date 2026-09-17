@@ -10,6 +10,7 @@ require (
 	github.com/go-gl/mathgl v1.2.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/uuid v1.6.0
+	github.com/pion/ice/v4 v4.4.1
 	github.com/pion/webrtc/v4 v4.2.19
 	github.com/restartfu/gophig v0.1.0
 	github.com/sandertv/go-raknet v1.15.2-0.20260819131831-ea813dc668b5
@@ -35,7 +36,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pion/datachannel v1.6.2 // indirect
 	github.com/pion/dtls/v3 v3.1.8 // indirect
-	github.com/pion/ice/v4 v4.4.1 // indirect
 	github.com/pion/interceptor v0.1.47 // indirect
 	github.com/pion/logging v0.2.4 // indirect
 	github.com/pion/mdns/v2 v2.2.0 // indirect
