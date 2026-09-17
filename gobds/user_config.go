@@ -42,6 +42,11 @@ type UserConfig struct {
 		FlushRate         int
 
 		SentryDSN string
+
+		// TurnAddress is host:port of the coturn server used for NetherNet ICE
+		// relay candidates (empty = no TURN). TurnSecret is its static-auth-secret.
+		TurnAddress string
+		TurnSecret  string
 	}
 	Border struct {
 		Enabled    bool

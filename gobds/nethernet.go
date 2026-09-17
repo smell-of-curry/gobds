@@ -28,6 +28,8 @@ type netherNetListenOpts struct {
 	udpIP          net.IP
 	publicIP       string
 	allowAnonymous bool
+	turnAddress    string
+	turnSecret     string
 	// keyPath persists the server identity key across restarts (stable fingerprint, no repeated TOFU prompt).
 	keyPath string
 	log     *slog.Logger
@@ -94,7 +96,10 @@ func newNetherNetStack(opts netherNetListenOpts) (*netherNetEndpoint, nethernet.
 	if opts.log == nil {
 		opts.log = slog.Default()
 	}
-	h := endpoint.HandlerConfig{Logger: opts.log}.New()
+	h := endpoint.HandlerConfig{
+		Logger:      opts.log,
+		Credentials: turnCredentialsFunc(opts.turnAddress, opts.turnSecret),
+	}.New()
 	tcp, err := net.Listen("tcp", opts.tcpAddr)
 	if err != nil {
 		return nil, nethernet.ListenConfig{}, fmt.Errorf("listen nethernet signaling: %w", err)
@@ -179,6 +184,8 @@ func (c UserConfig) netherNetListener(srv *Server, cfg minecraft.ListenConfig, n
 	opts.tcpAddr = srv.LocalAddress
 	opts.udpPort = nn.UDPPort
 	opts.publicIP = nn.PublicIP
+	opts.turnAddress = c.Network.TurnAddress
+	opts.turnSecret = c.Network.TurnSecret
 	opts.log = srv.Log
 	if opts.keyPath == "" {
 		opts.keyPath = fmt.Sprintf("nethernet_key_%s.pem", strings.ToLower(srv.Name))
