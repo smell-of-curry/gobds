@@ -123,6 +123,51 @@ func TestInvalidTransportRejected(t *testing.T) {
 	}
 }
 
+func TestPackConfigTOML(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	const raw = `
+[Resources]
+URLResources = ['https://example.invalid/legacy.mcpack']
+PathResources = ['packs/old.mcpack']
+
+[[Resources.Packs]]
+URL = 'https://example.invalid/texts-en_US.mcpack'
+Path = ''
+MinMemoryTier = 0
+Language = ''
+
+[[Resources.Packs]]
+URL = ''
+Path = 'packs/3d.mcpack'
+MinMemoryTier = 2
+Language = 'de_DE'
+`
+	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	g := gophig.NewGophig[UserConfig](path, gophig.TOMLMarshaler{}, os.ModePerm)
+	c, err := g.LoadConf()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Resources.URLResources) != 1 || c.Resources.URLResources[0] != "https://example.invalid/legacy.mcpack" {
+		t.Fatalf("URLResources = %#v", c.Resources.URLResources)
+	}
+	if len(c.Resources.PathResources) != 1 || c.Resources.PathResources[0] != "packs/old.mcpack" {
+		t.Fatalf("PathResources = %#v", c.Resources.PathResources)
+	}
+	if len(c.Resources.Packs) != 2 {
+		t.Fatalf("Packs = %d, want 2", len(c.Resources.Packs))
+	}
+	first, second := c.Resources.Packs[0], c.Resources.Packs[1]
+	if first.URL == "" || first.Path != "" || first.MinMemoryTier != 0 || first.Language != "" {
+		t.Fatalf("first pack = %+v", first)
+	}
+	if second.URL != "" || second.Path != "packs/3d.mcpack" || second.MinMemoryTier != 2 || second.Language != "de_DE" {
+		t.Fatalf("second pack = %+v", second)
+	}
+}
+
 func TestNetherNetEnabledRequiresUDPPort(t *testing.T) {
 	config := UserConfig{}
 	config.Network.Servers = []ServerConfig{{
