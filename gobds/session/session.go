@@ -50,6 +50,10 @@ type Session struct {
 	// ForwardPing. -1 means nothing has been forwarded yet.
 	lastForwardedPing int64
 
+	// commandChunks reassembles [PROXY_SYSTEM][COMMANDS:i/n] payloads.
+	// Server-side Text packets are handled on one goroutine per session.
+	commandChunks commandChunks
+
 	data *Data
 	log  *slog.Logger
 }

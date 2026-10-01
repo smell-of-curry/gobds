@@ -27,6 +27,12 @@ Below is an explanation of the relevant structures, how they are interpreted by 
    ```
    This prefix (`[PROXY_SYSTEM][COMMANDS]=`) indicates that the message contains JSON data describing the commands to register.
 
+   gophertunnel rejects `Text` messages over 65536 bytes, so large registries are split into ordered chunks instead:
+   ```
+   [PROXY_SYSTEM][COMMANDS:<i>/<n>]=<part>
+   ```
+   `i` is 1-based, `n` is the total chunk count. Concatenating parts `1..n` yields the same JSON as the legacy single message. The proxy reassembles on the session, then parses as usual. The unsplit `[PROXY_SYSTEM][COMMANDS]=<json>` form still works.
+
 3. **JSON Parsing**  
    The command data, stripped of the prefix, is then unmarshaled into a Go structure:
    ```go
