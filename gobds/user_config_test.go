@@ -82,8 +82,8 @@ func TestFilterPackOffers(t *testing.T) {
 		{id: "3d", filter: packFilter{MinMemoryTier: 2}},
 		{id: "de-3d", filter: packFilter{MinMemoryTier: 2, Language: "de_DE"}},
 		{id: "core"},
-		{id: "legacy-url", legacy: true},
-		{id: "legacy-path", legacy: true},
+		{id: "legacy-url"},
+		{id: "legacy-path"},
 	}
 
 	tests := []struct {
@@ -145,35 +145,5 @@ func TestPackMatchesEdges(t *testing.T) {
 	}
 	if !packMatches(packFilter{MinMemoryTier: 2, Language: "ru_RU"}, 4, "ru-RU") {
 		t.Fatal("tier above min and normalized language must match")
-	}
-}
-
-func TestStackOrder(t *testing.T) {
-	offers := []packOffer{
-		{id: "en"},
-		{id: "de", filter: packFilter{Language: "de_DE"}},
-		{id: "3d", filter: packFilter{MinMemoryTier: 2}},
-		{id: "core"},
-		{id: "legacy-url", legacy: true},
-		{id: "legacy-path", legacy: true},
-	}
-
-	// Filter keeps order; stack puts legacy first (unchanged) and reverses
-	// Packs so index 0 is applied last (highest priority). 3d must land
-	// after core.
-	matched := filterPackOffers(offers, 2, "de-DE")
-	if got, want := offerNames(matched), []string{"en", "de", "3d", "core", "legacy-url", "legacy-path"}; !slices.Equal(got, want) {
-		t.Fatalf("filter order got %v, want %v", got, want)
-	}
-	if got, want := offerNames(stackOrder(matched)), []string{"legacy-url", "legacy-path", "core", "3d", "de", "en"}; !slices.Equal(got, want) {
-		t.Fatalf("stack order got %v, want %v", got, want)
-	}
-
-	legacyOnly := []packOffer{
-		{id: "url", legacy: true},
-		{id: "path", legacy: true},
-	}
-	if got, want := offerNames(stackOrder(legacyOnly)), []string{"url", "path"}; !slices.Equal(got, want) {
-		t.Fatalf("legacy stack got %v, want %v", got, want)
 	}
 }

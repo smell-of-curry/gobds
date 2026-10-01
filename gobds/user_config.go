@@ -132,7 +132,6 @@ type packOffer struct {
 	id     string
 	pack   *resource.Pack
 	filter packFilter
-	legacy bool
 }
 
 // packs loads Packs, then legacy URLResources, then PathResources.
@@ -161,7 +160,7 @@ func (c UserConfig) packs(log *slog.Logger) []packOffer {
 			log.Error("failed to load url pack", "err", err)
 			continue
 		}
-		offers = append(offers, packOffer{pack: pack, legacy: true})
+		offers = append(offers, packOffer{pack: pack})
 	}
 	for _, path := range c.Resources.PathResources {
 		pack, err := resource.ReadPath(path)
@@ -169,13 +168,13 @@ func (c UserConfig) packs(log *slog.Logger) []packOffer {
 			log.Error("failed to load path pack", "err", err)
 			continue
 		}
-		offers = append(offers, packOffer{pack: pack, legacy: true})
+		offers = append(offers, packOffer{pack: pack})
 	}
 
-	// Translator merge is later-wins. Walk stack order (lowest priority
-	// first) so Packs[0], the highest priority pack, overwrites keys last.
-	for _, offer := range stackOrder(offers) {
-		if err := translator.Setup(offer.pack); err != nil {
+	// Translator merge is later-wins. Walk lowest priority first so
+	// Packs[0], the highest priority pack, overwrites keys last.
+	for i := len(offers) - 1; i >= 0; i-- {
+		if err := translator.Setup(offers[i].pack); err != nil {
 			log.Error("failed to setup translator", "err", err)
 		}
 	}
@@ -359,13 +358,13 @@ func (c UserConfig) listenConfig(srv *Server, offers []packOffer) minecraft.List
 		StatusProvider: srv.StatusProvider,
 
 		FlushRate:            time.Millisecond * time.Duration(c.Network.FlushRate),
-		ResourcePacks:        packsFrom(stackOrder(offers)),
+		ResourcePacks:        packsFrom(offers),
 		TexturePacksRequired: c.Resources.PacksRequired,
 		// Called before ResourcePacksInfo (gophertunnel minecraft/conn.go:889).
 		// The returned slice replaces the listener's packs for this client.
 		FetchResourcePacks: func(_ login.IdentityData, client login.ClientData, _ []*resource.Pack) []*resource.Pack {
 			matched := filterPackOffers(offers, client.MemoryTier, client.LanguageCode)
-			return packsFrom(stackOrder(matched))
+			return packsFrom(matched)
 		},
 	}
 
@@ -406,33 +405,10 @@ func filterPackOffers(offers []packOffer, memoryTier int, languageCode string) [
 	return matched
 }
 
-// stackOrder converts highest-priority-first offers into gophertunnel's
-// ResourcePacks order (lowest priority first).
-//
-// gophertunnel v1.62.0 copies conn.resourcePacks in slice order into
-// ResourcePackStack.TexturePacks (minecraft/conn.go:1117) and does not
-// reverse it. packet.ResourcePackStack says the first entry "will be applied
-// first" (minecraft/protocol/packet/resource_pack_stack.go:16), so index 0
-// on the wire is the lowest priority. Resources.Packs is the opposite
-// (index 0 highest, same as packs.json), so that prefix is reversed.
-//
-// Legacy URLResources/PathResources are not part of that prefix. They keep
-// today's load order and are placed before Packs, which leaves a Packs-empty
-// config unchanged and keeps a monolith lower priority than Packs.
-// highestFirst must be Packs (legacy == false) followed by legacy entries.
-func stackOrder(highestFirst []packOffer) []packOffer {
-	split := 0
-	for split < len(highestFirst) && !highestFirst[split].legacy {
-		split++
-	}
-	out := make([]packOffer, 0, len(highestFirst))
-	out = append(out, highestFirst[split:]...)
-	for i := split - 1; i >= 0; i-- {
-		out = append(out, highestFirst[i])
-	}
-	return out
-}
-
+// packsFrom returns the packs in offers order. gophertunnel copies that slice
+// into ResourcePackStack.TexturePacks unchanged (minecraft/conn.go:1117), and
+// the client gives index 0 the highest priority (it tops the in-game Active
+// list and overrides packs below it), so offers order is already wire order.
 func packsFrom(offers []packOffer) []*resource.Pack {
 	out := make([]*resource.Pack, len(offers))
 	for i, offer := range offers {
