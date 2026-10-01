@@ -1,6 +1,7 @@
 package translator
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/sandertv/gophertunnel/minecraft/resource"
@@ -25,18 +26,31 @@ func TranslationFor(lang string) (map[string]string, bool) {
 	return t, ok
 }
 
-// SetTranslationFor ...
+// SetTranslationFor merges t into the map already stored for lang.
+// A key present in both maps keeps the value from t (later pack wins).
 func SetTranslationFor(lang string, t map[string]string) {
 	translationMu.Lock()
 	defer translationMu.Unlock()
-	translations[lang] = t
+	dst := translations[lang]
+	if dst == nil {
+		dst = make(map[string]string, len(t))
+		translations[lang] = dst
+	}
+	for k, v := range t {
+		dst[k] = v
+	}
 }
 
-// Setup ...
+// Setup loads every language file in the pack into the shared translation
+// map. A pack with no texts/ directory (audio, 3d, and other asset-only
+// packs) is skipped.
 func Setup(rp *resource.Pack) error {
-	languages, exists := SupportedLanguages(rp)
-	if exists != nil {
-		return exists
+	languages, err := SupportedLanguages(rp)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found in the resource pack") {
+			return nil
+		}
+		return err
 	}
 	for _, l := range languages {
 		mapped, err := TranslationMapFor(rp, l)

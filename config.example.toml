@@ -62,8 +62,15 @@ TimeoutDuration = "10m" # The timeout duration of the afk timer
 [Resources]
 PacksRequired = false # If resource packs are required to download by players
 CommandPath = 'resources/commands.json' # The path to the file where the bds-scripting-commands are stored
-URLResources = [] # Urls of resource packs to require downloaded by players
-PathResources = [] # Paths of resource packs to require downloaded by players
+# Legacy, unfiltered, appended after Packs (lower priority). Prefer Packs.
+URLResources = []
+PathResources = []
+
+# [[Resources.Packs]] # bds-manager writes this from packs.json. Index 0 is highest priority.
+# URL = 'https://git.pokebedrock.com/.../pokebedrock-res-texts-en_US.mcpack'
+# Path = '' # exactly one of URL / Path
+# MinMemoryTier = 0 # 0 = everyone; else client MemoryTier must be >= this (0..4)
+# Language = '' # empty = everyone; else match ClientData.LanguageCode (case-insensitive, '-' == '_')
 
 [AuthenticationService]
 Enabled = false # Whether this service is enabled

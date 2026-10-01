@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 )
 
@@ -63,5 +64,116 @@ func TestReadURLPackHasNoDownloadURL(t *testing.T) {
 	}
 	if pack.Len() != len(data) {
 		t.Fatalf("pack content length mismatch: got %d, want %d", pack.Len(), len(data))
+	}
+}
+
+func offerNames(offers []packOffer) []string {
+	names := make([]string, len(offers))
+	for i, offer := range offers {
+		names[i] = offer.id
+	}
+	return names
+}
+
+func TestFilterPackOffers(t *testing.T) {
+	offers := []packOffer{
+		{id: "en"},
+		{id: "de", filter: packFilter{Language: "de_DE"}},
+		{id: "3d", filter: packFilter{MinMemoryTier: 2}},
+		{id: "de-3d", filter: packFilter{MinMemoryTier: 2, Language: "de_DE"}},
+		{id: "core"},
+		{id: "legacy-url", legacy: true},
+		{id: "legacy-path", legacy: true},
+	}
+
+	tests := []struct {
+		name string
+		tier int
+		lang string
+		want []string
+	}{
+		{
+			name: "tier below min drops 3d, dash language matches, order kept",
+			tier: 1,
+			lang: "de-DE",
+			want: []string{"en", "de", "core", "legacy-url", "legacy-path"},
+		},
+		{
+			name: "tier equal and case-insensitive language keeps 3d packs",
+			tier: 2,
+			lang: "DE_de",
+			want: []string{"en", "de", "3d", "de-3d", "core", "legacy-url", "legacy-path"},
+		},
+		{
+			name: "other language drops language packs, high tier keeps 3d",
+			tier: 4,
+			lang: "en_US",
+			want: []string{"en", "3d", "core", "legacy-url", "legacy-path"},
+		},
+		{
+			name: "tier zero and empty language keeps only unfiltered, including legacy",
+			tier: 0,
+			lang: "",
+			want: []string{"en", "core", "legacy-url", "legacy-path"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := offerNames(filterPackOffers(offers, tt.tier, tt.lang))
+			if !slices.Equal(got, tt.want) {
+				t.Fatalf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPackMatchesEdges(t *testing.T) {
+	if !packMatches(packFilter{}, 0, "en_US") {
+		t.Fatal("zero filter must match tier 0")
+	}
+	if packMatches(packFilter{MinMemoryTier: 2}, 1, "en_US") {
+		t.Fatal("tier 1 must not satisfy min 2")
+	}
+	if !packMatches(packFilter{MinMemoryTier: 2}, 2, "en_US") {
+		t.Fatal("tier 2 must satisfy min 2")
+	}
+	if !packMatches(packFilter{Language: "pt-BR"}, 0, "pt_br") {
+		t.Fatal("dash and underscore, different case, must match")
+	}
+	if packMatches(packFilter{MinMemoryTier: 2, Language: "ru_RU"}, 2, "en_US") {
+		t.Fatal("language mismatch must fail even when tier matches")
+	}
+	if !packMatches(packFilter{MinMemoryTier: 2, Language: "ru_RU"}, 4, "ru-RU") {
+		t.Fatal("tier above min and normalized language must match")
+	}
+}
+
+func TestStackOrder(t *testing.T) {
+	offers := []packOffer{
+		{id: "en"},
+		{id: "de", filter: packFilter{Language: "de_DE"}},
+		{id: "3d", filter: packFilter{MinMemoryTier: 2}},
+		{id: "core"},
+		{id: "legacy-url", legacy: true},
+		{id: "legacy-path", legacy: true},
+	}
+
+	// Filter keeps order; stack puts legacy first (unchanged) and reverses
+	// Packs so index 0 is applied last (highest priority). 3d must land
+	// after core.
+	matched := filterPackOffers(offers, 2, "de-DE")
+	if got, want := offerNames(matched), []string{"en", "de", "3d", "core", "legacy-url", "legacy-path"}; !slices.Equal(got, want) {
+		t.Fatalf("filter order got %v, want %v", got, want)
+	}
+	if got, want := offerNames(stackOrder(matched)), []string{"legacy-url", "legacy-path", "core", "3d", "de", "en"}; !slices.Equal(got, want) {
+		t.Fatalf("stack order got %v, want %v", got, want)
+	}
+
+	legacyOnly := []packOffer{
+		{id: "url", legacy: true},
+		{id: "path", legacy: true},
+	}
+	if got, want := offerNames(stackOrder(legacyOnly)), []string{"url", "path"}; !slices.Equal(got, want) {
+		t.Fatalf("legacy stack got %v, want %v", got, want)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/df-mc/go-nethernet"
@@ -78,9 +79,12 @@ type UserConfig struct {
 	Resources struct {
 		PacksRequired bool
 
-		CommandPath   string
+		CommandPath string
+		// URLResources and PathResources are legacy and unfiltered. They are
+		// loaded after Packs, so they sit below Packs in priority.
 		URLResources  []string
 		PathResources []string
+		Packs         []PackConfig `toml:"Packs"`
 	}
 	AuthenticationService struct {
 		Enabled bool
@@ -105,17 +109,59 @@ type UserConfig struct {
 	}
 }
 
-// packs loads and returns all packs.
-func (c UserConfig) packs(log *slog.Logger) []*resource.Pack {
-	packs := make([]*resource.Pack, 0, len(c.Resources.URLResources)+len(c.Resources.PathResources))
+// PackConfig is one Resources.Packs entry. Exactly one of URL or Path is set.
+// MinMemoryTier 0 and an empty Language send the pack to every player.
+type PackConfig struct {
+	URL           string `toml:"URL"`
+	Path          string `toml:"Path"`
+	MinMemoryTier int    `toml:"MinMemoryTier"`
+	Language      string `toml:"Language"`
+}
 
+// packFilter is the per-player predicate for one loaded pack. Zero value
+// matches every client (legacy URLResources / PathResources).
+type packFilter struct {
+	MinMemoryTier int
+	Language      string
+}
+
+// packOffer is a loaded pack plus the filter applied before it is sent.
+// offers from UserConfig.packs are highest-priority first: Resources.Packs
+// (index 0 highest), then unfiltered legacy URLResources and PathResources.
+type packOffer struct {
+	id     string
+	pack   *resource.Pack
+	filter packFilter
+	legacy bool
+}
+
+// packs loads Packs, then legacy URLResources, then PathResources.
+// A pack that fails to download or open is logged and skipped.
+func (c UserConfig) packs(log *slog.Logger) []packOffer {
+	offers := make([]packOffer, 0, len(c.Resources.Packs)+len(c.Resources.URLResources)+len(c.Resources.PathResources))
+
+	for i, pc := range c.Resources.Packs {
+		pack, err := readConfiguredPack(pc)
+		if err != nil {
+			log.Error("failed to load pack", "err", err)
+			continue
+		}
+		offers = append(offers, packOffer{
+			id:   fmt.Sprintf("pack-%d", i),
+			pack: pack,
+			filter: packFilter{
+				MinMemoryTier: pc.MinMemoryTier,
+				Language:      pc.Language,
+			},
+		})
+	}
 	for _, url := range c.Resources.URLResources {
 		pack, err := readURLPack(url)
 		if err != nil {
 			log.Error("failed to load url pack", "err", err)
 			continue
 		}
-		packs = append(packs, pack)
+		offers = append(offers, packOffer{pack: pack, legacy: true})
 	}
 	for _, path := range c.Resources.PathResources {
 		pack, err := resource.ReadPath(path)
@@ -123,16 +169,33 @@ func (c UserConfig) packs(log *slog.Logger) []*resource.Pack {
 			log.Error("failed to load path pack", "err", err)
 			continue
 		}
-		packs = append(packs, pack)
+		offers = append(offers, packOffer{pack: pack, legacy: true})
 	}
 
-	for _, pack := range packs {
-		err := translator.Setup(pack)
-		if err != nil {
+	// Translator merge is later-wins. Walk stack order (lowest priority
+	// first) so Packs[0], the highest priority pack, overwrites keys last.
+	for _, offer := range stackOrder(offers) {
+		if err := translator.Setup(offer.pack); err != nil {
 			log.Error("failed to setup translator", "err", err)
 		}
 	}
-	return packs
+	return offers
+}
+
+// readConfiguredPack loads one Resources.Packs entry. URL goes through
+// readURLPack so the pack is served over RakNet chunks, not as a CDN
+// DownloadURL.
+func readConfiguredPack(pc PackConfig) (*resource.Pack, error) {
+	switch {
+	case pc.URL != "" && pc.Path != "":
+		return nil, errors.New("pack has both URL and Path")
+	case pc.URL != "":
+		return readURLPack(pc.URL)
+	case pc.Path != "":
+		return resource.ReadPath(pc.Path)
+	default:
+		return nil, errors.New("pack has neither URL nor Path")
+	}
 }
 
 // readURLPack downloads and compiles the resource pack at the given URL WITHOUT
@@ -288,20 +351,94 @@ func (c UserConfig) dialerFunc(remoteAddress, transport string, log *slog.Logger
 }
 
 // listenConfig returns the shared Minecraft listen config for a server.
-func (c UserConfig) listenConfig(srv *Server, packs []*resource.Pack) minecraft.ListenConfig {
+// Both the RakNet listener and the NetherNet listener use this config, so
+// FetchResourcePacks filters packs for each transport.
+func (c UserConfig) listenConfig(srv *Server, offers []packOffer) minecraft.ListenConfig {
 	cfg := minecraft.ListenConfig{
 		ErrorLog:       srv.Log,
 		StatusProvider: srv.StatusProvider,
 
 		FlushRate:            time.Millisecond * time.Duration(c.Network.FlushRate),
-		ResourcePacks:        packs,
+		ResourcePacks:        packsFrom(stackOrder(offers)),
 		TexturePacksRequired: c.Resources.PacksRequired,
+		// Called before ResourcePacksInfo (gophertunnel minecraft/conn.go:889).
+		// The returned slice replaces the listener's packs for this client.
+		FetchResourcePacks: func(_ login.IdentityData, client login.ClientData, _ []*resource.Pack) []*resource.Pack {
+			matched := filterPackOffers(offers, client.MemoryTier, client.LanguageCode)
+			return packsFrom(stackOrder(matched))
+		},
 	}
 
 	if srv.Log.Enabled(context.Background(), slog.LevelDebug) {
 		cfg.ErrorLog = srv.Log.With("net origin", "gophertunnel")
 	}
 	return cfg
+}
+
+// normalizeLanguage lowercases a client or config language code and treats
+// '-' and '_' as the same separator.
+func normalizeLanguage(code string) string {
+	return strings.ToLower(strings.ReplaceAll(code, "-", "_"))
+}
+
+// packMatches reports whether a client with memoryTier and languageCode
+// should receive a pack with filter f. MinMemoryTier 0 and an empty Language
+// match every client. Both conditions are AND-ed.
+func packMatches(f packFilter, memoryTier int, languageCode string) bool {
+	if f.MinMemoryTier != 0 && memoryTier < f.MinMemoryTier {
+		return false
+	}
+	if f.Language != "" && normalizeLanguage(languageCode) != normalizeLanguage(f.Language) {
+		return false
+	}
+	return true
+}
+
+// filterPackOffers keeps offers the client should receive, in offers order
+// (highest priority first).
+func filterPackOffers(offers []packOffer, memoryTier int, languageCode string) []packOffer {
+	matched := make([]packOffer, 0, len(offers))
+	for _, offer := range offers {
+		if packMatches(offer.filter, memoryTier, languageCode) {
+			matched = append(matched, offer)
+		}
+	}
+	return matched
+}
+
+// stackOrder converts highest-priority-first offers into gophertunnel's
+// ResourcePacks order (lowest priority first).
+//
+// gophertunnel v1.62.0 copies conn.resourcePacks in slice order into
+// ResourcePackStack.TexturePacks (minecraft/conn.go:1117) and does not
+// reverse it. packet.ResourcePackStack says the first entry "will be applied
+// first" (minecraft/protocol/packet/resource_pack_stack.go:16), so index 0
+// on the wire is the lowest priority. Resources.Packs is the opposite
+// (index 0 highest, same as packs.json), so that prefix is reversed.
+//
+// Legacy URLResources/PathResources are not part of that prefix. They keep
+// today's load order and are placed before Packs, which leaves a Packs-empty
+// config unchanged and keeps a monolith lower priority than Packs.
+// highestFirst must be Packs (legacy == false) followed by legacy entries.
+func stackOrder(highestFirst []packOffer) []packOffer {
+	split := 0
+	for split < len(highestFirst) && !highestFirst[split].legacy {
+		split++
+	}
+	out := make([]packOffer, 0, len(highestFirst))
+	out = append(out, highestFirst[split:]...)
+	for i := split - 1; i >= 0; i-- {
+		out = append(out, highestFirst[i])
+	}
+	return out
+}
+
+func packsFrom(offers []packOffer) []*resource.Pack {
+	out := make([]*resource.Pack, len(offers))
+	for i, offer := range offers {
+		out[i] = offer.pack
+	}
+	return out
 }
 
 // listenerFunc returns a RakNet listener for a specific server.
