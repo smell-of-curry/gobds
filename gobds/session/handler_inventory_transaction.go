@@ -276,6 +276,13 @@ func offsetBlockPos(pos protocol.BlockPos, face int32) (protocol.BlockPos, bool)
 	return pos, true
 }
 
+// decorationAttackOperator ...
+// Operators bypass decoration-attack claim checks only in creative, so a
+// survival operator cannot punch spawn cushions, armor stands, or paintings.
+func decorationAttackOperator(operator bool, gameMode int32) bool {
+	return operator && gameMode == packet.GameTypeCreative
+}
+
 // handleClaimUseItemEntity ...
 func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt *packet.InventoryTransaction, ctx *Context) {
 	transactionData, ok := pkt.TransactionData.(*protocol.UseItemOnEntityTransactionData)
@@ -288,13 +295,14 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		return
 	}
 
-	// Only decoration entities are claim-filtered here. Widening this to every
-	// non-player actor would deny interacting with pokémon, NPCs, boats and the
-	// like inside any claim, and the proxy sees ~25 of these actions per 4h
-	// session, so there is nothing to win by moving that decision here.
+	// Only decoration entities are claim-filtered here (armor stands, paintings,
+	// cushions). Widening this to every non-player actor would deny interacting
+	// with pokémon, NPCs, boats and the like inside any claim, and the proxy
+	// sees ~25 of these actions per 4h session, so there is nothing to win by
+	// moving that decision here.
 	actorType := entity.ActorType()
 	switch actorType {
-	case "minecraft:armor_stand", "minecraft:painting":
+	case "minecraft:armor_stand", "minecraft:painting", "minecraft:cushion":
 	default:
 		return
 	}
@@ -312,10 +320,17 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 	default:
 		return
 	}
-	permitted := s.claimActionPermitted(action, claimActionData{
+	data := claimActionData{
 		position: entityPosition,
 		typeID:   actorType,
-	})
+	}
+	var permitted bool
+	if action == ClaimActionEntityHurt {
+		op := decorationAttackOperator(s.Data().Operator(), s.Data().GameMode())
+		permitted = s.claimActionPermittedOperator(action, data, &op)
+	} else {
+		permitted = s.claimActionPermitted(action, data)
+	}
 	if permitted {
 		return
 	}

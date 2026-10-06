@@ -111,7 +111,16 @@ func adminClaimBlockInteractionAllowed(data any) bool {
 	}
 }
 
+// claimActionPermitted ...
 func (s *Session) claimActionPermitted(action ClaimAction, data any) bool {
+	return s.claimActionPermittedOperator(action, data, nil)
+}
+
+// claimActionPermittedOperator ...
+// A non-nil operator replaces the session operator bit. Nil keeps
+// s.Data().Operator(), which is a full claim bypass. Decoration attacks pass
+// a bit that is true only for creative operators.
+func (s *Session) claimActionPermittedOperator(action ClaimAction, data any, operator *bool) bool {
 	if s.claimFactory == nil {
 		return true
 	}
@@ -151,9 +160,13 @@ func (s *Session) claimActionPermitted(action ClaimAction, data any) bool {
 		metrics.Action(uint8(action), true)
 		return true
 	}
+	op := s.Data().Operator()
+	if operator != nil {
+		op = *operator
+	}
 	permitted := ClaimActionPermitted(
 		*matched,
-		ClaimActor{XUID: s.IdentityData().XUID, Operator: s.Data().Operator()},
+		ClaimActor{XUID: s.IdentityData().XUID, Operator: op},
 		action,
 		data,
 	)

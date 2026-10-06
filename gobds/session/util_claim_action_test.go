@@ -11,6 +11,7 @@ import (
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
+	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
 	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/service"
@@ -208,6 +209,45 @@ func TestClaimPolicyFeatureParity(t *testing.T) {
 			data := claimActionData{position: position, typeID: test.typeID}
 			if !ClaimActionPermitted(cl, actor, test.action, data) {
 				t.Fatal("matching feature should permit action")
+			}
+		})
+	}
+}
+
+func TestDecorationCushionClaimPolicy(t *testing.T) {
+	admin := testClaim()
+	admin.OwnerXUID = "*"
+	owned := testClaim()
+	featured := admin
+	featured.Features = []claim.Feature{{
+		Type:          claim.FeatureTypeEntityHurt,
+		EntityTypeIDs: []string{"minecraft:cushion"},
+	}}
+	cushion := claimActionData{position: mgl32.Vec3{5, 5, 5}, typeID: "minecraft:cushion"}
+	tests := []struct {
+		name     string
+		cl       claim.PlayerClaim
+		actor    ClaimActor
+		gameMode int32
+		action   ClaimAction
+		want     bool
+	}{
+		{"stranger admin attack", admin, ClaimActor{XUID: "stranger"}, packet.GameTypeSurvival, ClaimActionEntityHurt, false},
+		{"op survival admin attack", admin, ClaimActor{XUID: "stranger", Operator: true}, packet.GameTypeSurvival, ClaimActionEntityHurt, false},
+		{"op creative admin attack", admin, ClaimActor{XUID: "stranger", Operator: true}, packet.GameTypeCreative, ClaimActionEntityHurt, true},
+		{"owner survival attack", owned, ClaimActor{XUID: "owner", Operator: true}, packet.GameTypeSurvival, ClaimActionEntityHurt, true},
+		{"trusted survival admin attack", admin, ClaimActor{XUID: "trusted", Operator: true}, packet.GameTypeSurvival, ClaimActionEntityHurt, true},
+		{"op survival feature attack", featured, ClaimActor{XUID: "stranger", Operator: true}, packet.GameTypeSurvival, ClaimActionEntityHurt, true},
+		{"admin interact", admin, ClaimActor{XUID: "stranger"}, packet.GameTypeSurvival, ClaimActionEntityInteract, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actor := test.actor
+			if test.action == ClaimActionEntityHurt {
+				actor.Operator = decorationAttackOperator(actor.Operator, test.gameMode)
+			}
+			if got := ClaimActionPermitted(test.cl, actor, test.action, cushion); got != test.want {
+				t.Fatalf("got %v, want %v", got, test.want)
 			}
 		})
 	}
