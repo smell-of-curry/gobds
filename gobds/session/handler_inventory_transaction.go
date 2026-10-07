@@ -325,7 +325,7 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		typeID:   actorType,
 	}
 	var permitted bool
-	if action == ClaimActionEntityHurt {
+	if action == ClaimActionEntityHurt || decorationHoldsItems(data) {
 		op := decorationAttackOperator(s.Data().Operator(), s.Data().GameMode())
 		permitted = s.claimActionPermittedOperator(action, data, &op)
 	} else {

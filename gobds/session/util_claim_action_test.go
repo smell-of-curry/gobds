@@ -253,6 +253,37 @@ func TestDecorationCushionClaimPolicy(t *testing.T) {
 	}
 }
 
+func TestArmorStandInteractClaimPolicy(t *testing.T) {
+	admin := testClaim()
+	admin.OwnerXUID = "*"
+	stand := claimActionData{position: mgl32.Vec3{5, 5, 5}, typeID: "minecraft:armor_stand"}
+	cushion := claimActionData{position: mgl32.Vec3{5, 5, 5}, typeID: "minecraft:cushion"}
+	tests := []struct {
+		name     string
+		actor    ClaimActor
+		gameMode int32
+		data     claimActionData
+		want     bool
+	}{
+		{"stranger stand", ClaimActor{XUID: "stranger"}, packet.GameTypeSurvival, stand, false},
+		{"op survival stand", ClaimActor{XUID: "stranger", Operator: true}, packet.GameTypeSurvival, stand, false},
+		{"op creative stand", ClaimActor{XUID: "stranger", Operator: true}, packet.GameTypeCreative, stand, true},
+		{"trusted stand", ClaimActor{XUID: "trusted"}, packet.GameTypeSurvival, stand, true},
+		{"stranger cushion sit", ClaimActor{XUID: "stranger"}, packet.GameTypeSurvival, cushion, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actor := test.actor
+			if decorationHoldsItems(test.data) {
+				actor.Operator = decorationAttackOperator(actor.Operator, test.gameMode)
+			}
+			if got := ClaimActionPermitted(admin, actor, ClaimActionEntityInteract, test.data); got != test.want {
+				t.Fatalf("got %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
 func TestClaimPolicyFiltersBoundsAndAdminExceptions(t *testing.T) {
 	actor := ClaimActor{XUID: "stranger"}
 	cl := testClaim()

@@ -82,10 +82,17 @@ func claimActionBlockInteractPermitted(cl claim.PlayerClaim, data any) bool {
 }
 
 func claimActionEntityInteractPermitted(cl claim.PlayerClaim, data any) bool {
-	if cl.OwnerXUID == "*" {
+	// Armor stands hold items, so equipping or looting one stays denied in
+	// admin claims where sitting on cushions is open.
+	if cl.OwnerXUID == "*" && !decorationHoldsItems(data) {
 		return true
 	}
 	return handleClaimActionInFeature(cl, data, claim.FeatureTypeEntityInteractable)
+}
+
+func decorationHoldsItems(data any) bool {
+	actionData, ok := claimActionDataFrom(data)
+	return ok && actionData.typeID == "minecraft:armor_stand"
 }
 
 func claimActionItemDropPermitted(cl claim.PlayerClaim, data any) bool {
