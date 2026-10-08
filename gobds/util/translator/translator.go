@@ -43,7 +43,8 @@ func SetTranslationFor(lang string, t map[string]string) {
 
 // Setup loads every language file in the pack into the shared translation
 // map. A pack with no texts/ directory (audio, 3d, and other asset-only
-// packs) is skipped.
+// packs) is skipped. Split texts packs list every language in
+// languages.json but ship one .lang each, so missing .lang files are skipped.
 func Setup(rp *resource.Pack) error {
 	languages, err := SupportedLanguages(rp)
 	if err != nil {
@@ -55,6 +56,9 @@ func Setup(rp *resource.Pack) error {
 	for _, l := range languages {
 		mapped, err := TranslationMapFor(rp, l)
 		if err != nil {
+			if strings.Contains(err.Error(), "not found in the resource pack") {
+				continue
+			}
 			return err
 		}
 		SetTranslationFor(l, mapped)

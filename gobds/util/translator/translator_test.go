@@ -80,3 +80,17 @@ func TestSetupSkipsPackWithoutTexts(t *testing.T) {
 		t.Fatalf("pack with no texts/: %v", err)
 	}
 }
+
+func TestSetupSkipsListedLanguageWithoutLangFile(t *testing.T) {
+	pack := packWithFiles(t, map[string]string{
+		"manifest.json":        testManifest,
+		"texts/languages.json": `["zz_MISSING", "zz_SPLIT"]`,
+		"texts/zz_SPLIT.lang":  "key=value\n",
+	})
+	if err := Setup(pack); err != nil {
+		t.Fatalf("split texts pack: %v", err)
+	}
+	if got, ok := TranslationFor("zz_SPLIT"); !ok || got["key"] != "value" {
+		t.Fatalf("zz_SPLIT = %#v, %v", got, ok)
+	}
+}
