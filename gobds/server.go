@@ -81,6 +81,10 @@ type Server struct {
 	xuidMu   sync.Mutex
 	xuids    map[string]struct{}
 
+	// itemRegistry is the last registry written by WriteItemRegistry.
+	itemRegistryMu sync.Mutex
+	itemRegistry   []byte
+
 	Log *slog.Logger
 }
 

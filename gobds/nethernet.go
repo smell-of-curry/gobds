@@ -87,7 +87,10 @@ func newNetherNetAPI(udp *net.UDPConn, publicIP string) *webrtc.API {
 		se.SetIncludeLoopbackCandidate(true)
 	}
 	if publicIP != "" {
-		se.SetNAT1To1IPs([]string{publicIP}, webrtc.ICECandidateTypeHost)
+		// ponytail: deprecated, but this is what the fleet runs. Move to
+		// SetICEAddressRewriteRules (Mode replace, AsCandidateType host) with a
+		// NetherNet join test on a multi-homed host, not inside a hotfix.
+		se.SetNAT1To1IPs([]string{publicIP}, webrtc.ICECandidateTypeHost) //nolint:staticcheck
 	}
 	return webrtc.NewAPI(webrtc.WithSettingEngine(se))
 }

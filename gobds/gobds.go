@@ -281,6 +281,7 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 		_ = serverConn.Close()
 		return nil, fmt.Errorf("failed to start game")
 	}
+	go srv.WriteItemRegistry(serverConn.GameData().Items)
 
 	s := session.Config{
 		Client: conn,
