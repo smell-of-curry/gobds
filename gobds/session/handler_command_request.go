@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/smell-of-curry/gobds/gobds/cmd"
 )
 
 // CommandRequestHandler ...
@@ -17,7 +18,7 @@ func (*CommandRequestHandler) Handle(s *Session, pk packet.Packet, ctx *Context)
 	if ctx.Val() != s.client {
 		return nil
 	}
-	cmd, empty, err := commandName(pkt.CommandLine, s.traffic.config.MaxCommandBytes)
+	name, empty, err := commandName(pkt.CommandLine, s.traffic.config.MaxCommandBytes)
 	if err != nil {
 		s.traffic.malformed(trafficCommand)
 		return err
@@ -31,18 +32,19 @@ func (*CommandRequestHandler) Handle(s *Session, pk packet.Packet, ctx *Context)
 		ctx.Cancel()
 		return nil
 	}
-	if cmd == "" {
+	if name == "" {
 		return nil
 	}
 
-	if slices.Contains(disabledCommands, cmd) {
+	if slices.Contains(disabledCommands, name) {
 		ctx.Cancel()
 		return nil
 	}
 
 	handler := s.handlers[packet.IDAvailableCommands].(*AvailableCommandsHandler)
-	_, ok := handler.cache.Load(cmd)
-	if ok {
+	_, vanilla := handler.cache.Load(name)
+	// The pack catalog can arrive after AvailableCommands cached the vanilla name.
+	if vanilla && !cmd.Shadows(name) {
 		return nil
 	}
 

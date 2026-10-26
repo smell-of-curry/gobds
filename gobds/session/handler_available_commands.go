@@ -24,6 +24,11 @@ func (h *AvailableCommandsHandler) Handle(_ *Session, pk packet.Packet, _ *Conte
 	pkt := pk.(*packet.AvailableCommands)
 
 	h.cache.Clear()
+	// A behavior pack command shadows the vanilla one with the same name
+	// (help, party), so drop the vanilla entry and keep it out of the cache.
+	pkt.Commands = slices.DeleteFunc(pkt.Commands, func(c protocol.Command) bool {
+		return cmd.Shadows(c.Name)
+	})
 	for _, c := range pkt.Commands {
 		if !slices.Contains(disabledCommands, c.Name) {
 			h.cache.Store(c.Name, c)

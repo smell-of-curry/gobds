@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 	"sync"
 
 	"github.com/go-gl/mathgl/mgl64"
@@ -124,6 +126,19 @@ func buildCommandPaths(current EngineResponseCommandChild) [][]EngineResponseCom
 	}
 
 	return allPaths
+}
+
+// Shadows reports whether a registered command uses name as its name or an alias, ignoring case.
+func Shadows(name string) bool {
+	found := false
+	commands.Range(func(_, value any) bool {
+		c := value.(Command)
+		found = strings.EqualFold(c.name, name) || slices.ContainsFunc(c.Aliases(), func(a string) bool {
+			return strings.EqualFold(a, name)
+		})
+		return !found
+	})
+	return found
 }
 
 // Commands returns a map of all registered commands indexed by the alias they were registered with.
