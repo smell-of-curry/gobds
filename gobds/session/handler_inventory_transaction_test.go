@@ -73,6 +73,69 @@ func TestClosestDecorationSwingHitsPaintingInFront(t *testing.T) {
 	}
 }
 
+func TestStandaloneUseAsAttackIsNotClaimFiltered(t *testing.T) {
+	// BDS 1.26 ignores this packet unless the same tick's PlayerAuthInput
+	// carries the swing. Cancelling it here does not save the painting.
+	var h InventoryTransactionHandler
+	h.handleClaimUseItem(nil, &packet.InventoryTransaction{
+		TransactionData: &protocol.UseItemTransactionData{
+			ActionType: protocol.UseItemActionUseAsAttack,
+		},
+	}, nil)
+}
+
+func TestStripClaimDecorationSwingUsesPacketLook(t *testing.T) {
+	painting := entity.NewEntity(1, 2, "minecraft:painting", mgl32.Vec3{0, 1.62, 3})
+	use := protocol.UseItemTransactionData{
+		ActionType: protocol.UseItemActionUseAsAttack,
+		Position:   mgl32.Vec3{0, 1.62, 0},
+	}
+	swing := func(yaw float32, action uint32) *packet.PlayerAuthInput {
+		flags := protocol.NewInputFlags(packet.InputFlagCount)
+		flags.Set(packet.InputFlagPerformItemInteraction)
+		data := use
+		data.ActionType = action
+		return &packet.PlayerAuthInput{
+			Yaw:                 yaw,
+			InputData:           flags,
+			ItemInteractionData: protocol.Option(data),
+		}
+	}
+	deny := func(entity.Entity) bool { return true }
+
+	pkt := swing(0, protocol.UseItemActionUseAsAttack)
+	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{painting}, deny); !ok {
+		t.Fatal("swing at a painting must be stripped")
+	}
+	if pkt.InputData.Load(packet.InputFlagPerformItemInteraction) {
+		t.Fatal("item interaction flag still set")
+	}
+	if _, ok := pkt.ItemInteractionData.Value(); ok {
+		t.Fatal("item interaction data still set")
+	}
+
+	pkt = swing(180, protocol.UseItemActionUseAsAttack)
+	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{painting}, deny); ok {
+		t.Fatal("swing looking away must be forwarded")
+	}
+
+	pkt = swing(0, protocol.UseItemActionClickBlock)
+	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{painting}, deny); ok {
+		t.Fatal("block click must not be stripped")
+	}
+
+	pkt = swing(0, protocol.UseItemActionUseAsAttack)
+	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{painting}, func(entity.Entity) bool { return false }); ok {
+		t.Fatal("permitted swing must be forwarded")
+	}
+
+	pig := entity.NewEntity(3, 4, "minecraft:pig", mgl32.Vec3{0, 1.62, 2})
+	pkt = swing(0, protocol.UseItemActionUseAsAttack)
+	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{pig}, deny); ok {
+		t.Fatal("pig swing must be forwarded")
+	}
+}
+
 func TestOffsetBlockPosUsesBedrockFaceOrder(t *testing.T) {
 	start := protocol.BlockPos{10, 20, 30}
 	tests := []struct {
