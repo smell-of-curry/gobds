@@ -5,6 +5,8 @@ import (
 
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/smell-of-curry/gobds/gobds/entity"
 )
 
 // PlayerAuthInputHandler handles PlayerAuthInput packets. AFK state lives on
@@ -38,7 +40,29 @@ func (h *PlayerAuthInputHandler) Handle(s *Session, pk packet.Packet, _ *Context
 	}
 
 	h.handleWorldInteractions(s, pkt)
+	h.dropClaimDecorationSwing(s, pkt)
 	return nil
+}
+
+// dropClaimDecorationSwing strips a melee swing that would hit a claim
+// decoration. 1.26.60 sends that swing inside this packet, with no entity
+// runtime id. The movement packet itself still goes through.
+func (h *PlayerAuthInputHandler) dropClaimDecorationSwing(s *Session, pkt *packet.PlayerAuthInput) {
+	if s.entityFactory == nil {
+		return
+	}
+	hit, ok := stripClaimDecorationSwing(pkt, s.entityFactory.All, func(e entity.Entity) bool {
+		actionData := claimActionData{position: e.Position(), typeID: e.ActorType()}
+		op := decorationAttackOperator(s.Data().Operator(), s.Data().GameMode())
+		return !s.claimActionPermittedOperator(ClaimActionEntityHurt, actionData, &op)
+	})
+	if !ok {
+		return
+	}
+	s.log.Info("dropped claim decoration swing", "type", hit.ActorType(), "position", hit.Position())
+	if s.claimMessageAllowed(hit.Position()) {
+		s.Message(text.Colourf("<red>You cannot hurt entities inside this claim.</red>"))
+	}
 }
 
 // handleWorldInteractions ...

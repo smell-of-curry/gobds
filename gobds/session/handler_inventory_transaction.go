@@ -203,10 +203,6 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 
 	if transactionData.ActionType == protocol.UseItemActionClickBlock {
 		h.handleClaimClickBlock(s, transactionData, ctx)
-		return
-	}
-	if transactionData.ActionType == protocol.UseItemActionUseAsAttack {
-		h.handleClaimUseAsAttack(s, transactionData, ctx)
 	}
 }
 
@@ -374,36 +370,34 @@ func decorationUseOnEntityAction(actorType string, actionType int32) (ClaimActio
 	}
 }
 
-// handleClaimUseAsAttack drops a melee swing that would hit a claim decoration.
-// 1.26.60 sends that swing as UseItem action UseAsAttack, which has no entity
-// runtime id; the server raycasts. UseItemOnEntity never sees it.
-func (h *InventoryTransactionHandler) handleClaimUseAsAttack(
-	s *Session,
-	data *protocol.UseItemTransactionData,
-	ctx *Context,
-) {
-	if s.entityFactory == nil {
-		return
+// stripClaimDecorationSwing removes a UseAsAttack item interaction from a
+// PlayerAuthInput when deny reports the hit decoration cannot be hurt.
+//
+// BDS 1.26 applies that swing from PlayerAuthInput.ItemInteractionData.
+// A standalone InventoryTransaction with the same action is ignored, so
+// dropping it never stops the painting from breaking. The look is the
+// packet yaw/pitch: session look is only sampled every 20 ticks.
+//
+// actors is only called for a UseAsAttack swing, not every movement tick.
+//
+// Returns the decoration that was stripped.
+func stripClaimDecorationSwing(pkt *packet.PlayerAuthInput, actors func() []entity.Entity, deny func(entity.Entity) bool) (entity.Entity, bool) {
+	if !pkt.InputData.Load(packet.InputFlagPerformItemInteraction) {
+		return entity.Entity{}, false
 	}
-	yaw, pitch := s.Look()
-	// Bedrock player positions are already at eye height.
-	origin := data.Position
+	data, ok := pkt.ItemInteractionData.Value()
+	if !ok || data.ActionType != protocol.UseItemActionUseAsAttack {
+		return entity.Entity{}, false
+	}
 	// ponytail: scans every actor the client has loaded, once per melee swing.
 	// Upgrade path is a decoration-only index if this shows up in a profile.
-	hit, ok := closestDecorationSwing(origin, lookDirection(yaw, pitch), s.entityFactory.All())
-	if !ok {
-		return
+	hit, ok := closestDecorationSwing(data.Position, lookDirection(pkt.Yaw, pkt.Pitch), actors())
+	if !ok || !deny(hit) {
+		return entity.Entity{}, false
 	}
-	actionData := claimActionData{position: hit.Position(), typeID: hit.ActorType()}
-	op := decorationAttackOperator(s.Data().Operator(), s.Data().GameMode())
-	if s.claimActionPermittedOperator(ClaimActionEntityHurt, actionData, &op) {
-		return
-	}
-	s.log.Info("dropped claim decoration swing", "type", hit.ActorType(), "position", hit.Position())
-	if s.claimMessageAllowed(hit.Position()) {
-		s.Message(text.Colourf("<red>You cannot hurt entities inside this claim.</red>"))
-	}
-	ctx.Cancel()
+	pkt.InputData.Unset(packet.InputFlagPerformItemInteraction)
+	pkt.ItemInteractionData = protocol.Optional[protocol.UseItemTransactionData]{}
+	return hit, true
 }
 
 // lookDirection is the unit look vector for Bedrock yaw/pitch degrees.
