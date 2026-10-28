@@ -47,6 +47,6 @@ func loadOrCreateServerKey(path string) (*ecdsa.PrivateKey, error) {
 // "self" is the domain BDS itself advertises for self-signed server identities.
 func serverIdentityIssuer(key *ecdsa.PrivateKey) func(context.Context) (*nethernet.Identity, error) {
 	return func(context.Context) (*nethernet.Identity, error) {
-		return nethernet.GenerateServerIdentity(key, "self")
+		return nethernet.ServerIdentity(key, "self")
 	}
 }

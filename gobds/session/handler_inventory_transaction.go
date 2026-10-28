@@ -1,14 +1,17 @@
 package session
 
 import (
+	"math"
 	"time"
 
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/event"
+	"github.com/go-gl/mathgl/mgl32"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	gblock "github.com/smell-of-curry/gobds/gobds/block"
+	"github.com/smell-of-curry/gobds/gobds/entity"
 )
 
 // InventoryTransactionHandler ...
@@ -200,6 +203,10 @@ func (h *InventoryTransactionHandler) handleClaimUseItem(s *Session, pkt *packet
 
 	if transactionData.ActionType == protocol.UseItemActionClickBlock {
 		h.handleClaimClickBlock(s, transactionData, ctx)
+		return
+	}
+	if transactionData.ActionType == protocol.UseItemActionUseAsAttack {
+		h.handleClaimUseAsAttack(s, transactionData, ctx)
 	}
 }
 
@@ -301,25 +308,11 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 	// sees ~25 of these actions per 4h session, so there is nothing to win by
 	// moving that decision here.
 	actorType := entity.ActorType()
-	switch actorType {
-	case "minecraft:armor_stand", "minecraft:painting", "minecraft:cushion":
-	default:
+	action, actionName, claimed := decorationUseOnEntityAction(actorType, transactionData.ActionType)
+	if !claimed {
 		return
 	}
 	entityPosition := entity.Position()
-
-	var action ClaimAction
-	var actionName string
-	switch transactionData.ActionType {
-	case protocol.UseItemOnEntityActionInteract:
-		action = ClaimActionEntityInteract
-		actionName = "interact with"
-	case protocol.UseItemOnEntityActionAttack:
-		action = ClaimActionEntityHurt
-		actionName = "hurt"
-	default:
-		return
-	}
 	data := claimActionData{
 		position: entityPosition,
 		typeID:   actorType,
@@ -339,4 +332,128 @@ func (h *InventoryTransactionHandler) handleClaimUseItemOnEntity(s *Session, pkt
 		s.Message(text.Colourf("<red>You cannot %s entities inside this claim.</red>", actionName))
 	}
 	ctx.Cancel()
+}
+
+// useItemOnEntityActionItemInteract is ItemUseOnActorActionType value 2 on
+// protocol 2225. gophertunnel names only Interact (0) and Attack (1).
+const useItemOnEntityActionItemInteract int32 = 2
+
+// Claim decoration actor types.
+const (
+	actorArmorStand = "minecraft:armor_stand"
+	actorPainting   = "minecraft:painting"
+	actorCushion    = "minecraft:cushion"
+)
+
+const (
+	decorationSwingReach  float32 = 5
+	decorationSwingRadius float32 = 1
+)
+
+// decorationUseOnEntityAction reports the claim action for a decoration
+// UseItemOnEntity packet. Item-interact (held item) breaks paintings the same
+// way a punch does, and is ignored for cushions so sitting stays open.
+func decorationUseOnEntityAction(actorType string, actionType int32) (ClaimAction, string, bool) {
+	switch actorType {
+	case actorArmorStand, actorPainting, actorCushion:
+	default:
+		return 0, "", false
+	}
+	switch actionType {
+	case protocol.UseItemOnEntityActionInteract:
+		return ClaimActionEntityInteract, "interact with", true
+	case protocol.UseItemOnEntityActionAttack:
+		return ClaimActionEntityHurt, "hurt", true
+	case useItemOnEntityActionItemInteract:
+		if actorType != actorPainting {
+			return 0, "", false
+		}
+		return ClaimActionEntityHurt, "hurt", true
+	default:
+		return 0, "", false
+	}
+}
+
+// handleClaimUseAsAttack drops a melee swing that would hit a claim decoration.
+// 1.26.60 sends that swing as UseItem action UseAsAttack, which has no entity
+// runtime id; the server raycasts. UseItemOnEntity never sees it.
+func (h *InventoryTransactionHandler) handleClaimUseAsAttack(
+	s *Session,
+	data *protocol.UseItemTransactionData,
+	ctx *Context,
+) {
+	if s.entityFactory == nil {
+		return
+	}
+	yaw, pitch := s.Look()
+	// Bedrock player positions are already at eye height.
+	origin := data.Position
+	// ponytail: scans every actor the client has loaded, once per melee swing.
+	// Upgrade path is a decoration-only index if this shows up in a profile.
+	hit, ok := closestDecorationSwing(origin, lookDirection(yaw, pitch), s.entityFactory.All())
+	if !ok {
+		return
+	}
+	actionData := claimActionData{position: hit.Position(), typeID: hit.ActorType()}
+	op := decorationAttackOperator(s.Data().Operator(), s.Data().GameMode())
+	if s.claimActionPermittedOperator(ClaimActionEntityHurt, actionData, &op) {
+		return
+	}
+	s.log.Info("dropped claim decoration swing", "type", hit.ActorType(), "position", hit.Position())
+	if s.claimMessageAllowed(hit.Position()) {
+		s.Message(text.Colourf("<red>You cannot hurt entities inside this claim.</red>"))
+	}
+	ctx.Cancel()
+}
+
+// lookDirection is the unit look vector for Bedrock yaw/pitch degrees.
+// Yaw 0 looks +Z. Positive pitch looks down.
+func lookDirection(yaw, pitch float32) mgl32.Vec3 {
+	yawRad := float64(yaw) * math.Pi / 180
+	pitchRad := float64(pitch) * math.Pi / 180
+	m := math.Cos(pitchRad)
+	return mgl32.Vec3{
+		float32(-m * math.Sin(yawRad)),
+		float32(-math.Sin(pitchRad)),
+		float32(m * math.Cos(yawRad)),
+	}
+}
+
+func decorationAimPoint(actor entity.Entity) mgl32.Vec3 {
+	pos := actor.Position()
+	switch actor.ActorType() {
+	case actorArmorStand:
+		pos[1] += 1
+	case actorCushion:
+		pos[1] += 0.3
+	}
+	return pos
+}
+
+// closestDecorationSwing returns the nearest claim decoration the swing ray hits.
+func closestDecorationSwing(origin, dir mgl32.Vec3, actors []entity.Entity) (entity.Entity, bool) {
+	var best entity.Entity
+	found := false
+	bestDist := decorationSwingReach
+	for _, actor := range actors {
+		switch actor.ActorType() {
+		case actorArmorStand, actorPainting, actorCushion:
+		default:
+			continue
+		}
+		target := decorationAimPoint(actor)
+		dist := target.Sub(origin).Dot(dir)
+		if dist < 0 || dist > decorationSwingReach {
+			continue
+		}
+		if origin.Add(dir.Mul(dist)).Sub(target).Len() > decorationSwingRadius {
+			continue
+		}
+		if !found || dist < bestDist {
+			best = actor
+			bestDist = dist
+			found = true
+		}
+	}
+	return best, found
 }

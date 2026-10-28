@@ -131,6 +131,13 @@ func (s *Session) Position() mgl32.Vec3 {
 	return s.afk.lastPosition
 }
 
+// Look returns the latest sampled yaw and pitch, in degrees.
+func (s *Session) Look() (yaw, pitch float32) {
+	s.afk.mu.RLock()
+	defer s.afk.mu.RUnlock()
+	return s.afk.lastYaw, s.afk.lastPitch
+}
+
 func (s *Session) allowCorrective(chunkPos protocol.ChunkPos, interval time.Duration) bool {
 	key := correctiveKey{
 		dimension: s.Data().Dimension(),

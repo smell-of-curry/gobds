@@ -92,7 +92,7 @@ func claimActionEntityInteractPermitted(cl claim.PlayerClaim, data any) bool {
 
 func decorationHoldsItems(data any) bool {
 	actionData, ok := claimActionDataFrom(data)
-	return ok && actionData.typeID == "minecraft:armor_stand"
+	return ok && actionData.typeID == actorArmorStand
 }
 
 func claimActionItemDropPermitted(cl claim.PlayerClaim, data any) bool {
