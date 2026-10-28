@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/avast/retry-go/v4 v4.7.0
-	github.com/df-mc/dragonfly v0.11.5-0.20260916221608-d42ce23a0d45
+	github.com/df-mc/dragonfly v0.11.6
 	github.com/df-mc/go-nethernet v1.0.27-0.20261027203254-60826b5e5a8f
 	github.com/getsentry/sentry-go v0.49.0
 	github.com/go-gl/mathgl v1.2.0
@@ -61,5 +61,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/df-mc/dragonfly => github.com/smell-of-curry/dragonfly v0.0.0-20261027175559-7848eab0d7e9
