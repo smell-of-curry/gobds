@@ -375,7 +375,7 @@ func decorationUseOnEntityAction(actorType string, actionType int32) (ClaimActio
 //
 // BDS 1.26 applies that swing from PlayerAuthInput.ItemInteractionData.
 // A standalone InventoryTransaction with the same action is ignored, so
-// cancelling it never stops the painting from breaking. The look is the
+// dropping it never stops the painting from breaking. The look is the
 // packet yaw/pitch: session look is only sampled every 20 ticks.
 //
 // actors is only called for a UseAsAttack swing, not every movement tick.
