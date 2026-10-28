@@ -9,8 +9,8 @@ github.com/coder/websocket v1.8.15/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6p
 github.com/coreos/go-oidc/v3 v3.21.0 h1:wZo4Q9Pum8dYEj0eMUPrqR+kvuGkeUplbLpNCkBqoWM=
 github.com/coreos/go-oidc/v3 v3.21.0/go.mod h1:DYCf24+ncYi+XkIH97GY1+dqoRlbaSI26KVTCI9SrY4=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
-github.com/df-mc/go-nethernet v1.0.26 h1:wO0PVPlBTEJI75YdA0eQ8DdDgeSYO6blZdnyYZrGg54=
-github.com/df-mc/go-nethernet v1.0.26/go.mod h1:SFH4cfiLRWUUNGMvQeaOjFfFX4eexTkIfBtp55vJNqY=
+github.com/df-mc/go-nethernet v1.0.27-0.20261027203254-60826b5e5a8f h1:/pIT2ej6b5o0/5HDPrHJv8mFXflQyY/1TauBU6TTsXk=
+github.com/df-mc/go-nethernet v1.0.27-0.20261027203254-60826b5e5a8f/go.mod h1:SFH4cfiLRWUUNGMvQeaOjFfFX4eexTkIfBtp55vJNqY=
 github.com/df-mc/go-playfab/v2 v2.0.3 h1:7L46Zp1Ca17Mmw7Zd5m4kGDDr8XhzGbaEv9SN2GIYdk=
 github.com/df-mc/go-playfab/v2 v2.0.3/go.mod h1:CS3FV3tJlohvGQiX0IJiaYKOVNfy0p778B84oEVyxlw=
 github.com/df-mc/go-xsapi/v2 v2.0.3 h1:fQLw4k15OinFhagWjbSj0BwQXeDUmY8a1J8yquEod3w=
@@ -105,8 +105,8 @@ github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0t
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/sandertv/go-raknet v1.15.2-0.20260819131831-ea813dc668b5 h1:4k54iv4TgC+W+Mwr4YWYjNOrWOajDwb3oIPjZgi9mfw=
 github.com/sandertv/go-raknet v1.15.2-0.20260819131831-ea813dc668b5/go.mod h1:/yysjwfCXm2+2OY8mBazLzcxJ3irnylKCyG3FLgUPVU=
-github.com/sandertv/gophertunnel v1.63.0 h1:18s5x1fKqt8JHh1hz+xuNAsQwJWPIKkOv6sN4wXyUTs=
-github.com/sandertv/gophertunnel v1.63.0/go.mod h1:hOjJWwzgmTw/Di+cYKVyoDxVtQINwqHVAYtgmTLo15A=
+github.com/sandertv/gophertunnel v1.63.1-0.20261028113046-25acc41eb24a h1:OwNqP9ybv+Mk0P/m2rcAU6gTKqbmoI285wrxhiwr2GA=
+github.com/sandertv/gophertunnel v1.63.1-0.20261028113046-25acc41eb24a/go.mod h1:sluxapcMsUBSO/AzYgZMFTDY6ITtNlW+ttxE9ZyhdHk=
 github.com/segmentio/fasthash v1.0.3 h1:EI9+KE1EwvMLBWwjpRDc+fEM+prwxDYbslddQGtrmhM=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/smell-of-curry/dragonfly v0.0.0-20261027175559-7848eab0d7e9 h1:Omekc2QsTwtkWY/Cq31ATnfSuJEO97f6bWG9mDLe6Zk=
