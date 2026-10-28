@@ -104,7 +104,7 @@ func TestStripClaimDecorationSwingUsesPacketLook(t *testing.T) {
 	deny := func(entity.Entity) bool { return true }
 
 	pkt := swing(0, protocol.UseItemActionUseAsAttack)
-	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{painting}, deny); !ok {
+	if _, ok := stripClaimDecorationSwing(pkt, func() []entity.Entity { return []entity.Entity{painting} }, deny); !ok {
 		t.Fatal("swing at a painting must be stripped")
 	}
 	if pkt.InputData.Load(packet.InputFlagPerformItemInteraction) {
@@ -115,23 +115,23 @@ func TestStripClaimDecorationSwingUsesPacketLook(t *testing.T) {
 	}
 
 	pkt = swing(180, protocol.UseItemActionUseAsAttack)
-	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{painting}, deny); ok {
+	if _, ok := stripClaimDecorationSwing(pkt, func() []entity.Entity { return []entity.Entity{painting} }, deny); ok {
 		t.Fatal("swing looking away must be forwarded")
 	}
 
 	pkt = swing(0, protocol.UseItemActionClickBlock)
-	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{painting}, deny); ok {
+	if _, ok := stripClaimDecorationSwing(pkt, func() []entity.Entity { return []entity.Entity{painting} }, deny); ok {
 		t.Fatal("block click must not be stripped")
 	}
 
 	pkt = swing(0, protocol.UseItemActionUseAsAttack)
-	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{painting}, func(entity.Entity) bool { return false }); ok {
+	if _, ok := stripClaimDecorationSwing(pkt, func() []entity.Entity { return []entity.Entity{painting} }, func(entity.Entity) bool { return false }); ok {
 		t.Fatal("permitted swing must be forwarded")
 	}
 
 	pig := entity.NewEntity(3, 4, "minecraft:pig", mgl32.Vec3{0, 1.62, 2})
 	pkt = swing(0, protocol.UseItemActionUseAsAttack)
-	if _, ok := stripClaimDecorationSwing(pkt, []entity.Entity{pig}, deny); ok {
+	if _, ok := stripClaimDecorationSwing(pkt, func() []entity.Entity { return []entity.Entity{pig} }, deny); ok {
 		t.Fatal("pig swing must be forwarded")
 	}
 }

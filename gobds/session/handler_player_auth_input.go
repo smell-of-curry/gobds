@@ -51,7 +51,7 @@ func (h *PlayerAuthInputHandler) dropClaimDecorationSwing(s *Session, pkt *packe
 	if s.entityFactory == nil {
 		return
 	}
-	hit, ok := stripClaimDecorationSwing(pkt, s.entityFactory.All(), func(e entity.Entity) bool {
+	hit, ok := stripClaimDecorationSwing(pkt, s.entityFactory.All, func(e entity.Entity) bool {
 		actionData := claimActionData{position: e.Position(), typeID: e.ActorType()}
 		op := decorationAttackOperator(s.Data().Operator(), s.Data().GameMode())
 		return !s.claimActionPermittedOperator(ClaimActionEntityHurt, actionData, &op)

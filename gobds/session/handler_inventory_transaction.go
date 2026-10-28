@@ -378,8 +378,10 @@ func decorationUseOnEntityAction(actorType string, actionType int32) (ClaimActio
 // cancelling it never stops the painting from breaking. The look is the
 // packet yaw/pitch: session look is only sampled every 20 ticks.
 //
+// actors is only called for a UseAsAttack swing, not every movement tick.
+//
 // Returns the decoration that was stripped.
-func stripClaimDecorationSwing(pkt *packet.PlayerAuthInput, actors []entity.Entity, deny func(entity.Entity) bool) (entity.Entity, bool) {
+func stripClaimDecorationSwing(pkt *packet.PlayerAuthInput, actors func() []entity.Entity, deny func(entity.Entity) bool) (entity.Entity, bool) {
 	if !pkt.InputData.Load(packet.InputFlagPerformItemInteraction) {
 		return entity.Entity{}, false
 	}
@@ -389,7 +391,7 @@ func stripClaimDecorationSwing(pkt *packet.PlayerAuthInput, actors []entity.Enti
 	}
 	// ponytail: scans every actor the client has loaded, once per melee swing.
 	// Upgrade path is a decoration-only index if this shows up in a profile.
-	hit, ok := closestDecorationSwing(data.Position, lookDirection(pkt.Yaw, pkt.Pitch), actors)
+	hit, ok := closestDecorationSwing(data.Position, lookDirection(pkt.Yaw, pkt.Pitch), actors())
 	if !ok || !deny(hit) {
 		return entity.Entity{}, false
 	}
