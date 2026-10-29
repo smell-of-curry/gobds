@@ -319,6 +319,9 @@ func (c UserConfig) whiteList(log *slog.Logger) *whitelist.Whitelist {
 	return whitelist.NewWhitelist(conf.Entries)
 }
 
+// upstreamMaxDecompressedLen caps one decompressed batch from BDS.
+const upstreamMaxDecompressedLen = 256 << 20
+
 // dialerFunc returns a dialer func for a specific server.
 func (c UserConfig) dialerFunc(remoteAddress, transport string, log *slog.Logger) DialerFunc {
 	return func(identityData login.IdentityData, clientData login.ClientData, ctx context.Context) (session.Conn, error) {
@@ -331,6 +334,8 @@ func (c UserConfig) dialerFunc(remoteAddress, transport string, log *slog.Logger
 			FlushRate:           time.Millisecond * time.Duration(c.Network.FlushRate),
 			ErrorLog:            log,
 			KeepXBLIdentityData: true,
+			// BDS login batches can pass gophertunnel's 16 MiB default.
+			MaxDecompressedLen: upstreamMaxDecompressedLen,
 		}
 		if transport == "nethernet" {
 			url := netherNetDialAddress(remoteAddress)
