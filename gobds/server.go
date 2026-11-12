@@ -11,14 +11,18 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/smell-of-curry/gobds/gobds/claim"
+	"github.com/smell-of-curry/gobds/gobds/identity"
 	"github.com/smell-of-curry/gobds/gobds/session"
 )
 
 // ServerConfig ...
 type ServerConfig struct {
-	Name          string
-	LocalAddress  string
-	RemoteAddress string
+	IdentityService identity.Config
+	// DisableLegacyIdentity stops the old encrypted chat handshake after old packs are retired.
+	DisableLegacyIdentity bool
+	Name                  string
+	LocalAddress          string
+	RemoteAddress         string
 	// Transport is the upstream (BDS) transport: ""/"raknet" (default) or "nethernet".
 	Transport string
 	// NetherNet configures the client-facing NetherNet listener (in addition to RakNet).
@@ -57,9 +61,11 @@ func (s ServerConfig) validate() error {
 
 // Server represents a single server instance with its own Listener, DialerFunc, and minecraft.ServerStatusProvider.
 type Server struct {
-	Name          string
-	LocalAddress  string
-	RemoteAddress string
+	IdentityPublisher     *identity.Publisher
+	DisableLegacyIdentity bool
+	Name                  string
+	LocalAddress          string
+	RemoteAddress         string
 
 	// ClaimFactory is shared across all sessions on this server because claims are world-state
 	// fetched periodically from an external service.

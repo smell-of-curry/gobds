@@ -19,6 +19,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/entity"
+	"github.com/smell-of-curry/gobds/gobds/identity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/util"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
@@ -26,9 +27,10 @@ import (
 
 // Session ...
 type Session struct {
-	client   Conn
-	server   Conn
-	handlers map[uint32]packetHandler
+	identityPublisher *identity.Publisher
+	client            Conn
+	server            Conn
+	handlers          map[uint32]packetHandler
 
 	entityFactory *entity.Factory
 	claimFactory  *claim.Factory
@@ -465,6 +467,7 @@ func (s *Session) registerHandlers() {
 		packet.IDSetActorData:         &SetActorDataHandler{},
 		packet.IDSetPlayerGameType:    &SetPlayerGameTypeHandler{},
 		packet.IDSubChunk:             &SubChunkHandler{},
+		packet.IDScriptMessage:        &ScriptMessageHandler{},
 		packet.IDText:                 &TextHandler{},
 		packet.IDUpdateAbilities:      &UpdateAbilitiesHandler{},
 		packet.IDUpdatePlayerGameType: &UpdatePlayerGameTypeHandler{},

@@ -161,3 +161,25 @@ MaxSnapshotAge = '45s'
 
 The `Key` is sent as the raw `Authorization` header, no `Bearer` prefix.
 Keep it in `config.toml`, not in git.
+
+### Session identity publisher
+
+`Network.Servers[].IdentityService` accepts `URL` and `Key` for that instance's
+bds-manager identity assertion endpoint. Omit both to keep the publisher disabled.
+Use HTTPS, or HTTP to a numeric loopback address; redirects are refused. The key
+is the instance's **publisher** credential, never the addon's challenge credential.
+
+The addon registers a short-lived challenge with manager, then sends it to its
+own connection as `engine:identity_challenge`. gobds consumes that backend-origin
+ScriptMessage, matches the backend entity ID and authenticated client name, and
+publishes the authenticated incoming connection's XUID. Client-origin challenges
+are consumed without publishing. The broker validates nonce, instance, boot,
+addon session, entity, name and expiry before emitting a fixed console assertion.
+No assertion or credential is written into player chat.
+
+Deploy manager and this publisher before updating the addon. The old encrypted
+chat handshake remains enabled for old packs during a rolling deployment. Set
+`Network.Servers[].DisableLegacyIdentity = true` after that instance uses only
+the new addon; reverting an old pack requires re-enabling it. This does not change
+Xbox authentication, packet protections, claims, resource packs or production
+proxy topology. No database key migration is needed.

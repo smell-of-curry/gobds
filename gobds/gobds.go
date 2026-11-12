@@ -284,8 +284,9 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 	go srv.WriteItemRegistry(serverConn.GameData().Items)
 
 	s := session.Config{
-		Client: conn,
-		Server: serverConn,
+		IdentityPublisher: srv.IdentityPublisher,
+		Client:            conn,
+		Server:            serverConn,
 
 		AFKTimer: gb.conf.AFKTimer,
 
@@ -304,7 +305,9 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 		Log:                gb.conf.Log,
 	}.New()
 
-	s.ForwardXUID(gb.conf.EncryptionKey)
+	if !srv.DisableLegacyIdentity {
+		s.ForwardXUID(gb.conf.EncryptionKey)
+	}
 	return s, nil
 }
 

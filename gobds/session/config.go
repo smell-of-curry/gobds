@@ -7,14 +7,16 @@ import (
 
 	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/entity"
+	"github.com/smell-of-curry/gobds/gobds/identity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/util/area"
 )
 
 // Config ...
 type Config struct {
-	Client Conn
-	Server Conn
+	IdentityPublisher *identity.Publisher
+	Client            Conn
+	Server            Conn
 
 	AFKTimer *infra.AFKTimer
 	Border   *area.Area2D
@@ -33,8 +35,9 @@ type Config struct {
 // New ...
 func (c Config) New() *Session {
 	s := &Session{
-		client: c.Client,
-		server: c.Server,
+		identityPublisher: c.IdentityPublisher,
+		client:            c.Client,
+		server:            c.Server,
 
 		afkTimer: c.AFKTimer,
 		border:   c.Border,

@@ -8,6 +8,7 @@ import (
 
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/smell-of-curry/gobds/gobds/claim"
+	"github.com/smell-of-curry/gobds/gobds/identity"
 	"github.com/smell-of-curry/gobds/gobds/infra"
 	"github.com/smell-of-curry/gobds/gobds/service"
 	"github.com/smell-of-curry/gobds/gobds/service/authentication"
@@ -85,10 +86,16 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 		if err := server.validate(); err != nil {
 			return Config{}, fmt.Errorf("server %q: %w", server.Name, err)
 		}
+		publisher, err := identity.New(server.Name, server.IdentityService)
+		if err != nil {
+			return Config{}, fmt.Errorf("server %q: invalid identity service configuration", server.Name)
+		}
 		srv := &Server{
-			Name:          server.Name,
-			LocalAddress:  server.LocalAddress,
-			RemoteAddress: server.RemoteAddress,
+			IdentityPublisher:     publisher,
+			DisableLegacyIdentity: server.DisableLegacyIdentity,
+			Name:                  server.Name,
+			LocalAddress:          server.LocalAddress,
+			RemoteAddress:         server.RemoteAddress,
 
 			ClaimFactory: claim.NewFactory(
 				server.ClaimService,
