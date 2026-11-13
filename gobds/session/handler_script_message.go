@@ -14,6 +14,7 @@ import (
 // At most one request is in flight per session; retries are bounded by the addon.
 type ScriptMessageHandler struct{ publishing atomic.Bool }
 
+// Handle consumes only the identity protocol and publishes backend challenges.
 func (h *ScriptMessageHandler) Handle(s *Session, pk packet.Packet, ctx *Context) error {
 	p := pk.(*packet.ScriptMessage)
 	if p.Identifier != identity.MessageID {

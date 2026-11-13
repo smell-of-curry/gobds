@@ -15,12 +15,16 @@ import (
 	"time"
 )
 
+// MessageID is reserved for backend-origin session challenges.
 const MessageID = "engine:identity_challenge"
 
+// Config contains the instance-scoped publisher endpoint and credential.
 type Config struct {
 	URL string
 	Key string
 }
+
+// Challenge binds one addon session to an expiring broker nonce.
 type Challenge struct {
 	Version   int    `json:"version"`
 	Instance  string `json:"instance"`
@@ -31,10 +35,14 @@ type Challenge struct {
 	Nonce     string `json:"nonce"`
 	ExpiresAt int64  `json:"expiresAt"`
 }
+
+// Assertion adds an authenticated incoming connection XUID to its challenge.
 type Assertion struct {
 	Challenge
 	XUID string `json:"xuid"`
 }
+
+// Publisher sends validated session assertions to the configured broker.
 type Publisher struct {
 	instance string
 	config   Config
@@ -55,7 +63,7 @@ func New(instance string, config Config) (*Publisher, error) {
 		return nil, errors.New("invalid identity endpoint")
 	}
 	ip := net.ParseIP(u.Hostname())
-	if u.Scheme != "https" && !(u.Scheme == "http" && ip != nil && ip.IsLoopback()) {
+	if u.Scheme != "https" && (u.Scheme != "http" || ip == nil || !ip.IsLoopback()) {
 		return nil, errors.New("identity endpoint requires TLS or loopback")
 	}
 	return &Publisher{instance: strings.ToUpper(instance), config: config, client: &http.Client{
@@ -94,7 +102,7 @@ func (p *Publisher) Publish(ctx context.Context, assertion Assertion) error {
 	if err != nil {
 		return errors.New("identity delivery failed")
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 2048))
 	if res.StatusCode != http.StatusNoContent {
 		return errors.New("identity assertion rejected")
