@@ -16,6 +16,7 @@ import (
 	"github.com/df-mc/go-nethernet/endpoint"
 	"github.com/google/uuid"
 	"github.com/restartfu/gophig"
+	"github.com/restartfu/gophig/codecs"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/resource"
@@ -499,7 +500,7 @@ func DefaultConfig() UserConfig {
 
 // ReadConfig ...
 func ReadConfig() (UserConfig, error) {
-	g := gophig.NewGophig[UserConfig]("./config.toml", gophig.TOMLMarshaler{}, os.ModePerm)
+	g := gophig.NewGophig[UserConfig]("./config.toml", codecs.TOMLMarshaler{}, os.ModePerm)
 	_, err := g.LoadConf()
 	if os.IsNotExist(err) {
 		err = g.SaveConf(DefaultConfig())

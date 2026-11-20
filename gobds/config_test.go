@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/restartfu/gophig"
+	"github.com/restartfu/gophig/codecs"
 	"github.com/smell-of-curry/gobds/gobds/claim"
 	"github.com/smell-of-curry/gobds/gobds/session"
 )
@@ -69,7 +70,7 @@ PublicIP = '1.2.3.4'
 	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	g := gophig.NewGophig[UserConfig](path, gophig.TOMLMarshaler{}, os.ModePerm)
+	g := gophig.NewGophig[UserConfig](path, codecs.TOMLMarshaler{}, os.ModePerm)
 	c, err := g.LoadConf()
 	if err != nil {
 		t.Fatal(err)
@@ -145,7 +146,7 @@ Language = 'de_DE'
 	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	g := gophig.NewGophig[UserConfig](path, gophig.TOMLMarshaler{}, os.ModePerm)
+	g := gophig.NewGophig[UserConfig](path, codecs.TOMLMarshaler{}, os.ModePerm)
 	c, err := g.LoadConf()
 	if err != nil {
 		t.Fatal(err)

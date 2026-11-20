@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/restartfu/gophig"
+	"github.com/restartfu/gophig/codecs"
 )
 
 // Config ...
@@ -21,7 +22,7 @@ func defaultConfig() Config {
 
 // ReadConfig ...
 func ReadConfig(path string) (Config, error) {
-	g := gophig.NewGophig[Config](path, gophig.JSONMarshaler{}, os.ModePerm)
+	g := gophig.NewGophig[Config](path, codecs.JSONMarshaler{}, os.ModePerm)
 	_, err := g.LoadConf()
 	if os.IsNotExist(err) {
 		err = g.SaveConf(defaultConfig())
