@@ -192,7 +192,13 @@ func (gb *GoBDS) accept(conn session.Conn, srv *Server, ctx context.Context) (*s
 		return nil, fmt.Errorf("error dialing connection")
 	}
 
-	return gb.startGame(conn, serverConn, srv, ctx)
+	upstream, cleanup, err := prepareVoxelRegistry(conn, serverConn)
+	if err != nil {
+		_ = serverConn.Close()
+		return nil, err
+	}
+	defer cleanup()
+	return gb.startGame(conn, upstream, srv, ctx)
 }
 
 // handleWhitelisted ensures that only whitelisted players can join.

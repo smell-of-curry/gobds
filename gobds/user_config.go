@@ -360,8 +360,9 @@ func (c UserConfig) dialerFunc(remoteAddress, transport string, log *slog.Logger
 // FetchResourcePacks filters packs for each transport.
 func (c UserConfig) listenConfig(srv *Server, offers []packOffer) minecraft.ListenConfig {
 	cfg := minecraft.ListenConfig{
-		ErrorLog:       srv.Log,
-		StatusProvider: srv.StatusProvider,
+		AcceptedProtocols: []minecraft.Protocol{&voxelProtocol{Protocol: minecraft.DefaultProtocol}},
+		ErrorLog:          srv.Log,
+		StatusProvider:    srv.StatusProvider,
 
 		FlushRate:            time.Millisecond * time.Duration(c.Network.FlushRate),
 		ResourcePacks:        packsFrom(offers),
