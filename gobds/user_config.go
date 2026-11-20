@@ -366,6 +366,8 @@ func (c UserConfig) listenConfig(srv *Server, offers []packOffer) minecraft.List
 		FlushRate:            time.Millisecond * time.Duration(c.Network.FlushRate),
 		ResourcePacks:        packsFrom(offers),
 		TexturePacksRequired: c.Resources.PacksRequired,
+		// Zero selects gophertunnel's 200 ms wait after every pack chunk.
+		ResourcePackDelivery: minecraft.ResourcePackDeliveryConfig{ChunkSendDelay: -1},
 		// Called before ResourcePacksInfo (gophertunnel minecraft/conn.go:889).
 		// The returned slice replaces the listener's packs for this client.
 		FetchResourcePacks: func(_ login.IdentityData, client login.ClientData, _ []*resource.Pack) []*resource.Pack {
