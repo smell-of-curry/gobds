@@ -19,6 +19,57 @@ func TestClaimHardeningDefaultsOff(t *testing.T) {
 	}
 }
 
+func TestReadConfigPingIndicator(t *testing.T) {
+	const base = `
+[[Network.Servers]]
+Name = 'fixture'
+LocalAddress = '127.0.0.1:19132'
+RemoteAddress = '127.0.0.1:19133'
+[Resources]
+CommandPath = 'commands.json'
+`
+	for _, tc := range []struct {
+		name, settings string
+		wantDisabled   bool
+	}{
+		{name: "omitted"},
+		{name: "empty section", settings: "\n[PingIndicator]\n"},
+		{name: "enabled", settings: "\n[PingIndicator]\nEnabled = true\n"},
+		{name: "disabled", settings: "\n[PingIndicator]\nEnabled = false\nIdentifier = '&_playerPing:'\n", wantDisabled: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			if err := os.WriteFile("config.toml", []byte(base+tc.settings), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile("commands.json", []byte("{}"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			config, err := ReadConfig()
+			if err != nil {
+				t.Fatal(err)
+			}
+			runtime, err := config.Config(slog.Default())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if runtime.DisablePingIndicator != tc.wantDisabled {
+				t.Fatalf("DisablePingIndicator = %v, want %v", runtime.DisablePingIndicator, tc.wantDisabled)
+			}
+		})
+	}
+	t.Run("generated defaults", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		config, err := ReadConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if config.PingIndicator.Enabled == nil || !*config.PingIndicator.Enabled {
+			t.Fatal("generated TOML must enable the ping indicator")
+		}
+	})
+}
+
 func TestClaimDurationsDefaultDuringConfigConversion(t *testing.T) {
 	config := UserConfig{}
 	config.Network.Servers = []ServerConfig{{

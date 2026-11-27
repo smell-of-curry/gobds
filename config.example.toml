@@ -52,8 +52,7 @@ PollInterval = '15s' # How often each server refreshes its immutable claim snaps
 MaxSnapshotAge = '45s' # Older snapshots fail open and pass actions to BDS
 
 [PingIndicator]
-Enabled = true # Whether to enable the ping indicator
-Identifier = '&_playerPing:' # The identifier for the ping indicator
+Enabled = true # Forward the measured proxy latency to the Bedrock server for the ping indicator
 
 [AFKTimer]
 Enabled = true # Whether to enable the afk timer

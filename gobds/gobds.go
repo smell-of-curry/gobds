@@ -293,7 +293,8 @@ func (gb *GoBDS) startGame(conn, serverConn session.Conn, srv *Server, ctx conte
 		Client: conn,
 		Server: serverConn,
 
-		AFKTimer: gb.conf.AFKTimer,
+		AFKTimer:             gb.conf.AFKTimer,
+		DisablePingIndicator: gb.conf.DisablePingIndicator,
 
 		// EntityFactory must be per-session: each session has its own backend connection
 		// and BDS issues runtime IDs scoped to that connection. Sharing this map between

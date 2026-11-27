@@ -18,6 +18,9 @@ type Config struct {
 
 	AFKTimer *infra.AFKTimer
 	Border   *area.Area2D
+	// DisablePingIndicator suppresses the ping chat packet. The zero value
+	// keeps forwarding enabled for callers that construct Config directly.
+	DisablePingIndicator bool
 
 	ClaimPrefilter     bool
 	ClaimDenyRendering bool
@@ -51,7 +54,8 @@ func (c Config) New() *Session {
 		},
 		traffic: newTrafficState(c.Traffic, c.TrafficMetrics),
 
-		lastForwardedPing: -1,
+		disablePingIndicator: c.DisablePingIndicator,
+		lastForwardedPing:    -1,
 
 		data: NewData(c.Client),
 		log:  c.Log,

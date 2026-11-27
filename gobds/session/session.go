@@ -46,6 +46,8 @@ type Session struct {
 	corrective correctiveState
 	traffic    trafficState
 
+	disablePingIndicator bool
+
 	// lastForwardedPing is the last client latency (ms) sent to BDS via
 	// ForwardPing. -1 means nothing has been forwarded yet.
 	lastForwardedPing int64
@@ -255,6 +257,9 @@ func (s *Session) Ping() int64 {
 // BDS getPing() only sees proxy↔BDS (~0 on same box), so the behavior pack
 // must receive this via chat and drive the PHUD indicator itself.
 func (s *Session) ForwardPing() {
+	if s.disablePingIndicator {
+		return
+	}
 	ping := s.Ping()
 	if ping == s.lastForwardedPing {
 		return
