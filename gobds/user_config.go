@@ -61,6 +61,10 @@ type UserConfig struct {
 		PollInterval         string
 		MaxSnapshotAge       string
 	}
+	PingIndicator struct {
+		// Enabled defaults to true for existing configs that omit it.
+		Enabled *bool
+	}
 	AFKTimer struct {
 		Enabled         bool
 		TimeoutDuration string
@@ -474,6 +478,9 @@ func DefaultConfig() UserConfig {
 	c.Claims.DenyRenderingEnabled = false
 	c.Claims.PollInterval = claim.DefaultPollInterval.String()
 	c.Claims.MaxSnapshotAge = claim.DefaultMaxSnapshotAge.String()
+
+	pingIndicatorEnabled := true
+	c.PingIndicator.Enabled = &pingIndicatorEnabled
 
 	c.AFKTimer.Enabled = true
 	c.AFKTimer.TimeoutDuration = "10m"

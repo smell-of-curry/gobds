@@ -25,6 +25,7 @@ type Config struct {
 	AuthenticationService *authentication.Service
 	VPNService            *vpn.Service
 	AFKTimer              *infra.AFKTimer
+	DisablePingIndicator  bool
 	Whitelist             *whitelist.Whitelist
 	Border                *area.Area2D
 	ClaimPrefilter        bool
@@ -64,6 +65,7 @@ func (c UserConfig) Config(log *slog.Logger) (Config, error) {
 			Key:     c.VPNService.Key,
 		}, c.VPNService.WhitelistedCIDRs),
 		AFKTimer:             c.afkTimer(),
+		DisablePingIndicator: c.PingIndicator.Enabled != nil && !*c.PingIndicator.Enabled,
 		Whitelist:            c.whiteList(log),
 		Border:               c.makeBorder(),
 		ClaimPrefilter:       c.Claims.PrefilterEnabled,
