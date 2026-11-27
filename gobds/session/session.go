@@ -322,6 +322,12 @@ func (s *Session) ReadPackets(ctx context.Context) {
 		for {
 			pk, err := s.server.ReadPacket()
 			if err != nil {
+				// Gophertunnel consumes the backend Disconnect packet. Forward
+				// only its player-facing message before the deferred close flushes it.
+				var reason minecraft.DisconnectError
+				if errors.As(err, &reason) && reason != "" {
+					s.WriteToClient(&packet.Disconnect{Message: string(reason)})
+				}
 				return
 			}
 			send, err := s.handlePacket(pk, s.server)
